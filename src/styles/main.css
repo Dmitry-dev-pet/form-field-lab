@@ -962,7 +962,7 @@ mjx-container[display="true"] {
   .lab-workspace, .evolution-workspace, .archive-workspace { border-radius: 21px; }
   .canvas-stage, .evolution-stage, .archive-player, .control-panel, .evolution-panel, .archive-index { padding: 18px; }
   .canvas-meta { right: 27px; bottom: 23px; left: 27px; font-size: 0.58rem; }
-  .sketch-grid { max-height: 430px; }
+  .sketch-grid { max-height: none; padding-right: 0; overflow: visible; }
   .inline-actions .button { flex: 1 1 42%; }
   .code-panel > header, .card-header { padding: 19px 18px 16px; }
   .code-panel > pre { padding: 18px; }
