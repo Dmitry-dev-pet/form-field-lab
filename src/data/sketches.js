@@ -1,4 +1,4 @@
-window.YURUYURAU_SKETCHES = [
+export const sketches = [
   {
     id: "2091540720628932622",
     createdAt: "2026-08-23T14:59:01.000Z",

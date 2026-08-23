@@ -1,0 +1,34 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { sketches } from "../src/data/sketches.js";
+import { createPointEngine, interpolatePointClouds } from "../src/lib/pointEngine.js";
+import { runnerDocument } from "../src/lib/runnerDocument.js";
+
+test("catalog contains 34 unique attributed sketches", () => {
+  assert.equal(sketches.length, 34);
+  assert.equal(new Set(sketches.map(sketch => sketch.id)).size, 34);
+  assert.ok(sketches.every(sketch => sketch.source === `https://x.com/yuruyurau/status/${sketch.id}`));
+});
+
+test("every archived formula compiles and produces a point cloud", () => {
+  for (const sketch of sketches) {
+    const points = createPointEngine(sketch).frame();
+    assert.ok(points.length > 1000, `${sketch.id} produced only ${points.length} points`);
+    assert.ok(points.every(([x, y]) => Number.isFinite(x) && Number.isFinite(y)));
+  }
+});
+
+test("point transport preserves endpoints and interpolates the middle", () => {
+  const pointsA = [[0, 0], [10, 10]];
+  const pointsB = [[10, 20], [20, 30]];
+  assert.equal(interpolatePointClouds(pointsA, pointsB, 0), pointsA);
+  assert.equal(interpolatePointClouds(pointsA, pointsB, 1), pointsB);
+  assert.deepEqual(interpolatePointClouds(pointsA, pointsB, 0.5), [[5, 10], [15, 20]]);
+});
+
+test("sandbox runner includes the original source and motion bridge", () => {
+  const html = runnerDocument(sketches[4].code);
+  assert.match(html, /p5@1\.11\.3/);
+  assert.match(html, /cos\(y\*31\+t\)/);
+  assert.match(html, /sketch-motion/);
+});
