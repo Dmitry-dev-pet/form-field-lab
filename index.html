@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Form / Field — лаборатория параметров</title>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]] },
+      options: { enableMenu: false }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-chtml.js"></script>
   <style>
     :root {
       --ink: #f4f3ed;
@@ -357,6 +364,176 @@
       line-height: 1.5;
     }
 
+    .explanation {
+      margin-top: 72px;
+      padding-bottom: 54px;
+    }
+
+    .explanation-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.65fr);
+      align-items: end;
+      gap: 32px;
+      margin-bottom: 24px;
+    }
+
+    .section-kicker {
+      margin: 0 0 8px;
+      color: var(--acid);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .explanation h2 {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+      font-size: clamp(2.25rem, 5vw, 4.25rem);
+      font-weight: 500;
+      letter-spacing: -0.05em;
+      line-height: 0.96;
+    }
+
+    .section-lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.65;
+    }
+
+    .theory-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .doc-card {
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(160deg, rgba(27,31,27,0.94), rgba(13,16,13,0.97));
+      box-shadow: 0 22px 60px rgba(0,0,0,0.22);
+    }
+
+    .doc-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 24px 24px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .doc-index {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--acid);
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.63rem;
+      letter-spacing: 0.1em;
+    }
+
+    .doc-card h3 {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+      font-size: 1.5rem;
+      font-weight: 500;
+      letter-spacing: -0.025em;
+    }
+
+    .copy-button {
+      flex: 0 0 auto;
+      min-width: 104px;
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      color: var(--ink);
+      background: rgba(255,255,255,0.035);
+      font-size: 0.68rem;
+      font-weight: 650;
+    }
+
+    .copy-button:hover { border-color: var(--acid); color: var(--acid); }
+
+    .equation-body { padding: 12px 24px 22px; }
+
+    .equation-intro {
+      margin: 6px 0 3px;
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.55;
+    }
+
+    .equation-scroll {
+      overflow-x: auto;
+      padding: 7px 2px;
+      scrollbar-color: var(--line-strong) transparent;
+    }
+
+    mjx-container[display="true"] {
+      min-width: max-content;
+      margin: 1.15em 0 !important;
+      color: var(--ink);
+      font-size: 94% !important;
+    }
+
+    .parameter-key {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px 14px;
+      margin: 10px 0 0;
+      padding: 16px 0 0;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.7rem;
+      line-height: 1.5;
+      list-style: none;
+    }
+
+    .parameter-key code { color: var(--acid); }
+
+    .code-wrap {
+      max-height: 610px;
+      overflow: auto;
+      scrollbar-color: var(--line-strong) transparent;
+      background: #090b09;
+    }
+
+    pre {
+      margin: 0;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.69rem;
+      line-height: 1.7;
+      tab-size: 2;
+    }
+
+    .code-wrap pre { min-width: 690px; padding: 22px 24px 26px; }
+    .code-wrap code { color: #dfe5d9; }
+    .code-wrap .token-accent { color: var(--acid); }
+
+    .doc-details {
+      margin: 0;
+      border-top: 1px solid var(--line);
+      background: rgba(255,255,255,0.018);
+    }
+
+    .doc-details summary { padding: 15px 24px; }
+
+    .latex-source,
+    .golf-source {
+      overflow-x: auto;
+      padding: 18px 24px 22px;
+      color: #cbd3c5;
+      background: #090b09;
+    }
+
+    .latex-source pre { min-width: 590px; }
+    .golf-source pre { min-width: 720px; }
+
     @media (max-width: 820px) {
       .shell { width: min(100% - 20px, 680px); padding: 18px 0; }
       .masthead { align-items: flex-start; flex-direction: column; }
@@ -364,6 +541,9 @@
       .workspace { grid-template-columns: 1fr; }
       .stage { min-height: 0; aspect-ratio: 1; }
       .controls { border-top: 1px solid var(--line); border-left: 0; }
+      .explanation { margin-top: 54px; }
+      .explanation-head, .theory-grid { grid-template-columns: 1fr; }
+      .explanation-head { align-items: start; gap: 15px; }
     }
 
     @media (max-width: 480px) {
@@ -372,6 +552,11 @@
       .workspace { border-radius: 20px; }
       .controls { padding: 20px 18px; }
       .stage-meta { right: 24px; bottom: 22px; left: 24px; }
+      .explanation { padding-right: 4px; padding-left: 4px; }
+      .doc-card-head { padding: 20px 18px 16px; }
+      .equation-body { padding: 10px 18px 18px; }
+      .parameter-key { grid-template-columns: 1fr; }
+      .copy-button { min-width: 94px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -437,6 +622,138 @@
 
         <p class="footnote">Original возвращает точные коэффициенты исходного скетча. При изменении числа форм фазовый шаг масштабируется автоматически.</p>
       </aside>
+    </section>
+
+    <section class="explanation" aria-labelledby="model-title">
+      <header class="explanation-head">
+        <div>
+          <p class="section-kicker">Under the surface</p>
+          <h2 id="model-title">Код и математика</h2>
+        </div>
+        <p class="section-lead">Каждый кадр — это параметрическое отображение индекса точки в координаты холста. Формулы ниже используют те же параметры, что и слайдеры сверху.</p>
+      </header>
+
+      <div class="theory-grid">
+        <article class="doc-card">
+          <header class="doc-card-head">
+            <div>
+              <span class="doc-index">01 / MODEL</span>
+              <h3>Математическая модель</h3>
+            </div>
+            <button class="copy-button" id="copyLatexButton" type="button">Копировать TeX</button>
+          </header>
+
+          <div class="equation-body">
+            <p class="equation-intro">Для точки с индексом \(i\), где \(0 \le i &lt; N\), вводим четыре промежуточные величины:</p>
+            <div class="equation-scroll">
+              \[
+              \begin{aligned}
+              y_i &amp;= \frac{i}{995}, \\
+              k_i &amp;= \left(4+\cos(\omega y_i+t)\right)\cos\left(\frac{i}{q}\right), \\
+              e_i &amp;= \frac{y_i}{5}-11, \\
+              d_i &amp;= \sqrt{k_i^2+e_i^2}-\delta, \\
+              c_i &amp;= \frac{d_i}{2}-\frac{t}{2}+(i\bmod m)\frac{3\varphi}{m}.
+              \end{aligned}
+              \]
+            </div>
+            <p class="equation-intro">После этого точка попадает на экран в координаты:</p>
+            <div class="equation-scroll">
+              \[
+              x_i=(R+k_i^2)\cos(c_i)+200,
+              \]
+              \[
+              \begin{aligned}
+              Y_i={}&amp;H\sin\left(\frac{c_i}{3}\right)+200 \\
+              &amp;+d_i^2\frac{P}{3}\sin(3t-d_i)+3\sin(2k_i) \\
+              &amp;+\frac{y_i k_i}{F}\left(e_i+\sin(4e_i-4d_i)\right).
+              \end{aligned}
+              \]
+            </div>
+
+            <ul class="parameter-key" aria-label="Обозначения параметров">
+              <li><code>N</code> — количество точек</li>
+              <li><code>m</code> — количество форм</li>
+              <li><code>R, H</code> — размер и высота</li>
+              <li><code>ω</code> — частота волн</li>
+              <li><code>P</code> — сила пульсации</li>
+              <li><code>φ</code> — фазовый шаг</li>
+              <li><code>q</code> — плотность рёбер</li>
+              <li><code>δ, F</code> — смещение и длина волокон</li>
+            </ul>
+            <p class="equation-intro">Пресет Original: \(N=20000,\ m=3,\ R=79,\ H=99,\omega=31,\ P=3,\ \varphi=8,\ q=99,\delta=6,\ F=13\).</p>
+          </div>
+
+          <details class="doc-details">
+            <summary>Исходник формул в LaTeX</summary>
+            <div class="latex-source"><pre><code id="latexCode">\begin{aligned}
+y_i &amp;= \frac{i}{995}, \\
+k_i &amp;= \left(4+\cos(\omega y_i+t)\right)\cos\left(\frac{i}{q}\right), \\
+e_i &amp;= \frac{y_i}{5}-11, \\
+d_i &amp;= \sqrt{k_i^2+e_i^2}-\delta, \\
+c_i &amp;= \frac{d_i}{2}-\frac{t}{2}+(i\bmod m)\frac{3\varphi}{m}, \\
+x_i &amp;= (R+k_i^2)\cos(c_i)+200, \\
+Y_i &amp;= H\sin\left(\frac{c_i}{3}\right)+200
++d_i^2\frac{P}{3}\sin(3t-d_i)+3\sin(2k_i)
++\frac{y_i k_i}{F}\left(e_i+\sin(4e_i-4d_i)\right).
+\end{aligned}</code></pre></div>
+          </details>
+        </article>
+
+        <article class="doc-card">
+          <header class="doc-card-head">
+            <div>
+              <span class="doc-index">02 / SOURCE</span>
+              <h3>Итоговый код ядра</h3>
+            </div>
+            <button class="copy-button" id="copyCodeButton" type="button">Копировать JS</button>
+          </header>
+
+          <div class="code-wrap"><pre><code id="kernelCode">const ORIGINAL = {
+  speed: 1, forms: 3, radius: 79, height: 99,
+  waveFrequency: 31, pulse: 3, pointCount: 20000,
+  alpha: 96, phaseStep: 8, radialDivisor: 99,
+  distanceOffset: 6, featherDivisor: 13
+};
+
+function render() {
+  ctx.fillStyle = settings.backgroundColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const point = hexToRgb(settings.pointColor);
+  ctx.fillStyle = `rgba(${point.r}, ${point.g}, ${point.b}, ${settings.alpha / 255})`;
+
+  const formCount = Math.max(1, Math.round(settings.forms));
+  const normalizedPhaseStep = settings.phaseStep * 3 / formCount;
+
+  for (let i = settings.pointCount; i--;) {
+    const y = i / 995;
+    const k = (4 + cos(y * settings.waveFrequency + time))
+      * cos(i / settings.radialDivisor);
+    const e = y / 5 - 11;
+    const d = mag(k, e) - settings.distanceOffset;
+    const c = d / 2 - time / 2
+      + (i % formCount) * normalizedPhaseStep;
+
+    const x = (settings.radius + k * k) * cos(c) + 200;
+    const pulse = d * d * (settings.pulse / 3)
+      * sin(time * 3 - d);
+    const ripple = 3 * sin(k * 2);
+    const feather = y / settings.featherDivisor * k
+      * (e + sin(e * 4 - d * 4));
+    const screenY = settings.height * sin(c / 3)
+      + 200 + pulse + ripple + feather;
+
+    ctx.fillRect(x, screenY, 1, 1);
+  }
+}</code></pre></div>
+
+          <details class="doc-details">
+            <summary>Исходная code-golf версия</summary>
+            <div class="golf-source"><pre><code>a=(y,d=mag(k=(4+cos(y*31+t))*cos(i/99),e=y/5-11)-6)=&gt;point((79+k*k)*cos(c=d/2-t/2+i%3*8)+200,99*sin(c/3)+200+d*d*sin(t*3-d)+3*sin(k*2)+y/13*k*(e+sin(e*4-d*4)))
+t=0,draw=$=&gt;{t||createCanvas(w=400,w);background(9).stroke(w,96);for(t+=PI/60,i=2e4;i--;)a(i/995)}</code></pre></div>
+          </details>
+        </article>
+      </div>
     </section>
   </main>
 
@@ -582,6 +899,24 @@
       updateMeta();
       render();
     });
+
+    function bindCopyButton(buttonId, sourceId, idleLabel) {
+      const button = document.querySelector(buttonId);
+      const source = document.querySelector(sourceId);
+
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(source.textContent);
+          button.textContent = "Скопировано ✓";
+        } catch {
+          button.textContent = "Не удалось";
+        }
+        window.setTimeout(() => { button.textContent = idleLabel; }, 1500);
+      });
+    }
+
+    bindCopyButton("#copyCodeButton", "#kernelCode", "Копировать JS");
+    bindCopyButton("#copyLatexButton", "#latexCode", "Копировать TeX");
 
     controls.forEach(syncControl);
     updateMeta();
