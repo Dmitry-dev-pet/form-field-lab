@@ -456,6 +456,73 @@ details[open] summary::after { content: "−"; }
 
 .advanced-controls { padding: 11px 0 6px; }
 
+.color-formula-controls {
+  display: grid;
+  gap: 13px;
+  padding: 11px 0 6px;
+}
+
+.color-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.layer-toggle.mode-button[aria-pressed="false"] {
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 1;
+}
+
+.formula-colors .wide { grid-column: 1 / -1; }
+.formula-colors.single label { grid-column: 1 / -1; }
+
+.formula-gradient {
+  height: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--acid), transparent 78%);
+}
+
+.formula-preset { margin-top: 1px; }
+
+.formula-field {
+  display: grid;
+  gap: 8px;
+}
+
+.formula-field > span {
+  color: var(--muted);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.formula-field textarea {
+  width: 100%;
+  min-height: 66px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  color: var(--ink);
+  background: #090b09;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.formula-field textarea[aria-invalid="true"] { border-color: var(--danger); }
+
+.formula-help {
+  margin: 0;
+  color: var(--quiet);
+  font-size: 0.64rem;
+  line-height: 1.65;
+}
+
+.formula-help code { color: var(--muted); }
+
 .anatomy-box {
   display: grid;
   gap: 11px;
@@ -853,6 +920,8 @@ pre {
   gap: 16px;
 }
 
+.color-theory { grid-column: 1 / -1; }
+
 .theory-body { padding: 18px 24px 24px; }
 
 .theory-body > p {
@@ -962,6 +1031,7 @@ mjx-container[display="true"] {
   .lab-workspace, .evolution-workspace, .archive-workspace { border-radius: 21px; }
   .canvas-stage, .evolution-stage, .archive-player, .control-panel, .evolution-panel, .archive-index { padding: 18px; }
   .canvas-meta { right: 27px; bottom: 23px; left: 27px; font-size: 0.58rem; }
+  .formula-field textarea, .select-field select { font-size: 1rem; }
   .sketch-grid { max-height: none; padding-right: 0; overflow: visible; }
   .inline-actions .button { flex: 1 1 42%; }
   .code-panel > header, .card-header { padding: 19px 18px 16px; }

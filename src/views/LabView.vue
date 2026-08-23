@@ -1,6 +1,13 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import ColorFormulaControls from "../components/ColorFormulaControls.vue";
 import ParametricCanvas from "../components/ParametricCanvas.vue";
+import { useColorFormula } from "../composables/useColorFormula.js";
+
+const route = useRoute();
+const router = useRouter();
+const { color, evaluator: colorEvaluator, error: colorFormulaError, resetColor } = useColorFormula(route, router);
 
 const original = Object.freeze({
   speed: 1,
@@ -15,8 +22,7 @@ const original = Object.freeze({
   radialDivisor: 99,
   distanceOffset: 6,
   featherDivisor: 13,
-  backgroundColor: "#090909",
-  pointColor: "#ffffff"
+  backgroundColor: "#090909"
 });
 
 const settings = reactive({ ...original });
@@ -75,6 +81,7 @@ function toggleLayer(key) {
 
 function reset() {
   Object.assign(settings, original);
+  resetColor();
   Object.keys(layers).forEach(key => { layers[key] = true; });
   paused.value = false;
   preset.value = "Original";
@@ -117,7 +124,14 @@ function randomize() {
 
     <div class="lab-workspace">
       <div class="canvas-stage">
-        <ParametricCanvas ref="canvas" :settings="settings" :layers="layers" :paused="paused" />
+        <ParametricCanvas
+          ref="canvas"
+          :settings="settings"
+          :layers="layers"
+          :color="color"
+          :color-evaluator="colorEvaluator"
+          :paused="paused"
+        />
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot"></span>{{ paused ? "pause" : "live" }}</span>
           <span>{{ pointStatus }}</span>
@@ -127,7 +141,7 @@ function randomize() {
       <aside class="control-panel" aria-label="Параметры визуализации">
         <div class="panel-title-row">
           <h2>Параметры</h2>
-          <span class="status-badge">{{ preset }}</span>
+          <span class="status-badge">Форма · {{ preset }}</span>
         </div>
 
         <div class="control-list">
@@ -140,6 +154,7 @@ function randomize() {
               :max="control.max"
               :step="control.step"
               :style="rangeStyle(control)"
+              :aria-label="control.label"
               @input="changed"
             >
           </label>
@@ -153,6 +168,20 @@ function randomize() {
           <button class="button" type="button" @click="randomize">Случайный</button>
         </div>
 
+        <details class="control-details color-details" open>
+          <summary>Цветовая формула</summary>
+          <ColorFormulaControls
+            v-model:mode="color.mode"
+            v-model:preset="color.preset"
+            v-model:expression="color.expression"
+            v-model:color-a="color.colorA"
+            v-model:color-b="color.colorB"
+            v-model:background="settings.backgroundColor"
+            :error="colorFormulaError"
+            include-background
+          />
+        </details>
+
         <details class="control-details">
           <summary>Точная настройка и анатомия</summary>
           <div class="advanced-controls">
@@ -165,6 +194,7 @@ function randomize() {
                 :max="control.max"
                 :step="control.step"
                 :style="rangeStyle(control)"
+                :aria-label="control.label"
                 @input="changed"
               >
             </label>
@@ -181,11 +211,6 @@ function randomize() {
                   @click="toggleLayer(key)"
                 >{{ label }}</button>
               </div>
-            </div>
-
-            <div class="color-grid">
-              <label>Фон <input v-model="settings.backgroundColor" type="color" @input="changed"></label>
-              <label>Точки <input v-model="settings.pointColor" type="color" @input="changed"></label>
             </div>
           </div>
         </details>

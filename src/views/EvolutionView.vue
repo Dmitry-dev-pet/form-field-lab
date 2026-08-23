@@ -1,11 +1,15 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import ColorFormulaControls from "../components/ColorFormulaControls.vue";
+import { useColorFormula } from "../composables/useColorFormula.js";
 import { sketches } from "../data/sketches.js";
+import { buildColorPalette } from "../lib/colorFormula.js";
 import { createPointEngine, interpolatePointClouds } from "../lib/pointEngine.js";
 
 const route = useRoute();
 const router = useRouter();
+const { color, evaluator: colorEvaluator, error: colorFormulaError } = useColorFormula(route, router);
 const canvas = ref(null);
 const parentA = ref(readIndex(route.query.a, 5));
 const parentB = ref(readIndex(route.query.b, 3));
@@ -19,6 +23,12 @@ let context;
 let frameId;
 let lastFrame = 0;
 let direction = 1;
+let colorTime = 0;
+const colorBuckets = Array.from({ length: 24 }, () => []);
+const colorScope = {
+  i: 0, y: 0, k: 0, e: 0, d: 0, c: 0, t: 0, branch: 0, forms: 3,
+  x: 0, Y: 0, u: 0, r: 0, angle: 0, mix: 0
+};
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
   day: "numeric",
@@ -66,8 +76,61 @@ function render() {
     const points = interpolatePointClouds(pointsA, pointsB, mix.value);
     context.fillStyle = "#090909";
     context.fillRect(0, 0, 400, 400);
-    context.fillStyle = "rgba(255,255,255,0.42)";
-    points.forEach(([x, y]) => context.fillRect(x, y, 1, 1));
+
+    const formulaColor = color.mode === "formula";
+    const palette = buildColorPalette(
+      color.colorA,
+      formulaColor ? color.colorB : color.colorA,
+      107,
+      colorBuckets.length
+    );
+    colorBuckets.forEach(bucket => { bucket.length = 0; });
+    if (!formulaColor) context.fillStyle = palette[0];
+    const formulaVariables = colorEvaluator.value.variables || new Set();
+    const pointDenominator = Math.max(1, points.length - 1);
+
+    points.forEach(([x, screenY], index) => {
+      if (!formulaColor) {
+        context.fillRect(x, screenY, 1, 1);
+        return;
+      }
+
+      const sequence = index / pointDenominator;
+      const dx = x - 200;
+      const dy = screenY - 200;
+      const radius = formulaVariables.has("r") || formulaVariables.has("d")
+        ? Math.hypot(dx, dy)
+        : 0;
+      const angle = formulaVariables.has("angle") || formulaVariables.has("c") || formulaVariables.has("k")
+        ? Math.atan2(dy, dx)
+        : 0;
+      colorScope.i = index;
+      colorScope.y = sequence * 20;
+      colorScope.k = Math.sin(angle * 3 + sequence * Math.PI * 2) * 4;
+      colorScope.e = dy / 20;
+      colorScope.d = radius / 18 - 6;
+      colorScope.c = angle;
+      colorScope.t = colorTime;
+      colorScope.branch = index % 3;
+      colorScope.x = x;
+      colorScope.Y = screenY;
+      colorScope.u = sequence;
+      colorScope.r = radius;
+      colorScope.angle = angle;
+      colorScope.mix = mix.value;
+      const bucketIndex = Math.round(colorEvaluator.value(colorScope) * (colorBuckets.length - 1));
+      colorBuckets[bucketIndex].push(x, screenY);
+    });
+
+    if (formulaColor) {
+      colorBuckets.forEach((bucket, bucketIndex) => {
+        if (!bucket.length) return;
+        context.fillStyle = palette[bucketIndex];
+        for (let offset = 0; offset < bucket.length; offset += 2) {
+          context.fillRect(bucket[offset], bucket[offset + 1], 1, 1);
+        }
+      });
+    }
     pointStatus.value = mix.value <= 0.001 || mix.value >= 0.999
       ? `${points.length.toLocaleString("ru-RU")} points`
       : `${pointsA.length.toLocaleString("ru-RU")} ↔ ${pointsB.length.toLocaleString("ru-RU")} points`;
@@ -81,6 +144,7 @@ function render() {
 function animate(timestamp) {
   if (auto.value && timestamp - lastFrame >= 33) {
     lastFrame = timestamp;
+    colorTime = timestamp / 1000;
     let next = mix.value + direction * 0.004;
     if (next >= 1 || next <= 0) {
       next = Math.max(0, Math.min(1, next));
@@ -96,6 +160,7 @@ function syncQuery() {
   router.replace({
     name: "evolution",
     query: {
+      ...route.query,
       a: String(parentA.value + 1),
       b: String(parentB.value + 1),
       mix: mix.value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")
@@ -141,6 +206,9 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => cancelAnimationFrame(frameId));
+
+watch(color, render, { deep: true });
+watch(colorEvaluator, render);
 </script>
 
 <template>
@@ -181,8 +249,21 @@ onBeforeUnmount(() => cancelAnimationFrame(frameId));
 
         <label class="range-field mix-field">
           <span>Степень превращения <output>{{ Math.round(mix * 100) }}%</output></span>
-          <input v-model.number="mix" type="range" min="0" max="1" step="0.005" :style="rangeStyle()" @input="manualMix" @change="finishMix">
+          <input v-model.number="mix" type="range" min="0" max="1" step="0.005" :style="rangeStyle()" aria-label="Степень превращения" @input="manualMix" @change="finishMix">
         </label>
+
+        <details class="control-details color-details" open>
+          <summary>Цветовой поток</summary>
+          <ColorFormulaControls
+            v-model:mode="color.mode"
+            v-model:preset="color.preset"
+            v-model:expression="color.expression"
+            v-model:color-a="color.colorA"
+            v-model:color-b="color.colorB"
+            :error="colorFormulaError"
+            context-note="В Эволюции переменные вычисляются из промежуточного облака точек."
+          />
+        </details>
 
         <div class="button-grid two">
           <button class="button primary" type="button" :aria-pressed="auto" @click="toggleAuto">{{ auto ? "Остановить" : "Продолжить" }}</button>

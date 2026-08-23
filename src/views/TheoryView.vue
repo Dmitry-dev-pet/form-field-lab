@@ -13,6 +13,12 @@ Y_i &= H\sin\left(\frac{c_i}{3}\right)+200
 +\frac{y_i k_i}{F}\left(e_i+\sin(4e_i-4d_i)\right).
 \end{aligned}`;
 
+const colorLatexSource = String.raw`\begin{aligned}
+u_i(t) &= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,t), \\
+\mathbf C_i(t) &= \left(1-u_i(t)\right)\mathbf C_A+u_i(t)\mathbf C_B, \\
+f_{\mathrm{phase}} &= \frac{1+\sin\left(c_i+0.35d_i+0.8t\right)}{2}.
+\end{aligned}`;
+
 const kernelSource = `const ORIGINAL = {
   speed: 1, forms: 3, radius: 79, height: 99,
   waveFrequency: 31, pulse: 3, pointCount: 20000,
@@ -43,7 +49,12 @@ for (let i = settings.pointCount; i--;) {
 const golfSource = `a=(y,d=mag(k=(4+cos(y*31+t))*cos(i/99),e=y/5-11)-6)=>point((79+k*k)*cos(c=d/2-t/2+i%3*8)+200,99*sin(c/3)+200+d*d*sin(t*3-d)+3*sin(k*2)+y/13*k*(e+sin(e*4-d*4)))
 t=0,draw=$=>{t||createCanvas(w=400,w);background(9).stroke(w,96);for(t+=PI/60,i=2e4;i--;)a(i/995)}//#つぶやきProcessing`;
 
-const copyLabels = ref({ latex: "Копировать TeX", code: "Копировать JS" });
+const defaultCopyLabels = {
+  latex: "Копировать TeX",
+  color: "Копировать TeX",
+  code: "Копировать JS"
+};
+const copyLabels = ref({ ...defaultCopyLabels });
 
 async function copy(kind, value) {
   try {
@@ -53,7 +64,7 @@ async function copy(kind, value) {
     copyLabels.value[kind] = "Не удалось";
   }
   window.setTimeout(() => {
-    copyLabels.value[kind] = kind === "latex" ? "Копировать TeX" : "Копировать JS";
+    copyLabels.value[kind] = defaultCopyLabels[kind];
   }, 1500);
 }
 
@@ -149,6 +160,31 @@ onMounted(async () => {
           <summary>Исходная code-golf версия</summary>
           <pre><code>{{ golfSource }}</code></pre>
         </details>
+      </article>
+
+      <article class="theory-card color-theory">
+        <header class="card-header">
+          <div><span>03 / COLOR FIELD</span><h2>Цвет как функция формы</h2></div>
+          <button class="button" type="button" @click="copy('color', colorLatexSource)">{{ copyLabels.color }}</button>
+        </header>
+        <div class="theory-body">
+          <p>Геометрия и цвет используют одни и те же скрытые переменные. Выражение вычисляет коэффициент смешивания \(u_i(t)\), после чего точка получает цвет между двумя краями палитры:</p>
+          <div class="math-scroll">
+            \[
+            \begin{aligned}
+            u_i(t) &amp;= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,t), \\
+            \mathbf C_i(t) &amp;= \left(1-u_i(t)\right)\mathbf C_A+u_i(t)\mathbf C_B.
+            \end{aligned}
+            \]
+          </div>
+          <p>Стандартный режим «Фаза» связывает цвет со складками и временем:</p>
+          <div class="math-scroll">
+            \[
+            f_{\mathrm{phase}}=\frac{1+\sin\left(c_i+0.35d_i+0.8t\right)}{2}.
+            \]
+          </div>
+          <p>Результат квантуется в 24 оттенка: формула остаётся плавной визуально, но Canvas меняет стиль только между цветовыми слоями, а не для каждой из 20&nbsp;000 точек.</p>
+        </div>
       </article>
     </div>
   </section>

@@ -1,9 +1,12 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { buildColorPalette } from "../lib/colorFormula.js";
 
 const props = defineProps({
   settings: { type: Object, required: true },
   layers: { type: Object, required: true },
+  color: { type: Object, required: true },
+  colorEvaluator: { type: Function, required: true },
   paused: { type: Boolean, default: false }
 });
 
@@ -11,11 +14,11 @@ const canvas = ref(null);
 let context;
 let frameId;
 let time = 0;
-
-function hexToRgb(hex) {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return { r: value >> 16, g: (value >> 8) & 255, b: value & 255 };
-}
+const colorBuckets = Array.from({ length: 24 }, () => []);
+const colorScope = {
+  i: 0, y: 0, k: 0, e: 0, d: 0, c: 0, t: 0, branch: 0, forms: 0,
+  x: 0, Y: 0, u: 0, r: 0, angle: 0, mix: 0
+};
 
 function render() {
   if (!context) return;
@@ -23,8 +26,17 @@ function render() {
   context.fillStyle = settings.backgroundColor;
   context.fillRect(0, 0, 400, 400);
 
-  const point = hexToRgb(settings.pointColor);
-  context.fillStyle = `rgba(${point.r}, ${point.g}, ${point.b}, ${settings.alpha / 255})`;
+  const formulaColor = props.color.mode === "formula";
+  const formulaVariables = props.colorEvaluator.variables || new Set();
+  const palette = buildColorPalette(
+    props.color.colorA,
+    formulaColor ? props.color.colorB : props.color.colorA,
+    settings.alpha,
+    colorBuckets.length
+  );
+  colorBuckets.forEach(bucket => { bucket.length = 0; });
+  if (!formulaColor) context.fillStyle = palette[0];
+
   const formCount = Math.max(1, Math.round(settings.forms));
   const normalizedPhaseStep = settings.phaseStep * 3 / formCount;
 
@@ -45,7 +57,38 @@ function render() {
       ? y / settings.featherDivisor * k * (e + Math.sin(e * 4 - d * 4))
       : 0;
     const screenY = settings.height * Math.sin(c / 3) + 200 + pulse + ripple + feather;
-    context.fillRect(x, screenY, 1, 1);
+
+    if (formulaColor) {
+      colorScope.i = index;
+      colorScope.y = y;
+      colorScope.k = k;
+      colorScope.e = e;
+      colorScope.d = d;
+      colorScope.c = c;
+      colorScope.t = time;
+      colorScope.branch = index % formCount;
+      colorScope.forms = formCount;
+      colorScope.x = x;
+      colorScope.Y = screenY;
+      if (formulaVariables.has("u")) colorScope.u = index / Math.max(1, settings.pointCount - 1);
+      if (formulaVariables.has("r")) colorScope.r = Math.hypot(x - 200, screenY - 200);
+      if (formulaVariables.has("angle")) colorScope.angle = Math.atan2(screenY - 200, x - 200);
+      colorScope.mix = 0;
+      const bucketIndex = Math.round(props.colorEvaluator(colorScope) * (colorBuckets.length - 1));
+      colorBuckets[bucketIndex].push(x, screenY);
+    } else {
+      context.fillRect(x, screenY, 1, 1);
+    }
+  }
+
+  if (formulaColor) {
+    colorBuckets.forEach((bucket, bucketIndex) => {
+      if (!bucket.length) return;
+      context.fillStyle = palette[bucketIndex];
+      for (let offset = 0; offset < bucket.length; offset += 2) {
+        context.fillRect(bucket[offset], bucket[offset + 1], 1, 1);
+      }
+    });
   }
 }
 
@@ -63,7 +106,7 @@ function resetTime() {
 }
 
 watch(
-  [() => props.settings, () => props.layers, () => props.paused],
+  [() => props.settings, () => props.layers, () => props.color, () => props.colorEvaluator, () => props.paused],
   () => { if (props.paused) render(); },
   { deep: true }
 );
@@ -86,6 +129,6 @@ defineExpose({ resetTime, render });
     width="400"
     height="400"
     role="img"
-    aria-label="Анимированная параметрическая композиция из светящихся точек"
+    :aria-label="`Анимированная параметрическая композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек`"
   ></canvas>
 </template>
