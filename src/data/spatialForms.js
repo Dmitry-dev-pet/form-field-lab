@@ -1,4 +1,6 @@
 import { sketches } from "./sketches.js";
+import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
+import { PELAGION_GENOME_SKETCH } from "./pelagionGenome.js";
 
 const control = (key, label, min, max, step, options = {}) => ({
   key, label, min, max, step, ...options
@@ -217,6 +219,118 @@ function pelagionPoint(index, time, settings, layers, target, interaction) {
   return target;
 }
 
+function cycleDistance(first, second) {
+  const distance = Math.abs(first - second) % 1;
+  return Math.min(distance, 1 - distance);
+}
+
+function chronophorePoint(index, time, settings, layers, target, interaction) {
+  const strandCount = Math.max(3, Math.round(settings.strands));
+  const strand = index % strandCount;
+  const sample = Math.floor(index / strandCount);
+  const sampleCount = Math.max(2, Math.ceil(settings.pointCount / strandCount));
+  const baseU = sample / (sampleCount - 1);
+  const materialFlow = layers.flow ? time * settings.flow : 0;
+  const u = (baseU + materialFlow) % 1;
+  const windingP = Math.max(1, Math.round(settings.windingP));
+  const windingQ = Math.max(1, Math.round(settings.windingQ));
+  const pathAngle = TAU * windingP * u;
+  const knotPhase = TAU * windingQ * u + time * settings.knotDrift;
+  const fiberPhase = TAU * strand / strandCount
+    + TAU * settings.fiberTwist * u
+    + (layers.flow ? time * settings.fiberSpeed : 0);
+  const breath = 1 + settings.pulse * Math.sin(
+    time * settings.pulseFrequency - TAU * windingQ * u
+  );
+  const knotRadius = layers.knot ? settings.knotRadius * breath : 0;
+  const fiberRadius = layers.fibers ? settings.tubeRadius : 0;
+
+  let radial = settings.radius
+    + knotRadius * Math.cos(knotPhase)
+    + fiberRadius * Math.cos(fiberPhase);
+  let localZ = knotRadius * Math.sin(knotPhase)
+    + fiberRadius * Math.sin(fiberPhase);
+
+  const stimulus = Number(interaction?.strength) || 0;
+  const age = Number(interaction?.age) || 0;
+  const focus = Number.isFinite(interaction?.u) ? interaction.u : 0.5;
+  const waveOffset = age * settings.echoSpeed;
+  const echoA = Math.exp(
+    -settings.echoSharpness * cycleDistance(u, focus + waveOffset) ** 2
+  );
+  const echoB = Math.exp(
+    -settings.echoSharpness * cycleDistance(u, focus - waveOffset) ** 2
+  );
+  const echo = layers.echo ? Math.min(1.4, stimulus * (echoA + echoB)) : 0;
+
+  radial += settings.response * echo * (0.4 + 0.6 * Math.cos(knotPhase));
+  localZ += settings.response * 0.62 * echo * Math.sin(fiberPhase + knotPhase);
+
+  const divisionProgress = Math.max(0, Math.min(1, (age - 0.9) / 3.8));
+  const divisionEnvelope = Math.sin(Math.PI * divisionProgress) ** 2;
+  const meetingPoint = (focus + 0.5) % 1;
+  const meeting = layers.division
+    ? stimulus * divisionEnvelope * Math.exp(
+      -settings.divisionSharpness * cycleDistance(u, meetingPoint) ** 2
+    )
+    : 0;
+  radial += settings.budSize * 0.2 * meeting;
+  localZ += settings.budSize * 0.18 * meeting * Math.sin(fiberPhase);
+
+  let x = radial * Math.cos(pathAngle);
+  let y = radial * Math.sin(pathAngle);
+  let z = localZ;
+  const divisionState = layers.division ? stimulus * divisionEnvelope : 0;
+  if (divisionState > 0) {
+    if (strand % 2) {
+      const childMix = Math.min(1, divisionState * 2.6);
+      const childPhase = TAU * u + time * 0.4;
+      const childRadius = settings.radius * 0.42
+        + fiberRadius * 0.6 * Math.cos(fiberPhase);
+      const childX = childRadius * Math.cos(childPhase)
+        + settings.budSize * 2.05;
+      const childY = childRadius * Math.sin(childPhase)
+        - settings.budSize * 0.18;
+      const childZ = (settings.knotRadius * 0.22 + fiberRadius * 0.4)
+        * Math.sin(fiberPhase + childPhase);
+      x += (childX - x) * childMix;
+      y += (childY - y) * childMix;
+      z += (childZ - z) * childMix;
+    } else {
+      x -= settings.budSize * 0.16 * divisionState;
+    }
+  }
+  const swarmEnvelope = layers.swarm
+    ? stimulus ** 3 * Math.sin(Math.min(1, age / 0.35) * Math.PI / 2)
+    : 0;
+  if (swarmEnvelope > 0) {
+    const locality = 0.32 + 0.68 * Math.exp(
+      -24 * cycleDistance(u, focus) ** 2
+    );
+    const scatter = settings.swarmSize * swarmEnvelope * locality;
+    x += scatter * Math.sin(index * 12.9898 + age * 5.1);
+    y += scatter * Math.sin(index * 78.233 - age * 3.7);
+    z += scatter * Math.cos(index * 37.719 + age * 4.3);
+  }
+
+  const cosTilt = Math.cos(settings.tilt);
+  const sinTilt = Math.sin(settings.tilt);
+  const tiltedY = y * cosTilt - z * sinTilt;
+  const tiltedZ = y * sinTilt + z * cosTilt;
+
+  target.x = x + 200;
+  target.y = tiltedY + 200;
+  target.z = tiltedZ * settings.depth;
+  target.parameter = u;
+  target.k = Math.sin(knotPhase);
+  target.e = echo + divisionState;
+  target.d = tiltedZ;
+  target.c = knotPhase + fiberPhase + (strand % 2 ? divisionState * Math.PI : 0);
+  target.branch = strand;
+  target.forms = strandCount;
+  return target;
+}
+
 export const spatialForms = Object.freeze([
   {
     id: "brancher",
@@ -384,7 +498,9 @@ export const spatialForms = Object.freeze([
     association: "синтез · мембрана · поле · отклик",
     description: "Новая сущность соединяет связное параметрическое тело, настоящую пространственную мембрану, течение и память света. Короткое касание возмущает организм; движение пальца вращает пространство.",
     origin: "community-synthesis",
+    genomeSketch: PELAGION_GENOME_SKETCH,
     supportsStimulus: true,
+    stimulusMessage: "Пелагион сжался и раскрыл мембрану в ответ на возмущение.",
     trailLayer: "memory",
     timeStep: 0.012,
     defaults: {
@@ -445,6 +561,84 @@ export const spatialForms = Object.freeze([
       pointCount: [10000, 20000, 1000], alpha: [55, 130, 1]
     },
     evaluate: pelagionPoint
+  },
+  {
+    id: "chronophore",
+    displayNumber: "P2",
+    sketchNumber: null,
+    shortLabel: "Хронофор",
+    title: "Хронофор",
+    association: "фазовый узел · вихрь · колония · память",
+    description: "Сущность существует не как постоянное вещество, а как сохраняющийся фазовый узел. Точки текут сквозь него; касание разрывает фазу, запускает встречные волны, временное деление и последующую сборку.",
+    origin: "form-field-synthesis",
+    genomeSketch: CHRONOPHORE_GENOME_SKETCH,
+    supportsStimulus: true,
+    stimulusMessage: "Фаза разорвана: две волны расходятся по Хронофору и готовят временное деление.",
+    responseFrames: 300,
+    trailLayer: "memory",
+    timeStep: 0.012,
+    defaults: {
+      speed: 1, windingP: 2, windingQ: 3,
+      radius: 88, knotRadius: 31, tubeRadius: 7, strands: 12,
+      depth: 1, tilt: 0.68,
+      flow: 0.035, knotDrift: 0.9, fiberTwist: 3, fiberSpeed: 1.7,
+      pulse: 0.15, pulseFrequency: 2.2,
+      echoSpeed: 0.22, echoSharpness: 420, response: 38,
+      budSize: 58, divisionSharpness: 72, swarmSize: 34,
+      memory: 0.72, pointCount: 18000, alpha: 88,
+      backgroundColor: "#05070c"
+    },
+    primaryControls: [
+      speed,
+      control("windingP", "Обороты p", 1, 5, 1),
+      control("windingQ", "Переплетения q", 1, 8, 1),
+      control("radius", "Радиус узла", 45, 125, 1),
+      depth,
+      control("flow", "Поток вещества", 0, 0.12, 0.005, { digits: 3 }),
+      control("response", "Сила фазового эха", 0, 80, 1),
+      control("memory", "Память следа", 0, 0.96, 0.02, { format: "percent" }),
+      points(30000),
+      alpha
+    ],
+    advancedControls: [
+      control("knotRadius", "Глубина переплетения", 8, 58, 1),
+      control("tubeRadius", "Толщина нитей", 0, 18, 0.5, { digits: 1 }),
+      control("strands", "Число нитей", 3, 24, 1),
+      control("tilt", "Наклон узла", 0, 1.5, 0.02, { digits: 2 }),
+      control("knotDrift", "Дрейф фазы", 0, 2.5, 0.05, { digits: 2 }),
+      control("fiberTwist", "Скручивание нитей", 0, 9, 0.25, { digits: 2 }),
+      control("fiberSpeed", "Скорость нитей", 0, 4, 0.1, { digits: 1 }),
+      control("pulse", "Дыхание", 0, 0.42, 0.01, { digits: 2 }),
+      control("pulseFrequency", "Ритм дыхания", 0.4, 5, 0.1, { digits: 1 }),
+      control("echoSpeed", "Скорость эха", 0.08, 0.38, 0.01, { digits: 2 }),
+      control("echoSharpness", "Фронт эха", 120, 900, 10),
+      control("budSize", "Размер дочернего кольца", 0, 95, 1),
+      control("divisionSharpness", "Локальность деления", 24, 160, 2),
+      control("swarmSize", "Разлёт роя", 0, 70, 1)
+    ],
+    layers: [
+      { key: "knot", label: "Фазовый узел", default: true },
+      { key: "fibers", label: "Нити вещества", default: true },
+      { key: "flow", label: "Внутренний поток", default: true },
+      { key: "echo", label: "Встречные волны", default: true },
+      { key: "division", label: "Дочернее кольцо", default: true },
+      { key: "swarm", label: "Распад в рой", default: true },
+      { key: "memory", label: "Память света", default: true }
+    ],
+    randomRanges: {
+      speed: [0.45, 1.8, 0.05], windingP: [1, 5, 1], windingQ: [2, 8, 1],
+      radius: [62, 112, 1], knotRadius: [18, 48, 1], tubeRadius: [3, 14, 0.5],
+      strands: [6, 20, 1], depth: [0.6, 1.55, 0.05], tilt: [0.25, 1.2, 0.02],
+      flow: [0.015, 0.09, 0.005], knotDrift: [0.35, 1.8, 0.05],
+      fiberTwist: [1, 7, 0.25], fiberSpeed: [0.6, 3.2, 0.1],
+      pulse: [0.04, 0.32, 0.01], pulseFrequency: [1, 4, 0.1],
+      echoSpeed: [0.14, 0.32, 0.01], echoSharpness: [220, 720, 10],
+      response: [18, 66, 1], budSize: [32, 82, 1],
+      divisionSharpness: [42, 130, 2], swarmSize: [16, 56, 1],
+      memory: [0.62, 0.94, 0.02], pointCount: [12000, 26000, 1000],
+      alpha: [55, 135, 1]
+    },
+    evaluate: chronophorePoint
   }
 ]);
 

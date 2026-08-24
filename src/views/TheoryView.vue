@@ -1,6 +1,11 @@
 <script setup>
 import { nextTick, onMounted, ref } from "vue";
 import {
+  CHRONOPHORE_GENOME,
+  CHRONOPHORE_GENOME_CHARACTERS,
+  CHRONOPHORE_GENOME_LIMIT
+} from "../data/chronophoreGenome.js";
+import {
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT
@@ -77,6 +82,29 @@ M(u,\theta,t) &= 1+B\sin^{\gamma}(\pi u)|\sin\theta|^6,\\
 Q(u) &= q\exp\!\left[-28(u-u_{touch})^2\right].
 \end{aligned}`;
 
+const chronophoreLatexSource = String.raw`\begin{aligned}
+u_i &= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1}+v_mt,
+& \beta_i &= 2\pi\frac{i\bmod S}{S},\\
+\alpha_i &= 2\pi p u_i,
+& \phi_i &= 2\pi q u_i+\omega_kt,\\
+\psi_i &= \beta_i+2\pi h u_i+\omega_ft,\\
+\rho_i &= R+K\left[1+B\sin(\omega_bt-2\pi q u_i)\right]\cos\phi_i
++A\cos\psi_i,\\
+z_i &= K\left[1+B\sin(\omega_bt-2\pi q u_i)\right]\sin\phi_i
++A\sin\psi_i,\\
+\mathbf P_i &=
+\begin{bmatrix}
+\rho_i\cos\alpha_i\\
+\rho_i\sin\alpha_i\\
+\lambda z_i
+\end{bmatrix},\\
+\Delta(u,v)&=\min\!\left(|u-v|,1-|u-v|\right),\\
+E(u,\tau)&=Q\!\left[
+e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
++e^{-\kappa\Delta(u,u_0-v_e\tau)^2}
+\right].
+\end{aligned}`;
+
 const kernelSource = `const ORIGINAL = {
   speed: 1, forms: 3, radius: 79, height: 99, depth: 1,
   waveFrequency: 31, pulse: 3, pointCount: 20000,
@@ -124,7 +152,9 @@ const defaultCopyLabels = {
   spatial: "Копировать TeX",
   movement: "Копировать TeX",
   pelagion: "Копировать TeX",
+  chronophore: "Копировать TeX",
   seed: "Копировать 280",
+  chronophoreSeed: "Копировать 280",
   code: "Копировать JS"
 };
 const copyLabels = ref({ ...defaultCopyLabels });
@@ -403,6 +433,66 @@ onMounted(async () => {
         </div>
         <div class="tiny-code-context">
           <p><strong>Авторская граница.</strong> Пелагион — самостоятельный синтез Form / Field, вдохновлённый механизмами сообщества. Он не объявляется работой перечисленных художников и не копирует их минимизированные выражения.</p>
+        </div>
+      </article>
+
+      <article id="chronophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>07 / PHASE ORGANISM</span><h2>Хронофор: живой узел времени</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('chronophore', chronophoreLatexSource)">{{ copyLabels.chronophore }}</button>
+            <button class="button" type="button" @click="copy('chronophoreSeed', CHRONOPHORE_GENOME)">{{ copyLabels.chronophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Хронофор не хранит постоянный набор частиц. Его идентичность задают два целых числа: <code>p</code> — число оборотов вокруг центра и <code>q</code> — число переплетений. Материя течёт по параметру <code>u</code>, но топологический закон остаётся прежним.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i &amp;= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1}+v_mt,
+              &amp;\beta_i &amp;= 2\pi\frac{i\bmod S}{S},\\
+              \alpha_i &amp;=2\pi p u_i,
+              &amp;\phi_i &amp;=2\pi q u_i+\omega_kt,\\
+              \rho_i &amp;=R+K\cos\phi_i+A\cos\psi_i,
+              &amp;z_i &amp;=K\sin\phi_i+A\sin\psi_i,\\
+              \mathbf P_i &amp;=
+              \begin{bmatrix}
+              \rho_i\cos\alpha_i\\
+              \rho_i\sin\alpha_i\\
+              \lambda z_i
+              \end{bmatrix}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Касание создаёт две волны, бегущие в противоположных направлениях по замкнутой координате. Когда они встречаются на обратной стороне узла, половина нитей образует дочернее кольцо; затем неизменный закон <code>(p,q)</code> собирает рассеянные точки обратно.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \Delta(u,v)&amp;=\min\left(|u-v|,1-|u-v|\right),\\
+              E(u,\tau)&amp;=Q\left[
+              e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
+              +e^{-\kappa\Delta(u,u_0-v_e\tau)^2}
+              \right].
+              \end{aligned}
+              \]
+            </div>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Автономный фазовый зародыш</span>
+              <strong>{{ CHRONOPHORE_GENOME_CHARACTERS }} / {{ CHRONOPHORE_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ CHRONOPHORE_GENOME }}</code></pre>
+            <p>RAW-геном сохраняет узел <code>(2,3)</code>, девять нитей, независимую координату <code>z</code>, цветовой поток и автоматический поворот. Для совместимости глубина проецируется в обычный 2D canvas; эхо, деление, рой, след и управление камерой раскрывает SPA.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'chronophore' } }">Открыть Хронофор →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'chronophore', view: 'bare' } }">Запустить RAW-геном →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Граница сущности.</strong> Конкретные точки не считаются её телом: они могут рассеяться и замениться. Хронофор остаётся собой, пока сохраняются переплетение <code>(p,q)</code> и причинная непрерывность фазовых волн.</p>
         </div>
       </article>
     </div>

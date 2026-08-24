@@ -33,6 +33,11 @@ export const COLOR_PRESETS = Object.freeze([
     id: "membrane",
     label: "Мембрана",
     expression: "0.5 + 0.5 * sin(3 * c + 8 * u - 1.2 * t + 0.025 * z)"
+  },
+  {
+    id: "knot",
+    label: "Фазовый узел",
+    expression: "0.5 + 0.5 * sin(c + 3 * e + 6 * u - 1.4 * t)"
   }
 ]);
 

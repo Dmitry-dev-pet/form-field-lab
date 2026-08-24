@@ -3,12 +3,12 @@ import assert from "node:assert/strict";
 import { spatialForms, spatialLayerDefaults } from "../src/data/spatialForms.js";
 import { createPointEngine } from "../src/lib/pointEngine.js";
 
-test("the spatial lab separates three attributed lifts from one synthesis", () => {
+test("the spatial lab separates attributed lifts from synthetic entities", () => {
   const attributed = spatialForms.filter(form => form.sketch);
   const synthetic = spatialForms.filter(form => !form.sketch);
 
   assert.deepEqual(attributed.map(form => form.sketchNumber), [5, 1, 6]);
-  assert.deepEqual(synthetic.map(form => form.id), ["pelagion"]);
+  assert.deepEqual(synthetic.map(form => form.id), ["pelagion", "chronophore"]);
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
 
@@ -18,6 +18,7 @@ test("the spatial lab separates three attributed lifts from one synthesis", () =
   for (const form of spatialForms) {
     assert.ok(form.primaryControls.some(control => control.key === "depth"));
     assert.ok(form.layers.every(layer => Object.hasOwn(spatialLayerDefaults(form), layer.key)));
+    assert.ok(form.sketch || form.genomeSketch, `${form.id}: RAW source is missing`);
   }
 });
 
@@ -82,4 +83,39 @@ test("Pelagion has a local, finite response to stimulation", () => {
     calm.y - stimulated.y,
     calm.z - stimulated.z
   ) > 1);
+});
+
+test("Chronophore preserves a finite knot and reacts across response phases", () => {
+  const form = spatialForms.find(item => item.id === "chronophore");
+  const layers = spatialLayerDefaults(form);
+  const calm = {};
+  const rupture = {};
+  const division = {};
+  const index = 9113;
+
+  form.evaluate(index, 0.9, form.defaults, layers, calm, {
+    strength: 0, age: 0, u: 0.5, x: 0, y: 0
+  });
+  form.evaluate(index, 0.9, form.defaults, layers, rupture, {
+    strength: 0.94, age: 0.28, u: 0.5, x: 0.4, y: -0.2
+  });
+  form.evaluate(index, 0.9, form.defaults, layers, division, {
+    strength: 0.48, age: 2.2, u: 0.5, x: 0.4, y: -0.2
+  });
+
+  for (const point of [calm, rupture, division]) {
+    assert.ok([point.x, point.y, point.z].every(Number.isFinite));
+  }
+  assert.ok(Math.hypot(
+    calm.x - rupture.x,
+    calm.y - rupture.y,
+    calm.z - rupture.z
+  ) > 1);
+  assert.ok(Math.hypot(
+    calm.x - division.x,
+    calm.y - division.y,
+    calm.z - division.z
+  ) > 1);
+  assert.equal(form.defaults.windingP, 2);
+  assert.equal(form.defaults.windingQ, 3);
 });

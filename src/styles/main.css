@@ -455,6 +455,24 @@ a:focus-visible {
   gap: 7px;
 }
 
+.form-choice-groups,
+.form-choice-group { display: grid; }
+.form-choice-groups { gap: 13px; }
+.form-choice-group { gap: 7px; }
+
+.form-choice-group > p {
+  margin: 0;
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.53rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.form-choice-group:first-child .form-choice:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .form-choice {
   display: grid;
   min-width: 0;

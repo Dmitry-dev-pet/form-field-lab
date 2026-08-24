@@ -5,10 +5,6 @@ import ColorFormulaControls from "../components/ColorFormulaControls.vue";
 import ParametricCanvas from "../components/ParametricCanvas.vue";
 import SketchRunner from "../components/SketchRunner.vue";
 import { useColorFormula } from "../composables/useColorFormula.js";
-import {
-  PELAGION_GENOME_CHARACTERS,
-  PELAGION_GENOME_SKETCH
-} from "../data/pelagionGenome.js";
 import { spatialForms, spatialFormById, spatialLayerDefaults } from "../data/spatialForms.js";
 import {
   LAB_VIEW_MODE,
@@ -24,16 +20,28 @@ const requestedFormId = Array.isArray(route.query.form) ? route.query.form[0] : 
 const initialForm = spatialFormById(requestedFormId);
 const selectedFormId = ref(initialForm.id);
 const selectedForm = computed(() => spatialFormById(selectedFormId.value));
+const formGroups = Object.freeze([
+  {
+    id: "attributed",
+    label: "Архетипы автора",
+    forms: spatialForms.filter(form => form.sketch)
+  },
+  {
+    id: "synthetic",
+    label: "Синтетические сущности",
+    forms: spatialForms.filter(form => !form.sketch)
+  }
+]);
 const viewMode = ref(readLabViewMode(route.query.view));
 const isBareMode = computed(() => viewMode.value === LAB_VIEW_MODE.bare);
-const bareSketch = computed(() => selectedForm.value.sketch || PELAGION_GENOME_SKETCH);
+const bareSketch = computed(() => selectedForm.value.sketch || selectedForm.value.genomeSketch);
 const bareCodeLength = computed(() => bareSketch.value.code.length);
 const bareRunnerLabel = computed(() => selectedForm.value.sketch
   ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
-  : `Пелагион: автономный p5.js-геном, ${PELAGION_GENOME_CHARACTERS} символов`);
+  : `${selectedForm.value.title}: автономный p5.js-геном, ${bareCodeLength.value} символов`);
 const bareLead = computed(() => selectedForm.value.sketch
   ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
-  : `Автономный ${PELAGION_GENOME_CHARACTERS}-символьный геном выполняется без расширенной анатомии, следа и реакции SPA.`);
+  : `Автономный ${bareCodeLength.value}-символьный геном выполняется без расширенной анатомии, следа и реакции SPA.`);
 const settings = reactive({ ...initialForm.defaults });
 const layers = reactive(spatialLayerDefaults(initialForm));
 const canvas = ref(null);
@@ -54,7 +62,7 @@ function formNumber(form) {
 }
 
 function basePresetLabel(form) {
-  return form.origin === "community-synthesis" ? "Синтез" : "Original";
+  return form.sketch ? "Original" : "Синтез";
 }
 
 function formatValue(control, value) {
@@ -118,7 +126,7 @@ function provoke() {
 }
 
 function announceStimulus() {
-  reactionMessage.value = "Пелагион сжался и раскрыл мембрану в ответ на возмущение.";
+  reactionMessage.value = selectedForm.value.stimulusMessage || "Форма ответила на возмущение.";
   window.clearTimeout(reactionTimer);
   reactionTimer = window.setTimeout(() => { reactionMessage.value = ""; }, 1800);
 }
@@ -260,18 +268,23 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
       <aside class="control-panel" :aria-label="isBareMode ? 'Сведения о голом скетче' : 'Параметры визуализации'">
         <div class="form-picker">
           <p class="panel-kicker">Форма / синтез</p>
-          <div class="form-choice-grid" role="group" aria-label="Выбор исходного скетча">
-            <button
-              v-for="form in spatialForms"
-              :key="form.id"
-              class="form-choice"
-              type="button"
-              :aria-pressed="selectedForm.id === form.id"
-              @click="selectForm(form.id)"
-            >
-              <strong>#{{ formNumber(form) }}</strong>
-              <span>{{ form.shortLabel }}</span>
-            </button>
+          <div class="form-choice-groups">
+            <div v-for="group in formGroups" :key="group.id" class="form-choice-group">
+              <p>{{ group.label }}</p>
+              <div class="form-choice-grid" role="group" :aria-label="group.label">
+                <button
+                  v-for="form in group.forms"
+                  :key="form.id"
+                  class="form-choice"
+                  type="button"
+                  :aria-pressed="selectedForm.id === form.id"
+                  @click="selectForm(form.id)"
+                >
+                  <strong>#{{ formNumber(form) }}</strong>
+                  <span>{{ form.shortLabel }}</span>
+                </button>
+              </div>
+            </div>
           </div>
           <p class="form-context">
             <span>{{ selectedForm.association }}</span>
@@ -279,7 +292,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
               v-if="selectedForm.sketch"
               :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }"
             >оригинал и код →</RouterLink>
-            <RouterLink v-else to="/community#pelagion">карта происхождения →</RouterLink>
+            <RouterLink v-else :to="`/theory#${selectedForm.id}`">модель и геном →</RouterLink>
           </p>
         </div>
 
@@ -307,8 +320,8 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
               :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }"
             >Открыть оригинал и код →</RouterLink>
             <template v-else>
-              <RouterLink class="text-link" to="/theory#pelagion">Открыть геном и LaTeX →</RouterLink>
-              <RouterLink class="text-link" to="/community#pelagion">Карта происхождения →</RouterLink>
+              <RouterLink class="text-link" :to="`/theory#${selectedForm.id}`">Открыть геном и LaTeX →</RouterLink>
+              <RouterLink v-if="selectedForm.id === 'pelagion'" class="text-link" to="/community#pelagion">Карта происхождения →</RouterLink>
             </template>
           </div>
 
@@ -411,7 +424,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
             </div>
           </details>
 
-          <RouterLink class="text-link" :to="selectedForm.id === 'pelagion' ? '/theory#pelagion' : '/theory'">Открыть код и математическую модель →</RouterLink>
+          <RouterLink class="text-link" :to="selectedForm.sketch ? '/theory' : `/theory#${selectedForm.id}`">Открыть код и математическую модель →</RouterLink>
         </template>
       </aside>
     </div>

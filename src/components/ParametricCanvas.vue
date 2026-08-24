@@ -39,7 +39,7 @@ let pointerStartY = 0;
 let pointerMoved = false;
 let clearNextFrame = true;
 const rotatedPoint = { x: 0, y: 0, z: 0 };
-const interaction = { strength: 0, x: 0, y: 0, u: 0.5 };
+const interaction = { strength: 0, age: 0, x: 0, y: 0, u: 0.5 };
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const orbitRadiansPerPixel = 0.008;
 const inertiaPerFrame = 0.9;
@@ -149,8 +149,13 @@ function animate(timestamp) {
     viewChanged = true;
   }
 
-  if (interaction.strength > 0) {
-    interaction.strength = Math.max(0, interaction.strength - elapsedFrames / 78);
+  if (!props.paused && interaction.strength > 0) {
+    interaction.age += elapsedFrames / 60;
+    const responseFrames = Math.max(1, Number(props.form.responseFrames) || 78);
+    interaction.strength = Math.max(
+      0,
+      interaction.strength - elapsedFrames / responseFrames
+    );
     viewChanged = true;
   }
 
@@ -166,6 +171,7 @@ function animate(timestamp) {
 function resetTime() {
   time = 0;
   interaction.strength = 0;
+  interaction.age = 0;
   clearNextFrame = true;
   render();
 }
@@ -184,6 +190,7 @@ function provoke(x = 0, y = 0) {
   interaction.y = Math.max(-1, Math.min(1, y));
   interaction.u = (interaction.x + 1) / 2;
   interaction.strength = 1;
+  interaction.age = 0;
   emit("stimulate");
   render();
 }

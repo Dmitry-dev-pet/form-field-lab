@@ -44,7 +44,15 @@ const routes = [
 const router = createRouter({
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes,
-  scrollBehavior: () => ({ top: 0 })
+  scrollBehavior: (to, from, savedPosition) => {
+    if (savedPosition) return savedPosition;
+    if (to.hash) {
+      return new Promise(resolve => {
+        window.setTimeout(() => resolve({ el: to.hash, top: 92 }), 0);
+      });
+    }
+    return { top: 0 };
+  }
 });
 
 router.afterEach(route => {
