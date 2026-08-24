@@ -141,7 +141,15 @@ function topologyGridPoint(index, time, settings, layers, target) {
   let y;
   let z;
 
-  if (topology.id === "plane") {
+  if (topology.id === "ichthyo") {
+    const bodyV = Math.PI * vertex.row / (rows - 1);
+    const radius = scale * Math.sin(bodyV);
+    const angle = u - genomeTime / 99;
+    const bend = secondary * bodyV * bodyV * Math.sin(genomeTime - bodyV);
+    x = radius * Math.cos(angle) + bend;
+    y = 99 * Math.cos(bodyV) - radius * Math.sin(angle) * projection;
+    z = radius * Math.sin(angle);
+  } else if (topology.id === "plane") {
     const planeU = vertex.column * 13 - 156;
     const planeV = vertex.row * 23 + 70;
     const wave = scale * Math.sin(planeU / secondary - genomeTime / 20);
@@ -581,8 +589,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "RAW-топологии",
     title: "Атлас 280-геномов",
-    association: "6 исполняемых геномов · каждый ≤ 280",
-    description: "Пять устойчивых поверхностей и единый переход сфера↔тор существуют как самостоятельные p5.js-геномы. SPA только выбирает формулу, меняет её короткие константы и расшифровывает результат.",
+    association: "7 исполняемых геномов · каждый ≤ 280",
+    description: "Пять топологических классов, органический Ихтиоморф и единый переход сфера↔тор существуют как самостоятельные p5.js-геномы. SPA только выбирает формулу, меняет её короткие константы и расшифровывает результат.",
     origin: "mesh-study",
     genomeSketch: SPHERE_GRID_GENOME_SKETCH,
     meshGenome: true,

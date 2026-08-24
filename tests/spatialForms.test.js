@@ -45,7 +45,7 @@ test("the mesh baseline decodes the exact compact sphere genome", () => {
   }
 });
 
-test("all six topology embeddings are finite spatial surfaces", () => {
+test("all seven topology embeddings are finite spatial surfaces", () => {
   const form = spatialForms.find(item => item.id === "sphere-grid");
   const layers = spatialLayerDefaults(form);
 
@@ -68,6 +68,25 @@ test("all six topology embeddings are finite spatial surfaces", () => {
     assert.ok(Math.max(...axes.y) - Math.min(...axes.y) > 10, `${topology.id}: y is flat`);
     assert.ok(Math.max(...axes.z) - Math.min(...axes.z) > 10, `${topology.id}: z is flat`);
   }
+});
+
+test("the ichthyomorph keeps its head still while the tail wave travels", () => {
+  const form = spatialForms.find(item => item.id === "sphere-grid");
+  const settings = { ...form.defaults, ...topologyGenomeDefaults("ichthyo") };
+  const layers = spatialLayerDefaults(form);
+  const dimensions = resolveGridDimensions(form.mesh, settings);
+  const headBefore = {};
+  const headAfter = {};
+  const tailBefore = {};
+  const tailAfter = {};
+
+  form.evaluate(0, 0, settings, layers, headBefore);
+  form.evaluate(0, Math.PI / 2, settings, layers, headAfter);
+  form.evaluate(dimensions.vertexCount - 1, 0, settings, layers, tailBefore);
+  form.evaluate(dimensions.vertexCount - 1, Math.PI / 2, settings, layers, tailAfter);
+
+  assert.ok(Math.abs(headAfter.x - headBefore.x) < 1e-9);
+  assert.ok(Math.abs(tailAfter.x - tailBefore.x) > 20);
 });
 
 test("one compact genome passes sphere, horn and ring-torus images", () => {

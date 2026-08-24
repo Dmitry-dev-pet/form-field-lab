@@ -20,6 +20,9 @@ function executeFrames(code) {
       lines = [];
       return renderer;
     },
+    point(...coordinates) {
+      lines.push(coordinates);
+    },
     line(...coordinates) {
       lines.push(coordinates);
     }
@@ -44,6 +47,9 @@ function executeFrameAt(code, time) {
       lines = [];
       return renderer;
     },
+    point(...coordinates) {
+      lines.push(coordinates);
+    },
     line(...coordinates) {
       lines.push(coordinates);
     }
@@ -64,11 +70,11 @@ function endpointSettings(preset, endpoint) {
 test("every topology choice is a real executable genome within 280 characters", () => {
   assert.deepEqual(
     TOPOLOGY_GENOME_PRESETS.map(preset => preset.id),
-    ["sphere", "plane", "cylinder", "torus", "sphere-torus", "mobius"]
+    ["sphere", "ichthyo", "plane", "cylinder", "torus", "sphere-torus", "mobius"]
   );
   assert.deepEqual(
     TOPOLOGY_GENOME_PRESETS.map(preset => compileTopologyGenome(preset.defaults).characters),
-    [276, 271, 247, 277, 275, 276]
+    [276, 265, 271, 247, 277, 275, 276]
   );
 
   for (const preset of TOPOLOGY_GENOME_PRESETS) {
@@ -84,7 +90,7 @@ test("every topology choice is a real executable genome within 280 characters", 
   }
 });
 
-test("all six compact genomes draw finite animated wireframes", () => {
+test("all seven compact genomes draw finite animated grids", () => {
   for (const preset of TOPOLOGY_GENOME_PRESETS) {
     const compiled = compileTopologyGenome(topologyGenomeDefaults(preset.id));
     const { first, second } = executeFrames(compiled.code);
@@ -94,6 +100,40 @@ test("all six compact genomes draw finite animated wireframes", () => {
     assert.ok(second.flat().every(Number.isFinite), `${preset.id}: invalid second frame`);
     assert.notDeepEqual(second, first, `${preset.id}: animation is frozen`);
   }
+});
+
+test("the ichthyomorph samples edges as points and grows motion toward the tail", () => {
+  const compiled = compileTopologyGenome(topologyGenomeDefaults("ichthyo"));
+  const maximum = compileTopologyGenome(endpointSettings(
+    TOPOLOGY_GENOME_PRESETS.find(preset => preset.id === "ichthyo"),
+    "max"
+  ));
+  assert.equal(compiled.characters, 265);
+  assert.equal(maximum.characters, 269);
+  assert.match(compiled.code, /point\(\.\.\.P\(/);
+  assert.match(compiled.code, /i%16<8/);
+  assert.match(compiled.code, /v\*v\*sin\(t-v\)/);
+
+  const renderer = { stroke() { return renderer; } };
+  const sandbox = {
+    PI: Math.PI,
+    sin: Math.sin,
+    cos: Math.cos,
+    createCanvas() {},
+    background() { return renderer; },
+    point() {},
+    line() {}
+  };
+  vm.runInNewContext(compiled.code, sandbox);
+  sandbox.t = 0;
+  const headBefore = sandbox.P(0, 0);
+  const tailBefore = sandbox.P(0, Math.PI);
+  sandbox.t = Math.PI / 2;
+  const headAfter = sandbox.P(0, 0);
+  const tailAfter = sandbox.P(0, Math.PI);
+
+  assert.ok(Math.abs(headAfter[0] - headBefore[0]) < 1e-9);
+  assert.ok(Math.abs(tailAfter[0] - tailBefore[0]) > 20);
 });
 
 test("the sphere-torus RAW contains the transition instead of switching sketches", () => {

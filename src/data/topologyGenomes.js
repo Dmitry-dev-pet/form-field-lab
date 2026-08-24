@@ -47,6 +47,25 @@ export const TOPOLOGY_GENOME_PRESETS = Object.freeze([
     }
   }),
   preset({
+    id: "ichthyo",
+    label: "Ихтиоморф",
+    shortLabel: "S² swim",
+    grid: Object.freeze({ columns: 30, rows: 16 }),
+    defaults: { genomeA: 50, genomeB: 3, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Толщина тела", 30, 99),
+      control("genomeB", "Хвостовая волна", 1, 9),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, b, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,q=${a}*sin(v),a=u-${time}/99)=>[q*cos(a)+${b}*v*v*sin(${time}-v)+200,99*cos(v)-q*sin(a)*${projection}+200]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=7200;i--;j=i>>4,s=i%8*PI/105,h=i%16<8,point(...P(j%30*PI/15+h*s,(j/30|0)*PI/15+!h*s)));}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
     id: "plane",
     label: "Плоскость",
     shortLabel: "R²",
@@ -151,7 +170,7 @@ export function compileTopologyGenome(settings = {}) {
   const selected = topologyGenomePreset(settings.topology);
   const parameters = {
     a: integer(settings.genomeA, selected.defaults.genomeA, selected.controls[0].min, selected.controls[0].max),
-    b: integer(settings.genomeB, selected.defaults.genomeB, 3, 49),
+    b: integer(settings.genomeB, selected.defaults.genomeB, 1, 49),
     projection: decimalHundredths(settings.genomeProjection ?? selected.defaults.genomeProjection),
     projectionValue: integer(settings.genomeProjection, selected.defaults.genomeProjection, 20, 79),
     speed: integer(settings.genomeSpeed, selected.defaults.genomeSpeed, 1, 9),

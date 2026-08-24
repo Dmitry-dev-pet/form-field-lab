@@ -25,7 +25,7 @@ const topologyGenomeRows = TOPOLOGY_GENOME_PRESETS.map(preset => {
     label: preset.label,
     characters: compiled.characters,
     code: compiled.code,
-    euler: preset.id === "sphere" ? 2 : preset.id === "plane" ? 1 : 0,
+    euler: ["sphere", "ichthyo"].includes(preset.id) ? 2 : preset.id === "plane" ? 1 : 0,
     boundaries: topology.boundaries,
     orientable: topology.orientable
   });
@@ -163,6 +163,16 @@ u_c &= 2\pi\frac{c}{C}+\omega t,
 \rho\cos v_r\\
 \lambda\rho\sin v_r\sin u_c
 \end{bmatrix}.
+\end{aligned}
+
+\begin{aligned}
+\mathbf P^{\text{ichthyo}}(u,v,t)&=
+\begin{bmatrix}
+r\sin v\cos(u-\omega t/99)+Av^2\sin(\omega t-v)\\
+L\cos v\\
+r\sin v\sin(u-\omega t/99)
+\end{bmatrix},
+&0\le v\le\pi.
 \end{aligned}`;
 
 const kernelSource = `const ORIGINAL = {
@@ -441,7 +451,7 @@ onMounted(async () => {
 
       <article id="sphere-grid" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>06 / SIX RAW GENOMES</span><h2>Топологический переход внутри 280 символов</h2></div>
+          <div><span>06 / SEVEN RAW GENOMES</span><h2>Топология и живое движение внутри 280 символов</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('sphereGrid', sphereGridLatexSource)">{{ copyLabels.sphereGrid }}</button>
             <button class="button" type="button" @click="copy('sphereGridSeed', sphereTorusGenome.code)">{{ copyLabels.sphereGridSeed }}</button>
@@ -449,7 +459,7 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>M0 состоит из шести самостоятельных исполняемых геномов. Пять задают устойчивые поверхности, а шестой одной формулой автоматически проходит сферический образ, самопересечение, сингулярность и тор. Только после проверки лимита SPA расшифровывает тот же закон в управляемую пространственную модель.</p>
+            <p>M0 состоит из семи самостоятельных исполняемых геномов: пяти топологических классов, органической деформации сферы и автоматического перехода сфера↔тор. Только после проверки лимита SPA расшифровывает тот же закон в управляемую пространственную модель.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
@@ -485,6 +495,17 @@ onMounted(async () => {
               \end{aligned}
               \]
             </div>
+            <p>Ихтиоморф показывает, что сетка почти бесплатна: список рёбер не хранится, оба направления решётки превращаются в 7200 вызовов <code>point(P(...))</code>. Восемь точек подряд визуально образуют ребро, а один бит индекса выбирает параллель или меридиан. Сферическая топология сохраняет \(\chi=2\), а член \(Av^2\sin(\omega t-v)\) усиливает изгиб к хвосту:</p>
+            <div class="math-scroll">
+              \[
+              \mathbf P_{fish}(u,v,t)=
+              \begin{bmatrix}
+              r\sin v\cos(u-\omega t/99)+Av^2\sin(\omega t-v)\\
+              L\cos v\\
+              r\sin v\sin(u-\omega t/99)
+              \end{bmatrix},\qquad 0\le v\le\pi.
+              \]
+            </div>
             <div class="topology-table-wrap">
               <table class="topology-table">
                 <thead><tr><th>Поверхность</th><th>RAW</th><th>χ домена</th><th>Границы</th><th>Ориентация</th></tr></thead>
@@ -507,7 +528,7 @@ onMounted(async () => {
             </div>
             <pre><code>{{ sphereTorusGenome.code }}</code></pre>
             <p>Это не переключатель между двумя заготовками. Радиус \(R(t)\) находится внутри самой короткой программы, поэтому голый скетч без SPA самостоятельно совершает полный цикл. Изменение топологии образа требует сингулярности — формула не скрывает этот момент.</p>
-            <ul class="topology-genome-counts" aria-label="Размеры шести исходных геномов">
+            <ul class="topology-genome-counts" aria-label="Размеры семи исходных геномов">
               <li v-for="genome in topologyGenomeRows" :key="genome.id"><span>{{ genome.label }}</span><code>{{ genome.characters }}/280</code></li>
             </ul>
             <div class="pelagion-links">

@@ -18,10 +18,10 @@ const mesh = Object.freeze({
   topologies: GRID_TOPOLOGY_PRESETS
 });
 
-test("the topology atlas exposes five surfaces and one singular transition", () => {
+test("the topology atlas exposes five classes, an organic sphere and one singular transition", () => {
   assert.deepEqual(
     GRID_TOPOLOGY_PRESETS.map(topology => topology.id),
-    ["sphere", "plane", "cylinder", "torus", "sphere-torus", "mobius"]
+    ["sphere", "ichthyo", "plane", "cylinder", "torus", "sphere-torus", "mobius"]
   );
   for (const topology of GRID_TOPOLOGY_PRESETS) {
     assert.equal(typeof topology.vertexCount, "function");
@@ -34,6 +34,7 @@ test("the topology atlas exposes five surfaces and one singular transition", () 
 test("each preset has the expected V, E, F and Euler characteristic", () => {
   const expected = {
     sphere: { vertexCount: 10, edges: 20, faces: 12, eulerCharacteristic: 2, boundaries: 0, orientable: true },
+    ichthyo: { vertexCount: 10, edges: 20, faces: 12, eulerCharacteristic: 2, boundaries: 0, orientable: true },
     plane: { vertexCount: 12, edges: 17, faces: 6, eulerCharacteristic: 1, boundaries: 1, orientable: true },
     cylinder: { vertexCount: 12, edges: 20, faces: 8, eulerCharacteristic: 0, boundaries: 2, orientable: true },
     torus: { vertexCount: 12, edges: 24, faces: 12, eulerCharacteristic: 0, boundaries: 0, orientable: true },
@@ -42,7 +43,8 @@ test("each preset has the expected V, E, F and Euler characteristic", () => {
   };
 
   for (const [topology, metrics] of Object.entries(expected)) {
-    const actual = measureGridTopology(mesh, { topology, columns: 4, rows: topology === "sphere" ? 4 : 3 });
+    const sphereLike = topology === "sphere" || topology === "ichthyo";
+    const actual = measureGridTopology(mesh, { topology, columns: 4, rows: sphereLike ? 4 : 3 });
     for (const [key, value] of Object.entries(metrics)) {
       assert.equal(actual[key], value, `${topology}: unexpected ${key}`);
     }

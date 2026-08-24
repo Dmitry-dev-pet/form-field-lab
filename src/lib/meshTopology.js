@@ -163,6 +163,18 @@ export const GRID_TOPOLOGY_PRESETS = Object.freeze([
     forEachFace: sphereFaces
   }),
   topology({
+    id: "ichthyo",
+    label: "Ихтиоморф",
+    description: "Сферическая сетка сохраняет χ=2, а бегущая хвостовая волна превращает её образ в плывущее тело.",
+    orientable: true,
+    boundaries: 0,
+    minRows: 3,
+    vertexCount: sphereVertexCount,
+    decodeVertex: decodeSphere,
+    forEachEdge: sphereEdges,
+    forEachFace: sphereFaces
+  }),
+  topology({
     id: "plane",
     label: "Плоскость",
     description: "Открытый прямоугольный лист с одной границей.",
