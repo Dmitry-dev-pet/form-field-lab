@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, reactive, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ColorFormulaControls from "../components/ColorFormulaControls.vue";
 import ParametricCanvas from "../components/ParametricCanvas.vue";
@@ -19,13 +19,20 @@ const layers = reactive(spatialLayerDefaults(initialForm));
 const canvas = ref(null);
 const paused = ref(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 const invertOrbitY = ref(true);
-const preset = ref("Original");
+const preset = ref(basePresetLabel(initialForm));
+const reactionMessage = ref("");
+let reactionTimer;
 const primaryControls = computed(() => selectedForm.value.primaryControls);
 const advancedControls = computed(() => selectedForm.value.advancedControls);
 const pointStatus = computed(() => `#${formNumber(selectedForm.value)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`);
 
 function formNumber(form) {
+  if (form.displayNumber) return form.displayNumber;
   return String(form.sketchNumber).padStart(2, "0");
+}
+
+function basePresetLabel(form) {
+  return form.origin === "community-synthesis" ? "Синтез" : "Original";
 }
 
 function formatValue(control, value) {
@@ -62,13 +69,23 @@ function reset() {
   resetColor();
   paused.value = false;
   invertOrbitY.value = true;
-  preset.value = "Original";
+  preset.value = basePresetLabel(form);
   canvas.value?.resetTime();
   canvas.value?.resetView();
 }
 
 function frontView() {
   canvas.value?.resetView();
+}
+
+function provoke() {
+  canvas.value?.provoke();
+}
+
+function announceStimulus() {
+  reactionMessage.value = "Пелагион сжался и раскрыл мембрану в ответ на возмущение.";
+  window.clearTimeout(reactionTimer);
+  reactionTimer = window.setTimeout(() => { reactionMessage.value = ""; }, 1800);
 }
 
 function randomStep(min, max, step) {
@@ -90,7 +107,7 @@ async function selectForm(formId, updateRoute = true) {
   selectedFormId.value = form.id;
   replaceReactive(settings, form.defaults);
   replaceReactive(layers, spatialLayerDefaults(form));
-  preset.value = "Original";
+  preset.value = basePresetLabel(form);
   await nextTick();
   canvas.value?.resetTime();
   canvas.value?.resetView();
@@ -111,6 +128,8 @@ watch(
     if (form.id !== selectedFormId.value) selectForm(form.id, false);
   }
 );
+
+onBeforeUnmount(() => window.clearTimeout(reactionTimer));
 </script>
 
 <template>
@@ -134,16 +153,18 @@ watch(
           :color-evaluator="colorEvaluator"
           :invert-y="invertOrbitY"
           :paused="paused"
+          @stimulate="announceStimulus"
         />
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot"></span>{{ paused ? "pause" : "live" }}</span>
-          <span>drag / orbit · {{ pointStatus }}</span>
+          <span>{{ selectedForm.supportsStimulus ? "tap / provoke · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
         </div>
+        <p class="sr-only" aria-live="polite">{{ reactionMessage }}</p>
       </div>
 
       <aside class="control-panel" aria-label="Параметры визуализации">
         <div class="form-picker">
-          <p class="panel-kicker">Исходная форма</p>
+          <p class="panel-kicker">Форма / синтез</p>
           <div class="form-choice-grid" role="group" aria-label="Выбор исходного скетча">
             <button
               v-for="form in spatialForms"
@@ -159,7 +180,11 @@ watch(
           </div>
           <p class="form-context">
             <span>{{ selectedForm.association }}</span>
-            <RouterLink :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }">оригинал и код →</RouterLink>
+            <RouterLink
+              v-if="selectedForm.sketch"
+              :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }"
+            >оригинал и код →</RouterLink>
+            <RouterLink v-else to="/community#pelagion">карта происхождения →</RouterLink>
           </p>
         </div>
 
@@ -185,7 +210,19 @@ watch(
         </div>
 
         <div class="button-grid">
-          <button class="button primary wide" type="button" :aria-pressed="paused" @click="paused = !paused">
+          <button
+            v-if="selectedForm.supportsStimulus"
+            class="button primary wide"
+            type="button"
+            @click="provoke"
+          >Спровоцировать реакцию</button>
+          <button
+            class="button"
+            :class="{ primary: !selectedForm.supportsStimulus, wide: !selectedForm.supportsStimulus }"
+            type="button"
+            :aria-pressed="paused"
+            @click="paused = !paused"
+          >
             {{ paused ? "Продолжить" : "Приостановить" }}
           </button>
           <button class="button" type="button" @click="reset">Сбросить</button>
@@ -246,7 +283,7 @@ watch(
           </div>
         </details>
 
-        <RouterLink class="text-link" to="/theory">Открыть код и математическую модель →</RouterLink>
+        <RouterLink class="text-link" :to="selectedForm.id === 'pelagion' ? '/theory#pelagion' : '/theory'">Открыть код и математическую модель →</RouterLink>
       </aside>
     </div>
   </section>

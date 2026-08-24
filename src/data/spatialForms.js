@@ -108,6 +108,115 @@ function pulsatorPoint(index, time, settings, layers, target) {
   return target;
 }
 
+const TAU = Math.PI * 2;
+
+function pelagionSpine(parameter, time, settings, layers, interaction, target) {
+  const u = Math.max(0, Math.min(1, parameter));
+  const tail = u ** 1.65;
+  const phase = TAU * (u * settings.swimWaves - time);
+  const profile = Math.max(0, Math.sin(Math.PI * u)) ** settings.taper;
+  const field = layers.field
+    ? settings.fieldStrength * Math.sin(
+      u * settings.fieldScale + time * 0.7 + Math.sin(u * 13 - time * 0.45)
+    )
+    : 0;
+  const stimulus = layers.response ? interaction?.strength || 0 : 0;
+  const focus = Number.isFinite(interaction?.u) ? interaction.u : 0.5;
+  const shock = stimulus * Math.exp(-28 * (u - focus) ** 2);
+  const touchX = Number.isFinite(interaction?.x) ? interaction.x : 0;
+  const touchY = Number.isFinite(interaction?.y) ? interaction.y : 0;
+
+  target._centerX = 200
+    + settings.length * (u - 0.5) * (1 - shock * 0.12);
+  target._centerY = 200
+    + settings.swim * tail * Math.sin(phase)
+    + field * profile
+    + touchY * settings.response * shock;
+  target._centerZ = settings.swim * 0.42 * tail * Math.cos(phase)
+    + field * 0.5 * Math.cos(u * 9 + time)
+    + touchX * settings.response * shock;
+  target._profile = profile;
+  target._field = field;
+  target._phase = phase;
+  target._shock = shock;
+  return target;
+}
+
+function pelagionPoint(index, time, settings, layers, target, interaction) {
+  const tentacleCount = Math.max(1, Math.round(settings.tentacles));
+  const isTendril = layers.tendrils && index % 5 === 0;
+
+  if (isTendril) {
+    const tendrilIndex = Math.floor(index / 5);
+    const branch = tendrilIndex % tentacleCount;
+    const sample = Math.floor(tendrilIndex / tentacleCount);
+    const sampleCount = Math.max(2, Math.ceil(settings.pointCount / 5 / tentacleCount));
+    const q = Math.min(1, sample / (sampleCount - 1));
+    const anchor = 0.76 + 0.035 * Math.cos(branch * 2.3);
+    const branchPhase = TAU * branch / tentacleCount;
+    pelagionSpine(anchor, time, settings, layers, interaction, target);
+
+    const anchorRadius = settings.radius * target._profile;
+    const wave = time * 2.1 - q * settings.tendrilFrequency + branchPhase;
+    const flare = 1 + (layers.response ? interaction?.strength || 0 : 0) * 0.9;
+    target.x = target._centerX + q * settings.tendrilLength;
+    target.y = target._centerY
+      + anchorRadius * 0.54 * Math.cos(branchPhase)
+      + settings.tendrilWave * q * Math.sin(wave) * flare;
+    target.z = target._centerZ
+      + anchorRadius * 0.85 * Math.sin(branchPhase) * settings.depth
+      + settings.tendrilWave * q * Math.cos(wave) * settings.depth * flare;
+    target.parameter = q;
+    target.k = Math.sin(wave);
+    target.e = target._profile;
+    target.d = q * settings.tendrilLength;
+    target.c = branchPhase;
+    target.branch = branch;
+    target.forms = tentacleCount;
+    return target;
+  }
+
+  const ringSamples = Math.max(8, Math.round(settings.ringSamples));
+  const segmentCount = Math.max(2, Math.ceil(settings.pointCount / ringSamples));
+  const u = Math.min(1, Math.floor(index / ringSamples) / (segmentCount - 1));
+  const ring = index % ringSamples;
+  const theta = TAU * ring / ringSamples
+    + settings.twist * u
+    + 0.08 * Math.sin(time + u * 9);
+  pelagionSpine(u, time, settings, layers, interaction, target);
+
+  const pulse = layers.body
+    ? 1 + settings.pulse * Math.sin(
+      time * settings.pulseFrequency - u * TAU * 1.7
+    ) ** 3
+    : 0.02;
+  const radius = settings.radius * target._profile * pulse
+    * (1 - target._shock * 0.28);
+  const rib = 0.9 + 0.1 * Math.sin(
+    theta * settings.ribs + u * TAU * 3 - time
+  );
+  const membrane = layers.membrane
+    ? 1 + settings.membrane * target._profile
+      * Math.abs(Math.sin(theta)) ** 6
+      * (0.78 + 0.22 * Math.sin(u * TAU * 2 - time))
+      * (1 + target._shock)
+    : 1;
+
+  target.x = target._centerX
+    + radius * 0.12 * Math.sin(theta * 2 + u * TAU - time);
+  target.y = target._centerY + radius * 0.72 * Math.cos(theta) * rib;
+  target.z = target._centerZ
+    + radius * Math.sin(theta) * settings.depth * membrane;
+  target.parameter = u;
+  target.k = target._field / Math.max(1, settings.fieldStrength);
+  target.e = target._profile;
+  target.d = radius;
+  target.c = theta;
+  target.branch = ring;
+  target.forms = ringSamples;
+  return target;
+}
+
 export const spatialForms = Object.freeze([
   {
     id: "brancher",
@@ -265,6 +374,77 @@ export const spatialForms = Object.freeze([
       eFrequencyB: [1, 4, 0.25]
     },
     evaluate: pulsatorPoint
+  },
+  {
+    id: "pelagion",
+    displayNumber: "P1",
+    sketchNumber: null,
+    shortLabel: "Пелагион",
+    title: "Пелагион",
+    association: "синтез · мембрана · поле · отклик",
+    description: "Новая сущность соединяет связное параметрическое тело, настоящую пространственную мембрану, течение и память света. Короткое касание возмущает организм; движение пальца вращает пространство.",
+    origin: "community-synthesis",
+    supportsStimulus: true,
+    trailLayer: "memory",
+    timeStep: 0.012,
+    defaults: {
+      speed: 1, length: 245, radius: 58, depth: 1,
+      swim: 31, swimWaves: 1.35, taper: 0.68,
+      pulse: 0.14, pulseFrequency: 2.1,
+      membrane: 1.35, twist: 5.5, ribs: 5, ringSamples: 34,
+      fieldStrength: 10, fieldScale: 17,
+      tentacles: 6, tendrilLength: 122, tendrilWave: 24,
+      tendrilFrequency: 8, response: 54, memory: 0.84,
+      pointCount: 14000, alpha: 82, backgroundColor: "#05090c"
+    },
+    primaryControls: [
+      speed,
+      control("length", "Длина", 140, 310, 1),
+      control("radius", "Объём тела", 25, 90, 1),
+      depth,
+      control("swim", "Сила движения", 0, 65, 1),
+      control("membrane", "Раскрытие мембраны", 0, 2.8, 0.05, { digits: 2 }),
+      control("response", "Реакция на касание", 0, 100, 1),
+      control("memory", "Память следа", 0, 0.96, 0.02, { format: "percent" }),
+      points(24000),
+      alpha
+    ],
+    advancedControls: [
+      control("swimWaves", "Волн вдоль тела", 0.4, 3, 0.05, { digits: 2 }),
+      control("taper", "Профиль корпуса", 0.35, 1.8, 0.05, { digits: 2 }),
+      control("pulse", "Дыхание", 0, 0.4, 0.01, { digits: 2 }),
+      control("pulseFrequency", "Ритм дыхания", 0.5, 5, 0.1, { digits: 1 }),
+      control("fieldStrength", "Сила течения", 0, 30, 0.5, { digits: 1 }),
+      control("fieldScale", "Частота течения", 4, 30, 0.5, { digits: 1 }),
+      control("twist", "Скручивание", 0, 12, 0.1, { digits: 1 }),
+      control("ribs", "Рёбра мембраны", 2, 12, 1),
+      control("ringSamples", "Сечение поверхности", 16, 56, 2),
+      control("tentacles", "Хвостовые нити", 2, 12, 1),
+      control("tendrilLength", "Длина нитей", 30, 190, 2),
+      control("tendrilWave", "Размах нитей", 0, 55, 1),
+      control("tendrilFrequency", "Волны нитей", 2, 16, 0.5, { digits: 1 })
+    ],
+    layers: [
+      { key: "body", label: "Тело", default: true },
+      { key: "membrane", label: "Мембрана", default: true },
+      { key: "field", label: "Течение", default: true },
+      { key: "tendrils", label: "Хвостовые нити", default: true },
+      { key: "response", label: "Отклик", default: true },
+      { key: "memory", label: "Память света", default: true }
+    ],
+    randomRanges: {
+      speed: [0.45, 1.8, 0.05], length: [180, 285, 1], radius: [38, 78, 1],
+      depth: [0.6, 1.55, 0.05], swim: [12, 54, 1], swimWaves: [0.75, 2.35, 0.05],
+      taper: [0.45, 1.2, 0.05], pulse: [0.04, 0.3, 0.01],
+      pulseFrequency: [1.1, 3.7, 0.1], membrane: [0.45, 2.4, 0.05],
+      twist: [2.5, 9.5, 0.1], ribs: [3, 9, 1], ringSamples: [24, 46, 2],
+      fieldStrength: [3, 24, 0.5], fieldScale: [8, 25, 0.5],
+      tentacles: [4, 10, 1], tendrilLength: [70, 165, 2],
+      tendrilWave: [10, 42, 1], tendrilFrequency: [4, 13, 0.5],
+      response: [28, 88, 1], memory: [0.58, 0.94, 0.02],
+      pointCount: [10000, 20000, 1000], alpha: [55, 130, 1]
+    },
+    evaluate: pelagionPoint
   }
 ]);
 

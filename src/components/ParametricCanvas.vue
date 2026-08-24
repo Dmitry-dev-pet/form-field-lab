@@ -8,6 +8,8 @@ import {
   rotateSpatialPoint
 } from "../lib/spatialProjection.js";
 
+const emit = defineEmits(["stimulate"]);
+
 const props = defineProps({
   form: { type: Object, required: true },
   settings: { type: Object, required: true },
@@ -32,7 +34,12 @@ let activePointerId = null;
 let pointerX = 0;
 let pointerY = 0;
 let pointerTime = 0;
+let pointerStartX = 0;
+let pointerStartY = 0;
+let pointerMoved = false;
+let clearNextFrame = true;
 const rotatedPoint = { x: 0, y: 0, z: 0 };
+const interaction = { strength: 0, x: 0, y: 0, u: 0.5 };
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const orbitRadiansPerPixel = 0.008;
 const inertiaPerFrame = 0.9;
@@ -49,8 +56,14 @@ const colorScope = {
 function render() {
   if (!context) return;
   const { form, settings, layers } = props;
+  const remembers = form.trailLayer && layers[form.trailLayer];
+  const persistence = remembers ? Number(settings.memory) || 0 : 0;
+  context.save();
+  context.globalAlpha = clearNextFrame ? 1 : Math.max(0.035, 1 - persistence);
   context.fillStyle = settings.backgroundColor;
   context.fillRect(0, 0, 400, 400);
+  context.restore();
+  clearNextFrame = false;
 
   const formulaColor = props.color.mode === "formula";
   const formulaVariables = props.colorEvaluator.variables || new Set();
@@ -66,7 +79,7 @@ function render() {
   const orbitRotation = createOrbitRotation(yaw, pitch);
 
   for (let index = settings.pointCount; index--;) {
-    form.evaluate(index, time, settings, layers, formPoint);
+    form.evaluate(index, time, settings, layers, formPoint, interaction);
     if (!Number.isFinite(formPoint.x)
       || !Number.isFinite(formPoint.y)
       || !Number.isFinite(formPoint.z)) continue;
@@ -136,6 +149,11 @@ function animate(timestamp) {
     viewChanged = true;
   }
 
+  if (interaction.strength > 0) {
+    interaction.strength = Math.max(0, interaction.strength - elapsedFrames / 78);
+    viewChanged = true;
+  }
+
   if (!props.paused) {
     time += props.form.timeStep * props.settings.speed;
     render();
@@ -147,6 +165,8 @@ function animate(timestamp) {
 
 function resetTime() {
   time = 0;
+  interaction.strength = 0;
+  clearNextFrame = true;
   render();
 }
 
@@ -155,7 +175,25 @@ function resetView() {
   pitch = 0;
   yawVelocity = 0;
   pitchVelocity = 0;
+  clearNextFrame = true;
   render();
+}
+
+function provoke(x = 0, y = 0) {
+  interaction.x = Math.max(-1, Math.min(1, x));
+  interaction.y = Math.max(-1, Math.min(1, y));
+  interaction.u = (interaction.x + 1) / 2;
+  interaction.strength = 1;
+  emit("stimulate");
+  render();
+}
+
+function provokeAtPointer(event) {
+  const bounds = canvas.value?.getBoundingClientRect();
+  if (!bounds?.width || !bounds?.height) return provoke();
+  const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+  const y = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
+  provoke(x, y);
 }
 
 function beginOrbit(event) {
@@ -163,7 +201,10 @@ function beginOrbit(event) {
   activePointerId = event.pointerId;
   pointerX = event.clientX;
   pointerY = event.clientY;
+  pointerStartX = event.clientX;
+  pointerStartY = event.clientY;
   pointerTime = event.timeStamp;
+  pointerMoved = false;
   yawVelocity = 0;
   pitchVelocity = 0;
   isOrbiting.value = true;
@@ -177,6 +218,17 @@ function beginOrbit(event) {
 
 function moveOrbit(event) {
   if (event.pointerId !== activePointerId) return;
+  if (!pointerMoved) {
+    const distance = Math.hypot(
+      event.clientX - pointerStartX,
+      event.clientY - pointerStartY
+    );
+    if (distance < 7) {
+      event.preventDefault();
+      return;
+    }
+    pointerMoved = true;
+  }
   const deltaX = event.clientX - pointerX;
   const deltaY = event.clientY - pointerY;
   const elapsed = Math.max(8, event.timeStamp - pointerTime);
@@ -197,12 +249,14 @@ function moveOrbit(event) {
 
 function finishOrbit(event, cancelled = false) {
   if (event.pointerId !== activePointerId) return;
+  const shouldProvoke = !cancelled && !pointerMoved && props.form.supportsStimulus;
   activePointerId = null;
   isOrbiting.value = false;
   if (cancelled || prefersReducedMotion) {
     yawVelocity = 0;
     pitchVelocity = 0;
   }
+  if (shouldProvoke) provokeAtPointer(event);
 }
 
 function handleOrbitKey(event) {
@@ -212,6 +266,9 @@ function handleOrbitKey(event) {
   else if (event.key === "ArrowUp") pitch = clampOrbitPitch(pitch - keyStep);
   else if (event.key === "ArrowDown") pitch = clampOrbitPitch(pitch + keyStep);
   else if (event.key === "Home" || event.key === "0") resetView();
+  else if ((event.key === "Enter" || event.key === " ") && props.form.supportsStimulus) {
+    provoke();
+  }
   else return;
 
   yawVelocity = 0;
@@ -229,7 +286,10 @@ watch(
     () => props.colorEvaluator,
     () => props.paused
   ],
-  () => { if (props.paused) render(); },
+  () => {
+    clearNextFrame = true;
+    if (props.paused) render();
+  },
   { deep: true }
 );
 
@@ -241,7 +301,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => cancelAnimationFrame(frameId));
 
-defineExpose({ resetTime, resetView, render });
+defineExpose({ resetTime, resetView, render, provoke });
 </script>
 
 <template>
@@ -253,7 +313,7 @@ defineExpose({ resetTime, resetView, render });
     height="400"
     tabindex="0"
     role="img"
-    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
+    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра.${form.supportsStimulus ? ' Коротко коснитесь формы или нажмите Enter, чтобы вызвать реакцию.' : ''} Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
     @pointerdown="beginOrbit"
     @pointermove="moveOrbit"
     @pointerup="finishOrbit"

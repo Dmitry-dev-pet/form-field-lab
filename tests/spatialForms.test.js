@@ -3,20 +3,26 @@ import assert from "node:assert/strict";
 import { spatialForms, spatialLayerDefaults } from "../src/data/spatialForms.js";
 import { createPointEngine } from "../src/lib/pointEngine.js";
 
-test("the spatial lab exposes three attributed source forms", () => {
-  assert.deepEqual(spatialForms.map(form => form.sketchNumber), [5, 1, 6]);
-  assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
-  assert.equal(new Set(spatialForms.map(form => form.sketch.id)).size, spatialForms.length);
+test("the spatial lab separates three attributed lifts from one synthesis", () => {
+  const attributed = spatialForms.filter(form => form.sketch);
+  const synthetic = spatialForms.filter(form => !form.sketch);
 
-  for (const form of spatialForms) {
+  assert.deepEqual(attributed.map(form => form.sketchNumber), [5, 1, 6]);
+  assert.deepEqual(synthetic.map(form => form.id), ["pelagion"]);
+  assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
+  assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
+
+  for (const form of attributed) {
     assert.match(form.sketch.source, /^https:\/\/x\.com\/yuruyurau\/status\//);
+  }
+  for (const form of spatialForms) {
     assert.ok(form.primaryControls.some(control => control.key === "depth"));
     assert.ok(form.layers.every(layer => Object.hasOwn(spatialLayerDefaults(form), layer.key)));
   }
 });
 
 test("every front projection reproduces its original p5.js frame", () => {
-  for (const form of spatialForms) {
+  for (const form of spatialForms.filter(item => item.sketch)) {
     const expected = createPointEngine(form.sketch).frame();
     const actual = [];
     const target = {};
@@ -58,4 +64,22 @@ test("each lift adds finite, non-flat depth without changing x/y", () => {
 
     assert.ok(Math.max(...depths) - Math.min(...depths) > 10, `${form.id}: depth is flat`);
   }
+});
+
+test("Pelagion has a local, finite response to stimulation", () => {
+  const form = spatialForms.find(item => item.id === "pelagion");
+  const layers = spatialLayerDefaults(form);
+  const calm = {};
+  const stimulated = {};
+  const index = 5789;
+
+  form.evaluate(index, 0.75, form.defaults, layers, calm, { strength: 0, u: 0.5, x: 0, y: 0 });
+  form.evaluate(index, 0.75, form.defaults, layers, stimulated, { strength: 1, u: 0.5, x: 0.6, y: -0.4 });
+
+  assert.ok([stimulated.x, stimulated.y, stimulated.z].every(Number.isFinite));
+  assert.ok(Math.hypot(
+    calm.x - stimulated.x,
+    calm.y - stimulated.y,
+    calm.z - stimulated.z
+  ) > 1);
 });

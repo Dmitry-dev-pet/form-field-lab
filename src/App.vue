@@ -17,7 +17,10 @@ function skipToMain() {
     </main>
     <footer class="app-footer">
       <span>Form / Field · исследовательский интерфейс</span>
-      <a href="https://x.com/yuruyurau" target="_blank" rel="noopener noreferrer">Исходные работы: ア / @yuruyurau ↗</a>
+      <span class="footer-links">
+        <a href="https://x.com/yuruyurau" target="_blank" rel="noopener noreferrer">Основной автор: ア / @yuruyurau ↗</a>
+        <a href="https://tsubuyaki.art/" target="_blank" rel="noopener noreferrer">Архив сообщества ↗</a>
+      </span>
     </footer>
   </div>
 </template>

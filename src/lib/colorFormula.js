@@ -28,6 +28,11 @@ export const COLOR_PRESETS = Object.freeze([
     id: "fibers",
     label: "Волокна",
     expression: "fract(0.12 * y + 0.2 * sin(k * 2 - t))"
+  },
+  {
+    id: "membrane",
+    label: "Мембрана",
+    expression: "0.5 + 0.5 * sin(3 * c + 8 * u - 1.2 * t + 0.025 * z)"
   }
 ]);
 

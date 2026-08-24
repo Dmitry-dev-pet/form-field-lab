@@ -3,6 +3,7 @@ const navigation = [
   { to: "/lab", label: "Лаборатория", short: "Лаб" },
   { to: "/evolution", label: "Эволюция", short: "Эволюция" },
   { to: "/archive", label: "Архив", short: "Архив" },
+  { to: "/community", label: "Community DNA", short: "ДНК" },
   { to: "/theory", label: "Теория", short: "Теория" }
 ];
 </script>

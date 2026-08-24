@@ -21,6 +21,12 @@ const routes = [
     meta: { title: "Архив" }
   },
   {
+    path: "/community",
+    name: "community",
+    component: () => import("./views/CommunityView.vue"),
+    meta: { title: "Community DNA" }
+  },
+  {
     path: "/sketch/:id",
     name: "sketch",
     component: () => import("./views/SketchView.vue"),
