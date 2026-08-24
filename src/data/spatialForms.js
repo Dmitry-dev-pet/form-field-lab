@@ -2,7 +2,12 @@ import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import { PELAGION_GENOME_SKETCH } from "./pelagionGenome.js";
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
-import { MESH_RENDER_MODES } from "../lib/meshTopology.js";
+import {
+  decodeGridVertex,
+  GRID_TOPOLOGY_PRESETS,
+  MESH_RENDER_MODES,
+  resolveGridDimensions
+} from "../lib/meshTopology.js";
 
 const control = (key, label, min, max, step, options = {}) => ({
   key, label, min, max, step, ...options
@@ -114,14 +119,24 @@ function pulsatorPoint(index, time, settings, layers, target) {
 
 const TAU = Math.PI * 2;
 
-function sphereGridPoint(index, time, settings, layers, target) {
-  const columns = Math.max(3, Math.round(settings.columns));
-  const rows = Math.max(2, Math.round(settings.rows));
-  const row = Math.floor(index / columns);
-  const column = index % columns;
-  const u = TAU * column / columns
-    + (layers.rotation ? time * settings.rotation : 0);
-  const v = Math.PI * row / (rows - 1);
+const TOPOLOGY_GRID = Object.freeze({
+  columnsKey: "columns",
+  rowsKey: "rows",
+  topologyKey: "topology",
+  defaultTopology: "sphere",
+  topologies: GRID_TOPOLOGY_PRESETS
+});
+
+function topologyGridPoint(index, time, settings, layers, target) {
+  const dimensions = resolveGridDimensions(TOPOLOGY_GRID, settings);
+  const vertex = decodeGridVertex(TOPOLOGY_GRID, dimensions, index, target);
+  const { columns, topology } = dimensions;
+  const normalizedU = topology.id === "plane"
+    ? vertex.column / Math.max(1, columns - 1)
+    : vertex.column / columns;
+  const normalizedV = vertex.row / Math.max(1, dimensions.rows - 1);
+  const u = TAU * normalizedU;
+  const v = Math.PI * normalizedV;
   const wave = layers.wave
     ? settings.wave * Math.sin(
       settings.waveFrequency * u
@@ -130,17 +145,55 @@ function sphereGridPoint(index, time, settings, layers, target) {
     )
     : 0;
   const radius = settings.radius + wave;
-  const ringRadius = radius * Math.sin(v);
+  const crossSection = Math.max(4, Number(settings.crossSection) || 0);
+  let x;
+  let y;
+  let z;
 
-  target.x = ringRadius * Math.cos(u) + 200;
-  target.y = radius * Math.cos(v) + 200;
-  target.z = ringRadius * Math.sin(u) * settings.depth;
-  target.parameter = v / Math.PI;
-  target.k = Math.sin(v);
+  if (topology.id === "plane") {
+    x = (normalizedU - 0.5) * radius * 1.8;
+    y = (0.5 - normalizedV) * settings.height;
+    z = wave;
+  } else if (topology.id === "cylinder") {
+    x = radius * Math.cos(u);
+    y = (0.5 - normalizedV) * settings.height;
+    z = radius * Math.sin(u);
+  } else if (topology.id === "torus") {
+    const torusV = TAU * vertex.row / dimensions.rows;
+    const majorRadius = Math.max(crossSection + 8, settings.radius - crossSection);
+    const localRadius = crossSection + wave;
+    x = (majorRadius + localRadius * Math.cos(torusV)) * Math.cos(u);
+    y = localRadius * Math.sin(torusV);
+    z = (majorRadius + localRadius * Math.cos(torusV)) * Math.sin(u);
+  } else if (topology.id === "mobius") {
+    const majorRadius = Math.max(crossSection + 8, settings.radius - crossSection);
+    const strip = (normalizedV - 0.5) * 2 * crossSection;
+    const twistedRadius = majorRadius + strip * Math.cos(u / 2) + wave;
+    x = twistedRadius * Math.cos(u);
+    y = strip * Math.sin(u / 2);
+    z = twistedRadius * Math.sin(u);
+  } else {
+    const ringRadius = radius * Math.sin(v);
+    x = ringRadius * Math.cos(u);
+    y = radius * Math.cos(v);
+    z = ringRadius * Math.sin(u);
+  }
+
+  const rotation = layers.rotation ? time * settings.rotation : 0;
+  const rotationCos = Math.cos(rotation);
+  const rotationSin = Math.sin(rotation);
+  const rotatedX = x * rotationCos + z * rotationSin;
+  const rotatedZ = -x * rotationSin + z * rotationCos;
+
+  target.x = rotatedX + 200;
+  target.y = y + 200;
+  target.z = rotatedZ * settings.depth;
+  target.parameter = normalizedV;
+  target.k = Math.sin(u);
   target.e = Math.cos(v);
-  target.d = target.z;
+  target.d = Math.hypot(x, y, z);
   target.c = u;
-  target.branch = column;
+  target.branch = vertex.column;
   target.forms = columns;
   return target;
 }
@@ -526,22 +579,19 @@ export const spatialForms = Object.freeze([
     id: "sphere-grid",
     displayNumber: "M0",
     sketchNumber: null,
-    shortLabel: "Сетчатый шар",
-    title: "Сетчатый шар",
-    association: "опыт · UV-сетка · рёбра без физики",
-    description: "Эталонная сфера показывает, как те же вычисляемые вершины превращаются в связную поверхность. Рёбра задаются соседством индексов, а движение остаётся чистой формулой.",
+    shortLabel: "Топологии",
+    title: "Атлас топологий",
+    association: "опыт · вершины · рёбра · грани",
+    description: "Один рендерер собирает сферу, плоскость, цилиндр, тор и ленту Мёбиуса из независимых законов вершин, рёбер и граней. Физика не нужна: движение остаётся чистой формулой.",
     origin: "mesh-study",
     genomeSketch: SPHERE_GRID_GENOME_SKETCH,
-    mesh: Object.freeze({
-      columnsKey: "columns",
-      rowsKey: "rows",
-      wrapColumns: true
-    }),
+    mesh: TOPOLOGY_GRID,
     renderModes: MESH_RENDER_MODES,
     timeStep: 0.012,
     defaults: {
-      speed: 1, radius: 118, depth: 1,
-      columns: 32, rows: 16, rotation: 0.8,
+      topology: "sphere", speed: 1, radius: 118, depth: 1,
+      columns: 30, rows: 19, rotation: 0.8,
+      crossSection: 36, height: 190,
       wave: 0, waveFrequency: 3, waveVertical: 2, waveSpeed: 1.4,
       lineWidth: 0.72, renderMode: "hybrid", alpha: 106,
       backgroundColor: "#05090c"
@@ -557,6 +607,8 @@ export const spatialForms = Object.freeze([
       alpha
     ],
     advancedControls: [
+      control("crossSection", "Радиус сечения / полуширина", 12, 62, 1),
+      control("height", "Высота листа / цилиндра", 90, 260, 2),
       control("waveFrequency", "Волн по долготе", 1, 12, 1),
       control("waveVertical", "Волн по широте", 0, 8, 1),
       control("waveSpeed", "Скорость волны", 0, 4, 0.1, { digits: 1 }),
@@ -569,10 +621,11 @@ export const spatialForms = Object.freeze([
     randomRanges: {
       speed: [0.4, 1.8, 0.05], radius: [82, 138, 1], depth: [0.6, 1.5, 0.05],
       columns: [18, 52, 1], rows: [10, 30, 1], rotation: [0.25, 1.7, 0.05],
+      crossSection: [22, 48, 1], height: [140, 230, 2],
       wave: [0, 18, 0.5], waveFrequency: [2, 9, 1], waveVertical: [0, 6, 1],
       waveSpeed: [0.4, 3, 0.1], lineWidth: [0.4, 1.35, 0.05], alpha: [65, 165, 1]
     },
-    evaluate: sphereGridPoint
+    evaluate: topologyGridPoint
   },
   {
     id: "pelagion",

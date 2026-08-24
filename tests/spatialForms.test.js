@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spatialForms, spatialLayerDefaults } from "../src/data/spatialForms.js";
+import { GRID_TOPOLOGY_PRESETS, resolveGridDimensions } from "../src/lib/meshTopology.js";
 import { createPointEngine } from "../src/lib/pointEngine.js";
 
 test("the spatial lab separates attributed lifts from synthetic entities", () => {
@@ -26,10 +27,11 @@ test("the mesh baseline stays an exact sphere before deformation", () => {
   const form = spatialForms.find(item => item.id === "sphere-grid");
   const layers = spatialLayerDefaults(form);
   const target = {};
-  const vertexCount = form.defaults.columns * form.defaults.rows;
+  const { vertexCount } = resolveGridDimensions(form.mesh, form.defaults);
 
   assert.equal(form.defaults.wave, 0);
   assert.equal(form.defaults.renderMode, "hybrid");
+  assert.equal(form.defaults.topology, "sphere");
   assert.equal(vertexCount, 512);
 
   for (let index = 0; index < vertexCount; index += 17) {
@@ -40,6 +42,28 @@ test("the mesh baseline stays an exact sphere before deformation", () => {
       target.z / form.defaults.depth
     );
     assert.ok(Math.abs(radius - form.defaults.radius) < 1e-9);
+  }
+});
+
+test("all five topology embeddings are finite spatial surfaces", () => {
+  const form = spatialForms.find(item => item.id === "sphere-grid");
+  const layers = spatialLayerDefaults(form);
+
+  for (const topology of GRID_TOPOLOGY_PRESETS) {
+    const settings = { ...form.defaults, topology: topology.id };
+    const dimensions = resolveGridDimensions(form.mesh, settings);
+    const axes = { x: [], y: [], z: [] };
+    const target = {};
+    for (let index = 0; index < dimensions.vertexCount; index += 7) {
+      form.evaluate(index, 0.7, settings, layers, target);
+      for (const axis of Object.keys(axes)) {
+        assert.ok(Number.isFinite(target[axis]), `${topology.id}: invalid ${axis}`);
+        axes[axis].push(target[axis]);
+      }
+    }
+    assert.ok(Math.max(...axes.x) - Math.min(...axes.x) > 10, `${topology.id}: x is flat`);
+    assert.ok(Math.max(...axes.y) - Math.min(...axes.y) > 10, `${topology.id}: y is flat`);
+    assert.ok(Math.max(...axes.z) - Math.min(...axes.z) > 10, `${topology.id}: z is flat`);
   }
 });
 
@@ -75,9 +99,12 @@ test("each lift adds finite, non-flat depth without changing x/y", () => {
     const layers = spatialLayerDefaults(form);
     const target = {};
     const depths = [];
+    const pointCount = form.mesh
+      ? resolveGridDimensions(form.mesh, form.defaults).vertexCount
+      : form.defaults.pointCount;
 
     for (let index = 1; index <= 200; index++) {
-      form.evaluate(index * 37, form.timeStep * 5, form.defaults, layers, target);
+      form.evaluate((index * 37) % pointCount, form.timeStep * 5, form.defaults, layers, target);
       assert.ok(Number.isFinite(target.x), `${form.id}: invalid x`);
       assert.ok(Number.isFinite(target.y), `${form.id}: invalid y`);
       assert.ok(Number.isFinite(target.z), `${form.id}: invalid z`);

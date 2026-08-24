@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  decodeGridVertex,
   forEachGridEdge,
+  forEachGridFace,
+  GRID_TOPOLOGY_PRESETS,
+  measureGridTopology,
   MESH_RENDER_MODE,
   readMeshRenderMode,
   resolveGridDimensions
@@ -10,31 +14,75 @@ import {
 const mesh = Object.freeze({
   columnsKey: "columns",
   rowsKey: "rows",
-  wrapColumns: true
+  topologyKey: "topology",
+  topologies: GRID_TOPOLOGY_PRESETS
 });
 
-test("grid dimensions derive a stable vertex count from rows and columns", () => {
+test("the topology atlas exposes five independent surface contracts", () => {
   assert.deepEqual(
-    resolveGridDimensions(mesh, { columns: 32, rows: 16 }),
-    { columns: 32, rows: 16, vertexCount: 512 }
+    GRID_TOPOLOGY_PRESETS.map(topology => topology.id),
+    ["sphere", "plane", "cylinder", "torus", "mobius"]
   );
-  assert.deepEqual(
-    resolveGridDimensions(mesh, { columns: 1, rows: 1 }),
-    { columns: 3, rows: 2, vertexCount: 6 }
-  );
+  for (const topology of GRID_TOPOLOGY_PRESETS) {
+    assert.equal(typeof topology.vertexCount, "function");
+    assert.equal(typeof topology.decodeVertex, "function");
+    assert.equal(typeof topology.forEachEdge, "function");
+    assert.equal(typeof topology.forEachFace, "function");
+  }
 });
 
-test("wrapped grid connects parallels, meridians and the longitude seam", () => {
-  const dimensions = resolveGridDimensions(mesh, { columns: 4, rows: 3 });
-  const edges = [];
+test("each preset has the expected V, E, F and Euler characteristic", () => {
+  const expected = {
+    sphere: { vertexCount: 10, edges: 20, faces: 12, eulerCharacteristic: 2, boundaries: 0, orientable: true },
+    plane: { vertexCount: 12, edges: 17, faces: 6, eulerCharacteristic: 1, boundaries: 1, orientable: true },
+    cylinder: { vertexCount: 12, edges: 20, faces: 8, eulerCharacteristic: 0, boundaries: 2, orientable: true },
+    torus: { vertexCount: 12, edges: 24, faces: 12, eulerCharacteristic: 0, boundaries: 0, orientable: true },
+    mobius: { vertexCount: 12, edges: 20, faces: 8, eulerCharacteristic: 0, boundaries: 1, orientable: false }
+  };
+
+  for (const [topology, metrics] of Object.entries(expected)) {
+    const actual = measureGridTopology(mesh, { topology, columns: 4, rows: topology === "sphere" ? 4 : 3 });
+    for (const [key, value] of Object.entries(metrics)) {
+      assert.equal(actual[key], value, `${topology}: unexpected ${key}`);
+    }
+  }
+});
+
+test("the sphere stores each pole once and keeps the 512-node baseline", () => {
+  const dimensions = resolveGridDimensions(mesh, { topology: "sphere", columns: 30, rows: 19 });
+  const top = decodeGridVertex(mesh, dimensions, 0);
+  const bottom = decodeGridVertex(mesh, dimensions, dimensions.vertexCount - 1);
+
+  assert.equal(dimensions.vertexCount, 512);
+  assert.deepEqual({ row: top.row, column: top.column }, { row: 0, column: 0 });
+  assert.deepEqual({ row: bottom.row, column: bottom.column }, { row: 18, column: 0 });
+  assert.equal(measureGridTopology(mesh, { topology: "sphere", columns: 30, rows: 19 }).eulerCharacteristic, 2);
+});
+
+test("the Möbius seam reverses the transverse row", () => {
+  const dimensions = resolveGridDimensions(mesh, { topology: "mobius", columns: 4, rows: 3 });
+  const seams = [];
   forEachGridEdge(mesh, dimensions, (first, second, kind) => {
-    edges.push([first, second, kind]);
+    if (kind === "seam") seams.push([first, second]);
   });
 
-  assert.equal(edges.length, 4 * 3 + 4 * 2);
-  assert.ok(edges.some(edge => edge[0] === 3 && edge[1] === 0 && edge[2] === "parallel"));
-  assert.ok(edges.some(edge => edge[0] === 4 && edge[1] === 8 && edge[2] === "meridian"));
-  assert.ok(edges.every(edge => edge[0] < 12 && edge[1] < 12));
+  assert.ok(seams.some(([first, second]) => first === 3 && second === 8));
+  assert.ok(seams.some(([first, second]) => first === 7 && second === 4));
+  assert.ok(seams.some(([first, second]) => first === 11 && second === 0));
+});
+
+test("every generated edge and face references a valid vertex", () => {
+  for (const topology of GRID_TOPOLOGY_PRESETS) {
+    const dimensions = resolveGridDimensions(mesh, { topology: topology.id, columns: 7, rows: 5 });
+    forEachGridEdge(mesh, dimensions, (first, second) => {
+      assert.ok(first >= 0 && first < dimensions.vertexCount, `${topology.id}: invalid edge start`);
+      assert.ok(second >= 0 && second < dimensions.vertexCount, `${topology.id}: invalid edge end`);
+    });
+    forEachGridFace(mesh, dimensions, vertices => {
+      assert.ok(vertices.length === 3 || vertices.length === 4);
+      assert.ok(vertices.every(index => index >= 0 && index < dimensions.vertexCount), `${topology.id}: invalid face`);
+    });
+  }
 });
 
 test("mesh rendering exposes points, wireframe and hybrid modes", () => {

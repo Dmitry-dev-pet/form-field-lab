@@ -5,7 +5,8 @@ import {
   forEachGridEdge,
   MESH_RENDER_MODE,
   readMeshRenderMode,
-  resolveGridDimensions
+  resolveGridDimensions,
+  resolveGridTopology
 } from "../lib/meshTopology.js";
 import {
   clampOrbitPitch,
@@ -65,7 +66,7 @@ const colorScope = {
 
 const canvasAriaLabel = computed(() => {
   const geometry = props.form.mesh
-    ? `сеточная пространственная композиция в режиме ${readMeshRenderMode(props.settings.renderMode)}`
+    ? `топология ${resolveGridTopology(props.form.mesh, props.settings).label}, сеточная пространственная композиция в режиме ${readMeshRenderMode(props.settings.renderMode)}`
     : "пространственная анимированная композиция из точек";
   const coloring = props.color.mode === "formula" ? "формульно окрашенная" : "однотонная";
   return `${props.form.title}: ${coloring} ${geometry}. Проведите пальцем или используйте стрелки, чтобы изменить только угол зрения. Инверсия Y ${props.invertY ? "включена" : "выключена"}.`;

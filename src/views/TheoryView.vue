@@ -111,16 +111,27 @@ e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
 \end{aligned}`;
 
 const sphereGridLatexSource = String.raw`\begin{aligned}
+\mathcal M(t)&=(V,E,F,\mathbf P(t)),
+&\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
+\chi(\mathcal M)&=|V|-|E|+|F|.&&
+\end{aligned}
+
+\begin{aligned}
+\text{цилиндр: } &(0,v)\sim(1,v),\\
+\text{тор: } &(0,v)\sim(1,v),\quad(u,0)\sim(u,1),\\
+\text{лента Мёбиуса: } &(0,v)\sim(1,1-v).
+\end{aligned}
+
+\begin{aligned}
 u_c &= 2\pi\frac{c}{C}+\omega t,
-& v_r &= \pi\frac{r}{R-1},\\
+&v_r &= \pi\frac{r}{R-1},\\
 \rho(u,v,t) &= \rho_0+A\sin(mu+nv-\nu t),\\
-\mathbf P_{r,c}(t) &=
+\mathbf P^{\text{sphere}}_{r,c}(t) &=
 \begin{bmatrix}
 \rho\sin v_r\cos u_c\\
 \rho\cos v_r\\
 \lambda\rho\sin v_r\sin u_c
-\end{bmatrix},\\
-\mathcal E &= \{(r,c)\leftrightarrow(r,c+1),\ (r,c)\leftrightarrow(r+1,c)\}.
+\end{bmatrix}.
 \end{aligned}`;
 
 const kernelSource = `const ORIGINAL = {
@@ -399,7 +410,7 @@ onMounted(async () => {
 
       <article id="sphere-grid" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>06 / MESH BASELINE</span><h2>Сетчатый шар: вершины и связи</h2></div>
+          <div><span>06 / TOPOLOGY ATLAS</span><h2>Вершины, рёбра и грани</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('sphereGrid', sphereGridLatexSource)">{{ copyLabels.sphereGrid }}</button>
             <button class="button" type="button" @click="copy('sphereGridSeed', SPHERE_GRID_GENOME)">{{ copyLabels.sphereGridSeed }}</button>
@@ -407,23 +418,38 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Это контрольный опыт, а не новая биологическая сущность. Индексы <code>r</code> и <code>c</code> образуют регулярную UV-сетку: первый выбирает широту, второй — долготу. Координаты каждой вершины по-прежнему вычисляются заново из формулы на каждом кадре.</p>
+            <p>Теперь M0 — не один шар, а общий контракт поверхности. Формула <code>P(i,t)</code> вычисляет положение вершины, множество <code>E</code> решает, какие вершины соединены, а <code>F</code> перечисляет треугольные или четырёхугольные грани. Камере и цветовому полю всё равно, какой закон связей выбран.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              u_c &amp;=2\pi\frac{c}{C}+\omega t,
-              &amp;v_r &amp;=\pi\frac{r}{R-1},\\
-              \rho &amp;=\rho_0+A\sin(mu_c+nv_r-\nu t),\\
-              \mathbf P_{r,c} &amp;=
-              \begin{bmatrix}
-              \rho\sin v_r\cos u_c\\
-              \rho\cos v_r\\
-              \lambda\rho\sin v_r\sin u_c
-              \end{bmatrix}.
+              \mathcal M(t)&amp;=(V,E,F,\mathbf P(t)),
+              &amp;\mathbf P_i(t)&amp;=(x_i(t),y_i(t),z_i(t)),\\
+              \chi(\mathcal M)&amp;=|V|-|E|+|F|.
               \end{aligned}
               \]
             </div>
-            <p>Сетка не добавляет сил, масс или пружин. Она лишь соединяет индекс <code>(r,c)</code> с <code>(r,c+1)</code> и <code>(r+1,c)</code>; долгота замыкается по модулю <code>C</code>. Поэтому режимы «Точки», «Сетка» и «Вместе» показывают одну и ту же геометрию.</p>
+            <p>Различие возникает в шве параметрического прямоугольника. Цилиндр склеивает только левый и правый края, тор — ещё верх и низ, а лента Мёбиуса перед склейкой переворачивает поперечную координату:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \text{цилиндр: } &amp;(0,v)\sim(1,v),\\
+              \text{тор: } &amp;(0,v)\sim(1,v),\quad(u,0)\sim(u,1),\\
+              \text{Мёбиус: } &amp;(0,v)\sim(1,1-v).
+              \end{aligned}
+              \]
+            </div>
+            <div class="topology-table-wrap">
+              <table class="topology-table">
+                <thead><tr><th>Поверхность</th><th>χ</th><th>Границы</th><th>Ориентация</th></tr></thead>
+                <tbody>
+                  <tr><td>Сфера</td><td>2</td><td>0</td><td>да</td></tr>
+                  <tr><td>Плоскость</td><td>1</td><td>1</td><td>да</td></tr>
+                  <tr><td>Цилиндр</td><td>0</td><td>2</td><td>да</td></tr>
+                  <tr><td>Тор</td><td>0</td><td>0</td><td>да</td></tr>
+                  <tr><td>Мёбиус</td><td>0</td><td>1</td><td>нет</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
@@ -431,15 +457,16 @@ onMounted(async () => {
               <strong>{{ SPHERE_GRID_GENOME_CHARACTERS }} / {{ SPHERE_GRID_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ SPHERE_GRID_GENOME }}</code></pre>
-            <p>RAW-версия укладывает сферу, соседние рёбра, автоматический поворот и ручную 3D-проекцию в один пост. SPA использует ту же параметризацию, добавляя только управление камерой, режим отображения и формульный цвет.</p>
+            <p>RAW-версия остаётся 276-символьным каноническим семенем сферы: соседние рёбра, автоматический поворот и ручная 3D-проекция помещаются в один пост. Пять топологий — расширенный фенотип SPA; перенос всего атласа в тот же лимит разрушил бы читаемый закон.</p>
             <div class="pelagion-links">
-              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть сетчатый шар →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть атлас топологий →</RouterLink>
               <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid', view: 'bare' } }">Запустить RAW-формулу →</RouterLink>
             </div>
           </div>
         </div>
         <div class="tiny-code-context">
-          <p><strong>Что проверяет опыт.</strong> Рёбра можно добавить к формульным точкам без отдельной физики и без долговременного массива состояния. Изменение формулы поверхности автоматически перестраивает и вершины, и всю сетку.</p>
+          <p><strong>Что проверяет опыт.</strong> Топология не требует отдельной физики и не обязана совпадать с формой в пространстве. Тор и лента Мёбиуса имеют одинаковое \(\chi=0\), но только Мёбиус неориентируем. Более экзотические законы тоже допустимы; некоторые из них, например бутылка Клейна, неизбежно самопересекутся при показе в обычном трёхмерном пространстве.</p>
+          <p><strong>Граница управления.</strong> Перетаскивание пальцем меняет только матрицу камеры. Оно не перестраивает <code>V</code>, <code>E</code> или <code>F</code> и не создаёт мутацию.</p>
         </div>
       </article>
 

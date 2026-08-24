@@ -19,7 +19,11 @@ import {
   mergeLabViewModeQuery,
   readLabViewMode
 } from "../lib/labViewMode.js";
-import { readMeshRenderMode, resolveGridDimensions } from "../lib/meshTopology.js";
+import {
+  measureGridTopology,
+  readMeshRenderMode,
+  resolveGridTopology
+} from "../lib/meshTopology.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -158,11 +162,23 @@ const bareLead = computed(() => selectedForm.value.sketch
     : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
 const primaryControls = computed(() => selectedForm.value.primaryControls);
 const advancedControls = computed(() => selectedForm.value.advancedControls);
+const selectedTopology = computed(() => selectedForm.value.mesh
+  ? resolveGridTopology(selectedForm.value.mesh, settings)
+  : null);
+const meshMetrics = computed(() => selectedForm.value.mesh
+  ? measureGridTopology(selectedForm.value.mesh, settings)
+  : null);
+const boundaryLabel = computed(() => {
+  const boundaries = meshMetrics.value?.boundaries || 0;
+  if (!boundaries) return "без границы";
+  if (boundaries === 1) return "1 граница";
+  if (boundaries >= 2 && boundaries <= 4) return `${boundaries} границы`;
+  return `${boundaries} границ`;
+});
 const pointStatus = computed(() => {
   const form = selectedForm.value;
   if (form.mesh) {
-    const { vertexCount } = resolveGridDimensions(form.mesh, settings);
-    return `#${formNumber(form)} · ${vertexCount.toLocaleString("ru-RU")} узлов · 400²`;
+    return `#${formNumber(form)} · ${selectedTopology.value.label} · ${meshMetrics.value.vertexCount.toLocaleString("ru-RU")} узлов · 400²`;
   }
   return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`;
 });
@@ -207,6 +223,12 @@ function toggleLayer(key) {
 function setRenderMode(mode) {
   settings.renderMode = readMeshRenderMode(mode);
   changed();
+}
+
+function setTopology(topologyId) {
+  if (!selectedForm.value.mesh?.topologies.some(item => item.id === topologyId)) return;
+  settings.topology = topologyId;
+  preset.value = "Топология";
 }
 
 function replaceReactive(target, source) {
@@ -558,6 +580,30 @@ onBeforeUnmount(() => {
           <div class="panel-title-row">
             <h2>Параметры</h2>
             <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
+          </div>
+
+          <div v-if="selectedForm.mesh" class="mesh-topology-field">
+            <div class="mesh-mode-title">
+              <strong>Топология</strong>
+              <small>отдельный закон связей</small>
+            </div>
+            <div class="topology-switch" role="group" aria-label="Топология сеточной формы">
+              <button
+                v-for="topology in selectedForm.mesh.topologies"
+                :key="topology.id"
+                type="button"
+                :aria-pressed="selectedTopology.id === topology.id"
+                @click="setTopology(topology.id)"
+              >{{ topology.label }}</button>
+            </div>
+            <p class="topology-description">{{ selectedTopology.description }}</p>
+            <dl class="mesh-facts" aria-live="polite" aria-label="Топологические инварианты">
+              <div><dt>V</dt><dd>{{ meshMetrics.vertexCount }}</dd></div>
+              <div><dt>E</dt><dd>{{ meshMetrics.edges }}</dd></div>
+              <div><dt>F</dt><dd>{{ meshMetrics.faces }}</dd></div>
+              <div><dt>χ</dt><dd>{{ meshMetrics.eulerCharacteristic }}</dd></div>
+            </dl>
+            <p class="topology-summary">{{ meshMetrics.orientable ? "ориентируемая" : "неориентируемая" }} · {{ boundaryLabel }}</p>
           </div>
 
           <div v-if="selectedForm.renderModes" class="mesh-mode-field">
