@@ -165,7 +165,7 @@ const sphereGridLatexSource = String.raw`\begin{aligned}
 \chi(\mathcal M)&=|V|-|E|+|F|,\\
 G_\tau(\theta)&=\operatorname{compile}(\tau,\theta),
 &|G_\tau(\theta)|&\le 280,\\
-\operatorname{SPA}(\tau,\theta,t)&=\operatorname{decode}(G_\tau(\theta),t).&&
+\operatorname{Canvas}(t)&=\operatorname{p5}(G_\tau(\theta),t).&&
 \end{aligned}
 
 \begin{aligned}
@@ -501,7 +501,7 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>M0 состоит из семи самостоятельных исполняемых геномов: пяти топологических классов, органической деформации сферы и автоматического перехода сфера↔тор. Только после проверки лимита SPA расшифровывает тот же закон в управляемую пространственную модель.</p>
+            <p>M0 состоит из семи самостоятельных исполняемых геномов: пяти топологических классов, органической деформации сферы и автоматического перехода сфера↔тор. После проверки лимита лаборатория передаёт выбранную строку непосредственно p5.js.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
@@ -510,7 +510,7 @@ onMounted(async () => {
               \chi(\mathcal M)&amp;=|V|-|E|+|F|,\\
               G_\tau(\theta)&amp;=\operatorname{compile}(\tau,\theta),
               &amp;|G_\tau(\theta)|&amp;\le 280,\\
-              \operatorname{SPA}(\tau,\theta,t)&amp;=\operatorname{decode}(G_\tau(\theta),t).
+              \operatorname{Canvas}(t)&amp;=\operatorname{p5}(G_\tau(\theta),t).
               \end{aligned}
               \]
             </div>
@@ -569,18 +569,17 @@ onMounted(async () => {
               <strong>{{ sphereTorusGenome.characters }} / {{ sphereTorusGenome.limit }}</strong>
             </div>
             <pre><code>{{ sphereTorusGenome.code }}</code></pre>
-            <p>Это не переключатель между двумя заготовками. Радиус \(R(t)\) находится внутри самой короткой программы, поэтому голый скетч без SPA самостоятельно совершает полный цикл. Изменение топологии образа требует сингулярности — формула не скрывает этот момент.</p>
+            <p>Это не переключатель между двумя заготовками. Радиус \(R(t)\) находится внутри самой короткой программы, поэтому RAW самостоятельно совершает полный цикл. Изменение топологии образа требует сингулярности — формула не скрывает этот момент.</p>
             <ul class="topology-genome-counts" aria-label="Размеры семи исходных геномов">
               <li v-for="genome in topologyGenomeRows" :key="genome.id"><span>{{ genome.label }}</span><code>{{ genome.characters }}/280</code></li>
             </ul>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть редактор RAW-геномов →</RouterLink>
-              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid', view: 'bare' } }">Запустить RAW-формулу →</RouterLink>
             </div>
           </div>
         </div>
         <div class="tiny-code-context">
-          <p><strong>Источник истины.</strong> Итогом является только строка <code>Gτ(θ)</code>. В переходном геноме и сфера, и тор уже находятся в этой строке как разные фазы одного закона; SPA не подменяет их двумя отдельными моделями.</p>
+          <p><strong>Источник истины.</strong> Итогом является только строка <code>Gτ(θ)</code>. В переходном геноме и сфера, и тор уже находятся в этой строке как разные фазы одного закона; второго рендерера нет.</p>
           <p><strong>Граница управления.</strong> Перетаскивание пальцем меняет только матрицу камеры и потому не меняет ни одного символа RAW. Генетические ползунки, наоборот, немедленно пересобирают исполняемый код.</p>
         </div>
       </article>
@@ -644,7 +643,7 @@ onMounted(async () => {
               <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
-            <p>Первый RAW сохраняет минимальное непрерывное движение. Во втором одна величина <code>s=sin(4t-u)³</code> одновременно сжимает корпус, расширяет поперечное сечение и глубину, ведёт хвост и цвет. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома; более точная компенсация объёма, отклик и след остаются расширением SPA.</p>
+            <p>Первый RAW сохраняет минимальное непрерывное движение. Во втором одна величина <code>s=sin(4t-u)³</code> одновременно сжимает корпус, расширяет поперечное сечение и глубину, ведёт хвост и цвет. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома; не закодированные отклик и след лаборатория больше не дорисовывает.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
@@ -704,10 +703,9 @@ onMounted(async () => {
               <strong>{{ CHRONOPHORE_GENOME_CHARACTERS }} / {{ CHRONOPHORE_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ CHRONOPHORE_GENOME }}</code></pre>
-            <p>RAW-геном сохраняет узел <code>(2,3)</code>, девять нитей, независимую координату <code>z</code>, цветовой поток и автоматический поворот. Для совместимости глубина проецируется в обычный 2D canvas; эхо, деление, рой, след и управление камерой раскрывает SPA.</p>
+            <p>RAW-геном сохраняет узел <code>(2,3)</code>, девять нитей, независимую координату <code>z</code>, цветовой поток и автоматический поворот. Для совместимости глубина проецируется в обычный 2D canvas. Эхо, деление и рой остаются теоретическим расширением, пока не будут закодированы в исполняемую строку.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'chronophore' } }">Открыть Хронофор →</RouterLink>
-              <RouterLink :to="{ name: 'lab', query: { form: 'chronophore', view: 'bare' } }">Запустить RAW-геном →</RouterLink>
             </div>
           </div>
         </div>
@@ -727,7 +725,7 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>В режиме «Без памяти» индекс точки каждый кадр отображается на оболочку заново. В режиме «С памятью» холст хранит для каждой частицы координаты, возраст, номер поколения и скорость. Поэтому одинаковое текущее время уже недостаточно, чтобы восстановить форму: нужна вся предыдущая траектория.</p>
+            <p>Параметрическая контрольная модель каждый кадр отображает индекс точки на оболочку заново. RAW Мнемофоры вместо этого хранит для каждой частицы координаты, возраст, номер поколения и скорость. Поэтому одинакового текущего времени уже недостаточно, чтобы восстановить форму: нужна вся предыдущая траектория.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
@@ -769,10 +767,9 @@ onMounted(async () => {
                 <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>При 280 символах остаются память координат, обновление поколений и внешняя 3D-камера. Больший бюджет сначала возвращает формульный цвет, затем два процедурных семейства рёбер. SPA не выдаёт расширенный вариант за короткий: выбирается только реально помещающийся исполняемый код.</p>
+            <p>При 280 символах остаются память координат, обновление поколений и внешняя 3D-камера. Больший бюджет сначала возвращает формульный цвет, затем два процедурных семейства рёбер. Лаборатория выбирает только реально помещающийся код и исполняет именно его.</p>
             <div class="pelagion-links">
-              <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore' } }">Сравнить два режима времени →</RouterLink>
-              <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore', view: 'bare' } }">Открыть бюджет RAW →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore' } }">Открыть бюджет RAW →</RouterLink>
             </div>
           </div>
         </div>

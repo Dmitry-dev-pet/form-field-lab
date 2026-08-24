@@ -1,8 +1,7 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ColorFormulaControls from "../components/ColorFormulaControls.vue";
-import ParametricCanvas from "../components/ParametricCanvas.vue";
 import SketchRunner from "../components/SketchRunner.vue";
 import { useColorFormula } from "../composables/useColorFormula.js";
 import { spatialForms, spatialFormById, spatialLayerDefaults } from "../data/spatialForms.js";
@@ -27,13 +26,7 @@ import {
   writeSavedEntities
 } from "../lib/genomeImprint.js";
 import {
-  LAB_VIEW_MODE,
-  mergeLabViewModeQuery,
-  readLabViewMode
-} from "../lib/labViewMode.js";
-import {
   measureGridTopology,
-  readMeshRenderMode,
   resolveGridTopology
 } from "../lib/meshTopology.js";
 import {
@@ -44,7 +37,7 @@ import {
 
 const route = useRoute();
 const router = useRouter();
-const { color, evaluator: colorEvaluator, error: colorFormulaError, resetColor } = useColorFormula(route, router);
+const { color, error: colorFormulaError, resetColor } = useColorFormula(route, router);
 
 const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
@@ -61,7 +54,7 @@ function hydrateSavedForm(record) {
     shortLabel: legacyTitle.replace("Хронофор ", "Мутация "),
     title: legacyTitle,
     association: `закреплённая мутация · потомок ${record.parentDisplayNumber}`,
-    description: `Закреплённый отпечаток Хронофора сохраняет параметры, цвет и пространственную позу родителя ${record.parentDisplayNumber}. Его можно снова развернуть в SPA и использовать как родителя следующего поколения.`,
+    description: `Закреплённая RAW-мутация Хронофора сохраняет параметры и цвет родителя ${record.parentDisplayNumber}. Её можно снова исполнять напрямую и использовать как родителя следующего поколения.`,
     origin: "local-mutation",
     genomeSketch: Object.freeze({ id: `${record.id}-genome`, code: record.code }),
     defaults: Object.freeze({ ...chronophoreForm.defaults, ...record.settings }),
@@ -81,6 +74,11 @@ function formById(formId) {
 
 const requestedFormId = Array.isArray(route.query.form) ? route.query.form[0] : route.query.form;
 const initialForm = formById(requestedFormId);
+if (Object.hasOwn(route.query, "view")) {
+  const query = { ...route.query };
+  delete query.view;
+  router.replace({ query }).catch(() => undefined);
+}
 const selectedFormId = ref(initialForm.id);
 const selectedForm = computed(() => formById(selectedFormId.value));
 const formGroups = computed(() => {
@@ -110,25 +108,18 @@ const formGroups = computed(() => {
   }
   return groups;
 });
-const viewMode = ref(readLabViewMode(route.query.view));
-const isBareMode = computed(() => viewMode.value === LAB_VIEW_MODE.bare);
 const settings = reactive({ ...initialForm.defaults });
 const layers = reactive(initialForm.savedLayers || spatialLayerDefaults(initialForm));
-const canvas = ref(null);
 const bareRunner = ref(null);
-const spaPaused = ref(false);
 const barePaused = ref(false);
 const invertOrbitY = ref(true);
 const preset = ref(basePresetLabel(initialForm));
-const reactionMessage = ref("");
 const mutationMessage = ref("");
 const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref(defaultBareVariant(initialForm));
 const rawBudget = ref(RAW_CODE_BUDGET_MIN);
 const spaSnapshot = ref(restoredViewFor(initialForm));
 const rawViewState = ref(spaSnapshot.value);
-const imprintSnapshot = ref(null);
-let reactionTimer;
 let mutationTimer;
 
 if (initialForm.savedColor) Object.assign(color, initialForm.savedColor);
@@ -141,15 +132,12 @@ const compiledTopologyGenome = computed(() => isTopologyGenome.value
 const canonicalSketch = computed(() => compiledTopologyGenome.value?.sketch
   || selectedForm.value.sketch
   || selectedForm.value.genomeSketch);
-const canvasColor = computed(() => isTopologyGenome.value
-  ? { mode: "solid", colorA: "#ffffff", colorB: "#ffffff" }
-  : color);
-const imprintSource = computed(() => imprintSnapshot.value || {
+const imprintSource = computed(() => ({
   settings: { ...settings },
   layers: { ...layers },
   color: { ...color },
-  pose: spaSnapshot.value || selectedForm.value.savedPose || { yaw: 0, pitch: 0, time: 0 }
-});
+  pose: rawViewState.value || spaSnapshot.value || selectedForm.value.savedPose || { yaw: 0, pitch: 0, time: 0 }
+}));
 
 function compileImprintSource(source, pose = source.pose) {
   if (!supportsImprint.value || colorFormulaError.value) return null;
@@ -179,6 +167,8 @@ const isImprintBare = computed(() => supportsImprint.value
   && bareVariant.value === "imprint"
   && Boolean(imprintResult.value)
   && imprintResult.value.characters <= rawBudget.value);
+const isImprintRequested = computed(() => supportsImprint.value
+  && bareVariant.value === "imprint");
 const selectedRawVariant = computed(() => budgetSelection.value?.variant
   || selectedForm.value.rawVariants?.find(variant => variant.id === bareVariant.value)
   || null);
@@ -207,35 +197,46 @@ const bareRunnerLabel = computed(() => isTopologyGenome.value
   : selectedForm.value.sketch
     ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
   : isImprintBare.value
-    ? `${selectedForm.value.title}: исполняемый отпечаток текущего состояния SPA`
+    ? `${selectedForm.value.title}: исполняемая RAW-мутация текущих параметров`
   : selectedRawVariant.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} символов`
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isTopologyGenome.value
-  ? `Это итоговый исполняемый код выбранной формы: ${bareCodeLength.value} из 280 символов. SPA только расшифровывает и настраивает его константы.`
+  ? `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : selectedForm.value.budgetVariants
     ? `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
-    ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
+    ? "На холсте без преобразований выполняется исходный p5.js-код автора."
   : isImprintBare.value
-    ? "Исполняемый отпечаток переносит в автономный p5.js-код текущую фазу, пространственную позу, параметры и формульный цвет SPA."
+    ? "На холсте выполняется RAW-мутация, собранная из текущих генетических параметров и формульного цвета."
+  : isImprintRequested.value
+    ? `RAW-мутация занимает ${imprintResult.value?.characters || 0} символов и не помещается в лимит ${rawBudget.value}; пока исполняется канонический геном.`
   : selectedRawVariant.value
     ? selectedRawVariant.value.description
     : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
 const primaryControls = computed(() => compiledTopologyGenome.value?.preset.controls
   || selectedForm.value.primaryControls);
-const advancedControls = computed(() => selectedForm.value.advancedControls);
+const chronophoreRawControlKeys = new Set([
+  "speed", "windingP", "windingQ", "radius", "depth", "flow", "pointCount", "alpha",
+  "knotRadius", "tubeRadius", "strands", "knotDrift", "fiberTwist", "fiberSpeed",
+  "pulse", "pulseFrequency"
+]);
+const chronophoreRawLayerKeys = new Set(["knot", "fibers", "flow"]);
+const rawPrimaryControls = computed(() => isTopologyGenome.value
+  ? primaryControls.value
+  : isImprintRequested.value
+    ? selectedForm.value.primaryControls.filter(control => chronophoreRawControlKeys.has(control.key))
+    : []);
+const rawAdvancedControls = computed(() => isImprintRequested.value
+  ? selectedForm.value.advancedControls.filter(control => chronophoreRawControlKeys.has(control.key))
+  : []);
+const rawLayers = computed(() => isImprintRequested.value
+  ? selectedForm.value.layers.filter(layer => chronophoreRawLayerKeys.has(layer.key))
+  : []);
+const hasRawControls = computed(() => isTopologyGenome.value || isImprintRequested.value);
 const selectedTopology = computed(() => selectedForm.value.mesh
   ? resolveGridTopology(selectedForm.value.mesh, settings)
   : null);
-const selectedMotionMode = computed(() => selectedForm.value.motionModes
-  ?.find(mode => mode.id === settings.motionMode)
-  || selectedForm.value.motionModes?.[0]
-  || null);
-const selectedMemoryMode = computed(() => selectedForm.value.memoryModes
-  ?.find(mode => mode.id === settings.memoryMode)
-  || selectedForm.value.memoryModes?.[0]
-  || null);
 const isTopologyMorph = computed(() => Boolean(selectedTopology.value?.morph));
 const meshMetrics = computed(() => selectedForm.value.mesh
   ? measureGridTopology(selectedForm.value.mesh, settings)
@@ -247,15 +248,6 @@ const boundaryLabel = computed(() => {
   if (boundaries >= 2 && boundaries <= 4) return `${boundaries} границы`;
   return `${boundaries} границ`;
 });
-const pointStatus = computed(() => {
-  const form = selectedForm.value;
-  if (form.mesh) {
-    return `#${formNumber(form)} · ${selectedTopology.value.label} · RAW ${compiledTopologyGenome.value.characters}/280 · 400²`;
-  }
-  const memory = form.memoryModel ? ` · ${selectedMemoryMode.value.label.toLowerCase()}` : "";
-  return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts${memory} · 400²`;
-});
-
 function formNumber(form) {
   if (form.displayNumber) return form.displayNumber;
   return String(form.sketchNumber).padStart(2, "0");
@@ -281,9 +273,9 @@ function rememberViewState(snapshot, form = selectedForm.value) {
 }
 
 async function captureActiveView() {
-  const snapshot = isBareMode.value && bareSketch.value.viewModel
+  const snapshot = bareSketch.value.viewModel
     ? await bareRunner.value?.snapshot()
-    : canvas.value?.snapshot() || spaSnapshot.value;
+    : rawViewState.value || spaSnapshot.value;
   return rememberViewState(snapshot);
 }
 
@@ -333,25 +325,6 @@ function toggleLayer(key) {
   preset.value = "Анатомия";
 }
 
-function setRenderMode(mode) {
-  settings.renderMode = readMeshRenderMode(mode);
-  changed();
-}
-
-function setMotionMode(modeId) {
-  const mode = selectedForm.value.motionModes?.find(item => item.id === modeId);
-  if (!mode) return;
-  settings.motionMode = mode.id;
-  preset.value = mode.label;
-}
-
-function setMemoryMode(modeId) {
-  const mode = selectedForm.value.memoryModes?.find(item => item.id === modeId);
-  if (!mode) return;
-  settings.memoryMode = mode.id;
-  preset.value = mode.label;
-}
-
 function normalizeRawBudget() {
   rawBudget.value = readRawCodeBudget(rawBudget.value);
 }
@@ -388,20 +361,17 @@ function reset() {
   replaceReactive(layers, form.savedLayers || spatialLayerDefaults(form));
   if (form.savedColor) Object.assign(color, form.savedColor);
   else resetColor();
-  spaPaused.value = false;
+  barePaused.value = false;
   invertOrbitY.value = true;
   preset.value = basePresetLabel(form);
   clearViewState(form.id);
   spaSnapshot.value = form.savedPose || null;
   rawViewState.value = spaSnapshot.value;
-  imprintSnapshot.value = null;
   bareVariant.value = defaultBareVariant(form);
-  canvas.value?.restoreState(spaSnapshot.value);
 }
 
 function frontView() {
-  if (isBareMode.value) bareRunner.value?.resetView();
-  else canvas.value?.resetView();
+  bareRunner.value?.resetView();
 }
 
 async function restartBareSketch() {
@@ -419,16 +389,6 @@ function startBareMotion() {
 function toggleBareMotion() {
   if (barePaused.value) startBareMotion();
   else barePaused.value = true;
-}
-
-function provoke() {
-  canvas.value?.provoke();
-}
-
-function announceStimulus() {
-  reactionMessage.value = selectedForm.value.stimulusMessage || "Форма ответила на возмущение.";
-  window.clearTimeout(reactionTimer);
-  reactionTimer = window.setTimeout(() => { reactionMessage.value = ""; }, 1800);
 }
 
 function announceMutation(message) {
@@ -450,10 +410,12 @@ function randomize() {
     preset.value = "RAW случайный";
     return;
   }
-  Object.entries(selectedForm.value.randomRanges).forEach(([key, [min, max, step]]) => {
-    settings[key] = Number(randomStep(min, max, step).toFixed(6));
-  });
-  preset.value = "Случайный";
+  for (const control of [...rawPrimaryControls.value, ...rawAdvancedControls.value]) {
+    settings[control.key] = Number(
+      randomStep(control.min, control.max, control.step).toFixed(6)
+    );
+  }
+  preset.value = "RAW случайный";
 }
 
 async function copyTopologyGenome() {
@@ -467,25 +429,11 @@ async function copyTopologyGenome() {
   window.setTimeout(() => { genomeCopyLabel.value = "Копировать RAW"; }, 1500);
 }
 
-function captureImprint(capturedPose = null) {
-  if (!supportsImprint.value) return;
-  const pose = capturedPose || canvas.value?.snapshot() || spaSnapshot.value || { yaw: 0, pitch: 0, time: 0 };
-  rememberViewState(pose);
-  imprintSnapshot.value = {
-    settings: { ...settings },
-    layers: { ...layers },
-    color: { ...color },
-    pose: { ...pose }
-  };
-  bareVariant.value = "imprint";
-}
-
 async function setBareVariant(variant) {
-  if (isBareMode.value && bareSketch.value.viewModel) {
+  if (bareSketch.value.viewModel) {
     rememberViewState(await bareRunner.value?.snapshot());
   }
   if (variant === "imprint" && supportsImprint.value) {
-    if (!imprintSnapshot.value) captureImprint();
     bareVariant.value = imprintResult.value ? "imprint" : "canonical";
   } else if (selectedForm.value.rawVariants?.some(item => item.id === variant)) {
     bareVariant.value = variant;
@@ -517,26 +465,6 @@ function saveImprint() {
   announceMutation(`${record.title} закреплён и добавлен в список мутаций.`);
 }
 
-async function setViewMode(mode, updateRoute = true) {
-  const nextMode = readLabViewMode(mode);
-  if (nextMode === viewMode.value) return;
-  if (nextMode === LAB_VIEW_MODE.bare) {
-    const pose = await captureActiveView();
-    if (supportsImprint.value) captureImprint(pose);
-    else bareVariant.value = defaultBareVariant(selectedForm.value, settings.motionMode);
-  } else if (bareSketch.value.viewModel) {
-    rememberViewState(await bareRunner.value?.snapshot());
-  }
-  viewMode.value = nextMode;
-  await nextTick();
-  if (nextMode === LAB_VIEW_MODE.spa) canvas.value?.restoreState(spaSnapshot.value);
-
-  if (updateRoute) {
-    router.replace({ query: mergeLabViewModeQuery(route.query, nextMode) })
-      .catch(() => undefined);
-  }
-}
-
 async function selectForm(formId, updateRoute = true) {
   const form = formById(formId);
   if (form.id === selectedFormId.value) return;
@@ -549,14 +477,13 @@ async function selectForm(formId, updateRoute = true) {
   if (form.savedColor) Object.assign(color, form.savedColor);
   spaSnapshot.value = restoredViewFor(form);
   rawViewState.value = spaSnapshot.value;
-  imprintSnapshot.value = null;
   bareVariant.value = defaultBareVariant(form);
+  barePaused.value = false;
   preset.value = basePresetLabel(form);
-  await nextTick();
-  canvas.value?.restoreState(spaSnapshot.value);
 
   if (updateRoute) {
     const query = { ...route.query };
+    delete query.view;
     if (form.id === spatialForms[0].id) delete query.form;
     else query.form = form.id;
     router.replace({ query }).catch(() => undefined);
@@ -572,18 +499,9 @@ watch(
   }
 );
 
-watch(
-  () => route.query.view,
-  value => {
-    const mode = readLabViewMode(value);
-    if (mode !== viewMode.value) setViewMode(mode, false);
-  }
-);
-
 onBeforeUnmount(() => {
-  const snapshot = canvas.value?.snapshot() || rawViewState.value || spaSnapshot.value;
+  const snapshot = rawViewState.value || spaSnapshot.value;
   if (snapshot) writeViewState(selectedForm.value.id, snapshot);
-  window.clearTimeout(reactionTimer);
   window.clearTimeout(mutationTimer);
 });
 </script>
@@ -597,41 +515,17 @@ onBeforeUnmount(() => {
       </div>
       <p class="view-lead">
         <strong>{{ selectedForm.title }}.</strong>&nbsp;
-        <template v-if="isBareMode">{{ bareLead }}</template>
-        <template v-else>{{ selectedForm.description }} Проведите пальцем по форме, чтобы обойти её вокруг центра.</template>
+        {{ bareLead }}
       </p>
     </header>
 
     <div class="lab-workspace">
       <div class="canvas-stage">
-        <div class="render-switch" role="group" aria-label="Режим исполнения рисунка">
-          <button
-            type="button"
-            :aria-pressed="isBareMode"
-            @click="setViewMode(LAB_VIEW_MODE.bare)"
-          ><span>RAW</span>Голый скетч</button>
-          <button
-            type="button"
-            :aria-pressed="!isBareMode"
-            @click="setViewMode(LAB_VIEW_MODE.spa)"
-          ><span>SPA</span>SPA-форма</button>
+        <div class="raw-runtime-seal" aria-label="На холсте всегда исполняется показанный RAW-код">
+          <span>RAW</span>
+          <strong>Код = изображение</strong>
         </div>
-
-        <ParametricCanvas
-          v-if="!isBareMode"
-          ref="canvas"
-          :form="selectedForm"
-          :settings="settings"
-          :layers="layers"
-          :color="canvasColor"
-          :color-evaluator="colorEvaluator"
-          :initial-state="spaSnapshot"
-          :invert-y="invertOrbitY"
-          :paused="spaPaused"
-          @stimulate="announceStimulus"
-        />
         <SketchRunner
-          v-else
           :key="bareSketch.id"
           ref="bareRunner"
           class="lab-raw-runner"
@@ -643,7 +537,7 @@ onBeforeUnmount(() => {
           @update:view-state="rememberViewState"
         />
         <div
-          v-if="isBareMode && barePaused"
+          v-if="barePaused"
           class="raw-paused-overlay"
           role="status"
           aria-live="polite"
@@ -656,14 +550,12 @@ onBeforeUnmount(() => {
           <button class="button primary" type="button" @click="startBareMotion">Запустить анимацию</button>
         </div>
         <div class="canvas-meta" aria-hidden="true">
-          <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? barePaused ? "pause / raw" : "raw / p5.js" : spaPaused ? "pause" : "live" }}</span>
-          <span v-if="isBareMode">{{ bareCodeLength }} chars · {{ isTopologyGenome ? "result" : isImprintBare ? "SPA imprint" : selectedRawVariant?.id || "canonical" }} · {{ bareSketch.viewModel ? "drag / saved view" : "isolated" }}</span>
-          <span v-else>{{ selectedForm.supportsStimulus ? "button / reaction · drag / trackball" : "drag / trackball" }} · {{ pointStatus }}</span>
+          <span><span class="live-dot raw"></span>{{ barePaused ? "pause / raw" : "raw / p5.js" }}</span>
+          <span>{{ bareCodeLength }} chars · {{ isTopologyGenome ? "compiled" : isImprintBare ? "raw mutation" : selectedRawVariant?.id || "canonical" }} · {{ bareSketch.viewModel ? "drag / saved view" : "isolated" }}</span>
         </div>
-        <p class="sr-only" aria-live="polite">{{ reactionMessage }}</p>
       </div>
 
-      <aside :key="`${selectedForm.id}-${viewMode}`" class="control-panel" :aria-label="isBareMode ? 'Сведения о голом скетче' : 'Параметры визуализации'">
+      <aside :key="`${selectedForm.id}-raw`" class="control-panel" aria-label="RAW-геном и его параметры">
         <div class="form-picker">
           <p class="panel-kicker">Форма / синтез</p>
           <div class="form-choice-groups">
@@ -694,16 +586,16 @@ onBeforeUnmount(() => {
           </p>
         </div>
 
-        <div v-if="isBareMode" class="bare-mode-panel">
+        <div class="bare-mode-panel">
           <div>
             <p class="panel-kicker">RAW / GENOTYPE FEEDBACK</p>
-            <h2>{{ isTopologyGenome ? "Итоговый RAW" : isImprintBare ? "Отпечаток SPA" : selectedRawVariant?.title || "Код без лаборатории" }}</h2>
+            <h2>{{ isTopologyGenome ? "Итоговый RAW" : isImprintBare ? "RAW-мутация" : selectedRawVariant?.title || "Код без посредника" }}</h2>
             <p>{{ bareLead }}</p>
           </div>
 
           <div v-if="supportsImprint" class="imprint-mode-switch" role="group" aria-label="Версия голого генома">
-            <button type="button" :aria-pressed="!isImprintBare" @click="setBareVariant('canonical')">Исходный геном</button>
-            <button type="button" :aria-pressed="isImprintBare" :disabled="!imprintResult" @click="setBareVariant('imprint')">Отпечаток SPA</button>
+            <button type="button" :aria-pressed="bareVariant !== 'imprint'" @click="setBareVariant('canonical')">Исходный геном</button>
+            <button type="button" :aria-pressed="bareVariant === 'imprint'" :disabled="!imprintResult" @click="setBareVariant('imprint')">RAW-мутация</button>
           </div>
 
           <div v-else-if="selectedForm.rawVariants" class="imprint-mode-switch" role="group" aria-label="RAW-вариант Пелагиона">
@@ -780,7 +672,7 @@ onBeforeUnmount(() => {
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} из {{ rawBudget }} символов</dd></div>
             <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>последний ракурс · вне генома · 0 символов</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
-            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие генетические параметры SPA" : selectedForm.budgetVariants ? "автоматическая деградация по бюджету" : isImprintBare ? "поза, параметры и цвет SPA" : selectedRawVariant?.id === 'living-stroke' ? "хореография SPA, сжатая в RAW" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие константы RAW" : selectedForm.budgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
 
           <div v-if="selectedRawVariant" class="genome-comparison">
@@ -789,7 +681,7 @@ onBeforeUnmount(() => {
               <i aria-hidden="true">↔</i>
               <span><small>{{ selectedRawVariant.label }}</small>{{ bareCodeLength }}</span>
             </div>
-            <p class="comparison-label">{{ selectedForm.budgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и не требуют SPA" }}</p>
+            <p class="comparison-label">{{ selectedForm.budgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ bareSketch.code }}</code></pre>
@@ -820,6 +712,14 @@ onBeforeUnmount(() => {
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ imprintResult.code }}</code></pre>
+            </details>
+          </div>
+
+          <div v-if="!selectedRawVariant && !isImprintBare" class="genome-comparison">
+            <p class="comparison-label">Этот код непосредственно создаёт изображение на холсте.</p>
+            <details class="imprint-code-details">
+              <summary>Итоговый исполняемый код</summary>
+              <pre><code>{{ bareSketch.code }}</code></pre>
             </details>
           </div>
 
@@ -856,15 +756,15 @@ onBeforeUnmount(() => {
             </template>
           </div>
 
-          <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не демонстрационная замена, а точный результат выбора в SPA. Любое изменение генетического ползунка пересобирает этот код; ракурс камеры в него не записывается.</p>
+          <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
           <p v-else-if="selectedForm.budgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> признаки снимаются только в указанном списке и только до запуска. Память координат, анимация и сохранённая камера входят даже в 280; вращение не изменяет частицы и не расходует символы.</p>
-          <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Связь SPA → RAW:</strong> хореография выбирает самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией. Исходный RAW остаётся рядом для сравнения.</p>
+          <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>
 
-        <template v-else>
+        <template v-if="hasRawControls">
           <div class="panel-title-row">
-            <h2>{{ isTopologyGenome ? "Генетические параметры" : "Параметры" }}</h2>
+            <h2>{{ isTopologyGenome ? "Константы RAW" : "Генетические параметры RAW" }}</h2>
             <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
           </div>
 
@@ -916,62 +816,12 @@ onBeforeUnmount(() => {
             <p v-else role="alert">Лимит превышен: этот вариант не может считаться сущностью.</p>
             <div class="live-genome-actions">
               <button class="button" type="button" @click="copyTopologyGenome">{{ genomeCopyLabel }}</button>
-              <button class="button primary" type="button" :disabled="!compiledTopologyGenome.withinLimit" @click="setViewMode(LAB_VIEW_MODE.bare)">Запустить RAW</button>
+              <span class="raw-live-caption">Уже исполняется на холсте</span>
             </div>
           </section>
 
-          <div v-if="selectedForm.renderModes" class="mesh-mode-field">
-            <div class="mesh-mode-title">
-              <strong>Отображение</strong>
-              <small>те же вершины, разные связи</small>
-            </div>
-            <div class="mesh-mode-switch" role="group" aria-label="Отображение сеточной формы">
-              <button
-                v-for="mode in selectedForm.renderModes"
-                :key="mode.id"
-                type="button"
-                :aria-pressed="settings.renderMode === mode.id"
-                @click="setRenderMode(mode.id)"
-              >{{ mode.label }}</button>
-            </div>
-          </div>
-
-          <div v-if="selectedForm.motionModes" class="mesh-mode-field motion-mode-field">
-            <div class="mesh-mode-title">
-              <strong>Хореография</strong>
-              <small>одна фаза · всё тело</small>
-            </div>
-            <div class="mesh-mode-switch" role="group" aria-label="Хореография движения сущности">
-              <button
-                v-for="mode in selectedForm.motionModes"
-                :key="mode.id"
-                type="button"
-                :aria-pressed="selectedMotionMode.id === mode.id"
-                @click="setMotionMode(mode.id)"
-              >{{ mode.label }}</button>
-            </div>
-            <p class="topology-description">{{ selectedMotionMode.description }}</p>
-          </div>
-
-          <div v-if="selectedForm.memoryModes" class="mesh-mode-field memory-mode-field">
-            <div class="mesh-mode-title">
-              <strong>История координат</strong>
-              <small>одна оболочка · два закона времени</small>
-            </div>
-            <div class="mesh-mode-switch" role="group" aria-label="Сравнение формы без памяти и с памятью">
-              <button
-                v-for="mode in selectedForm.memoryModes"
-                :key="mode.id"
-                type="button"
-                :aria-pressed="selectedMemoryMode.id === mode.id"
-                @click="setMemoryMode(mode.id)"
-              >{{ mode.label }}</button>
-            </div>
-            <p class="topology-description">{{ selectedMemoryMode.description }}</p>
-          </div>
-
           <div class="control-list">
-            <label v-for="control in primaryControls" :key="control.key" class="range-field">
+            <label v-for="control in rawPrimaryControls" :key="control.key" class="range-field">
               <span>{{ control.label }} <output>{{ formatValue(control, settings[control.key]) }}</output></span>
               <input
                 v-model.number="settings[control.key]"
@@ -986,34 +836,12 @@ onBeforeUnmount(() => {
             </label>
           </div>
 
-          <div class="button-grid">
-            <button
-              v-if="selectedForm.supportsStimulus"
-              class="button primary wide"
-              type="button"
-              @click="provoke"
-            >Спровоцировать реакцию</button>
-            <button
-              class="button"
-              :class="{ primary: !selectedForm.supportsStimulus, wide: !selectedForm.supportsStimulus }"
-              type="button"
-              :aria-pressed="spaPaused"
-              @click="spaPaused = !spaPaused"
-            >
-              {{ spaPaused ? "Продолжить" : "Приостановить" }}
-            </button>
+          <div class="button-grid raw-genetic-actions">
             <button class="button" type="button" @click="reset">Сбросить</button>
             <button class="button" type="button" @click="randomize">Случайный</button>
-            <button class="button" type="button" title="Также: двойное касание холста или клавиша 0" @click="frontView">Вид спереди</button>
-            <button
-              class="button"
-              type="button"
-              :aria-pressed="invertOrbitY"
-              @click="invertOrbitY = !invertOrbitY"
-            >Инверсия Y · {{ invertOrbitY ? "вкл." : "выкл." }}</button>
           </div>
 
-          <details v-if="!isTopologyGenome" class="control-details color-details" open>
+          <details v-if="isImprintRequested" class="control-details color-details" open>
             <summary>Цветовая формула</summary>
             <ColorFormulaControls
               v-model:mode="color.mode"
@@ -1027,10 +855,10 @@ onBeforeUnmount(() => {
             />
           </details>
 
-          <details v-if="advancedControls.length || selectedForm.layers.length" class="control-details">
+          <details v-if="rawAdvancedControls.length || rawLayers.length" class="control-details">
             <summary>Точная настройка и анатомия</summary>
             <div class="advanced-controls">
-              <label v-for="control in advancedControls" :key="control.key" class="range-field">
+              <label v-for="control in rawAdvancedControls" :key="control.key" class="range-field">
                 <span>{{ control.label }} <output>{{ formatValue(control, settings[control.key]) }}</output></span>
                 <input
                   v-model.number="settings[control.key]"
@@ -1048,7 +876,7 @@ onBeforeUnmount(() => {
                 <div class="anatomy-title"><strong>Анатомия</strong><small>нажмите, чтобы убрать</small></div>
                 <div class="layer-grid">
                   <button
-                    v-for="layer in selectedForm.layers"
+                    v-for="layer in rawLayers"
                     :key="layer.key"
                     class="layer-toggle"
                     type="button"

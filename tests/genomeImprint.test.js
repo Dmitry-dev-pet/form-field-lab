@@ -34,7 +34,7 @@ function makeImprint(overrides = {}) {
   });
 }
 
-test("Chronophore SPA state compiles into an autonomous, rotated p5 imprint", () => {
+test("Chronophore genetic state compiles into an autonomous, rotated p5 imprint", () => {
   const imprint = makeImprint();
 
   assert.doesNotThrow(() => new Function(imprint.code));

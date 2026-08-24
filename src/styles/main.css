@@ -262,16 +262,17 @@ a:focus-visible {
   place-items: center;
 }
 
-.render-switch {
+.raw-runtime-seal {
   position: absolute;
   top: 32px;
   left: 50%;
   z-index: 4;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  width: min(330px, calc(100% - 52px));
-  padding: 4px;
-  border: 1px solid rgba(255,255,255,0.13);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  gap: 10px;
+  padding: 7px 15px 7px 8px;
+  border: 1px solid rgba(88,255,231,0.22);
   border-radius: 999px;
   background: rgba(5, 8, 7, 0.76);
   box-shadow: 0 14px 36px rgba(0,0,0,0.34);
@@ -279,45 +280,26 @@ a:focus-visible {
   transform: translateX(-50%);
 }
 
-.render-switch button {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  min-height: 44px;
-  justify-content: center;
-  gap: 7px;
-  padding: 7px 12px;
-  border: 0;
+.raw-runtime-seal span {
+  display: grid;
+  min-width: 48px;
+  min-height: 30px;
+  place-items: center;
   border-radius: 999px;
-  color: var(--quiet);
-  background: transparent;
-  font-size: 0.66rem;
-  font-weight: 680;
-  white-space: nowrap;
-  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
-}
-
-.render-switch button:hover { color: var(--ink); }
-
-.render-switch button[aria-pressed="true"] {
   color: var(--acid-ink);
   background: var(--acid);
-  box-shadow: 0 5px 19px rgba(215,255,88,0.13);
-}
-
-.render-switch button:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.render-switch button span {
-  color: var(--cyan);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.52rem;
-  letter-spacing: 0.08em;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
-.render-switch button[aria-pressed="true"] span { color: inherit; }
+.raw-runtime-seal strong {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
 
 .primary-canvas,
 .evolution-stage canvas {
@@ -1067,10 +1049,18 @@ a:focus-visible {
 .live-genome-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: center;
   gap: 7px;
 }
 
 .live-genome-actions .button { min-width: 0; }
+.raw-live-caption {
+  color: var(--cyan);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.58rem;
+  line-height: 1.45;
+  text-align: center;
+}
 .live-genome-panel.invalid { border-color: rgba(255,179,179,0.5); }
 .live-genome-panel.invalid header strong,
 .live-genome-panel.invalid > p { color: var(--danger); }
@@ -2281,9 +2271,7 @@ mjx-container[display="true"] {
   .display-title { font-size: clamp(2.45rem, 12vw, 3.65rem); }
   .lab-workspace, .evolution-workspace, .archive-workspace { border-radius: 21px; }
   .canvas-stage, .evolution-stage, .archive-player, .control-panel, .evolution-panel, .archive-index { padding: 18px; }
-  .render-switch { top: 25px; width: calc(100% - 48px); }
-  .render-switch button { min-height: 44px; gap: 5px; padding: 6px 8px; font-size: 0.59rem; }
-  .render-switch button span { font-size: 0.48rem; }
+  .raw-runtime-seal { top: 25px; }
   .raw-paused-overlay {
     top: 86px;
     grid-template-columns: 1fr;
@@ -2335,10 +2323,10 @@ mjx-container[display="true"] {
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .view { animation: none; }
-  .button, .form-choice, .render-switch button, .app-nav a { transition: none; }
+  .button, .form-choice, .app-nav a { transition: none; }
 }
 
 @media (forced-colors: active) {
   .brand-mark, .live-dot { forced-color-adjust: none; }
-  .button.primary, .sketch-card[aria-pressed="true"], .render-switch button[aria-pressed="true"], .raw-paused-overlay { border: 2px solid ButtonText; }
+  .button.primary, .sketch-card[aria-pressed="true"], .raw-paused-overlay { border: 2px solid ButtonText; }
 }
