@@ -38,10 +38,8 @@ const settings = reactive({ ...initialForm.defaults });
 const layers = reactive(spatialLayerDefaults(initialForm));
 const canvas = ref(null);
 const bareRunner = ref(null);
-const reducedMotionRequested = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const spaPaused = ref(reducedMotionRequested);
-const barePaused = ref(reducedMotionRequested);
-const barePauseReason = ref(reducedMotionRequested ? "system" : "");
+const spaPaused = ref(false);
+const barePaused = ref(false);
 const invertOrbitY = ref(true);
 const preset = ref(basePresetLabel(initialForm));
 const reactionMessage = ref("");
@@ -108,15 +106,11 @@ function restartBareSketch() {
 
 function startBareMotion() {
   barePaused.value = false;
-  barePauseReason.value = "";
 }
 
 function toggleBareMotion() {
   if (barePaused.value) startBareMotion();
-  else {
-    barePaused.value = true;
-    barePauseReason.value = "user";
-  }
+  else barePaused.value = true;
 }
 
 function provoke() {
@@ -241,7 +235,6 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           :sketch="bareSketch"
           :label="bareRunnerLabel"
           :paused="barePaused"
-          frame-driven
         />
         <div
           v-if="isBareMode && barePaused"
@@ -251,7 +244,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           aria-atomic="true"
         >
           <div>
-            <span>{{ barePauseReason === "system" ? "SYSTEM / REDUCE MOTION" : "RAW / PAUSED" }}</span>
+            <span>RAW / PAUSED</span>
             <strong>Анимация остановлена</strong>
           </div>
           <button class="button primary" type="button" @click="startBareMotion">Запустить анимацию</button>

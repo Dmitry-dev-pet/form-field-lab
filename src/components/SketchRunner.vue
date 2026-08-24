@@ -5,35 +5,19 @@ import { runnerDocument } from "../lib/runnerDocument.js";
 const props = defineProps({
   sketch: { type: Object, required: true },
   label: { type: String, default: "Скетч @yuruyurau" },
-  paused: { type: Boolean, default: false },
-  frameDriven: { type: Boolean, default: false }
+  paused: { type: Boolean, default: false }
 });
 
 const host = ref(null);
 const frame = ref(null);
 let observer;
-let driverFrame;
 let visible = true;
 
 function syncMotion() {
   frame.value?.contentWindow?.postMessage({
     type: "sketch-motion",
-    paused: props.paused || !visible,
-    driven: props.frameDriven
+    paused: props.paused || !visible
   }, "*");
-}
-
-function driveFrame() {
-  if (!props.frameDriven) return;
-  if (visible && !props.paused) {
-    frame.value?.contentWindow?.postMessage({ type: "sketch-frame" }, "*");
-  }
-  driverFrame = requestAnimationFrame(driveFrame);
-}
-
-function syncDriver() {
-  if (driverFrame) cancelAnimationFrame(driverFrame);
-  driverFrame = props.frameDriven ? requestAnimationFrame(driveFrame) : undefined;
 }
 
 function reload() {
@@ -42,10 +26,6 @@ function reload() {
 
 watch(() => props.sketch.id, reload);
 watch(() => props.paused, syncMotion);
-watch(() => props.frameDriven, () => {
-  syncMotion();
-  syncDriver();
-});
 
 onMounted(() => {
   reload();
@@ -56,13 +36,9 @@ onMounted(() => {
     }, { rootMargin: "160px 0px", threshold: 0.01 });
     observer.observe(host.value);
   }
-  syncDriver();
 });
 
-onBeforeUnmount(() => {
-  observer?.disconnect();
-  if (driverFrame) cancelAnimationFrame(driverFrame);
-});
+onBeforeUnmount(() => observer?.disconnect());
 
 defineExpose({ reload });
 </script>
