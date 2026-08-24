@@ -35,11 +35,13 @@ test("sandbox runner includes the original source and motion bridge", () => {
 });
 
 test("the Pelagion runner adds a spatial camera bridge outside the RAW code", () => {
-  const code = "t=0,draw=_=>{t++||createCanvas(400,400);point(200,200)}";
+  const code = "t=0,draw=_=>{t++||createCanvas(400,400);x=z=a=X=Z=0;point(200,200);line(190,190,210,210)}";
   const html = runnerDocument(code, { viewModel: "pelagion-orbit" });
 
   assert.match(html, /pelagion-orbit/);
   assert.match(html, /projectedSpatialPoint/);
+  assert.match(html, /projectedSpatialLine/);
+  assert.match(html, /globalThis\.X/);
   assert.match(html, /sketch-view-state/);
   assert.match(html, /sketch-view-snapshot/);
   assert.match(html, /canvas\?\.width === 400/);

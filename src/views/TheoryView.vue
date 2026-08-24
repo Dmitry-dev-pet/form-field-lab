@@ -6,6 +6,7 @@ import {
   CHRONOPHORE_GENOME_LIMIT
 } from "../data/chronophoreGenome.js";
 import {
+  PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT,
@@ -114,6 +115,8 @@ g(t,u_i)
 s(t,u)&=\sin(4t-u/9),
 &b_{\rm stroke}&=9s\sin^2\theta,
 &g_{\rm stroke}&=16s,\\
+\mathbf P_i^{\rm core}&=0.42\mathbf P_i^{\rm body},
+&E_{\rm ring}&=\left(\mathbf P(q,\theta),\mathbf P(q,\theta-1/32)\right),\\
 x_i'&=x_i\cos a+z_i\sin a+130,
 &y_i'&=y_i+200,
 &a(t)&=\sin(t)/5.
@@ -634,7 +637,17 @@ onMounted(async () => {
               <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
-            <p>В обоих RAW совпадают разбиение точек, тело, плавник и цвет; меняется только закон глубинной волны. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома.</p>
+            <ul class="topology-genome-counts" aria-label="Бюджеты плавного Пелагиона">
+              <li v-for="(variant, index) in PELAGION_BUDGET_VARIANTS_BY_MODE.canonical" :key="variant.id">
+                <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
+            <ul class="topology-genome-counts" aria-label="Бюджеты силового гребка Пелагиона">
+              <li v-for="(variant, index) in PELAGION_BUDGET_VARIANTS_BY_MODE['living-stroke']" :key="variant.id">
+                <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
+            <p>В обоих режимах совпадают разбиение точек, тело, плавник и цвет; переключатель меняет закон глубинной волны. Бюджет 280 сохраняет базовый организм, 512 добавляет светящееся ядро и ось хвоста, 768 соединяет соседние углы в кольца мембраны. Каждый уровень выбирает другой исполняемый RAW и сохраняет ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Камера и фаза хранятся просмотрщиком отдельно и не расходуют лимит.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>

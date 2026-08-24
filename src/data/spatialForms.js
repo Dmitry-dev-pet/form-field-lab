@@ -1,6 +1,7 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import {
+  PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_GENOME_SKETCH,
   PELAGION_RAW_VARIANTS
 } from "./pelagionGenome.js";
@@ -640,6 +641,7 @@ export const spatialForms = Object.freeze([
     origin: "community-synthesis",
     genomeSketch: PELAGION_GENOME_SKETCH,
     rawVariants: PELAGION_RAW_VARIANTS,
+    budgetVariantsByMode: PELAGION_BUDGET_VARIANTS_BY_MODE,
     motionModes: Object.freeze([
       Object.freeze({
         id: PELAGION_MOTION_MODE.continuous,

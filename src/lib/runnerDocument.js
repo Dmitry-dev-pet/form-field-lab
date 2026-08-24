@@ -127,6 +127,15 @@ function installSpatialViewBridge(viewModel) {
     return -axial * Math.sin(angle) + depth * Math.cos(angle);
   }
 
+  function lineEndDepth() {
+    if (viewModel === "point-cloud-orbit") return Number(globalThis.Z);
+    const axial = Number(globalThis.X);
+    const depth = Number(globalThis.Z);
+    const angle = Number(globalThis.a);
+    if (![axial, depth, angle].every(Number.isFinite)) return Number.NaN;
+    return -axial * Math.sin(angle) + depth * Math.cos(angle);
+  }
+
   function installSpatialProjectors() {
     if (!orbitEnabled || sourcePoint || typeof globalThis.point !== "function") return;
     sourcePoint = globalThis.point;
@@ -141,10 +150,10 @@ function installSpatialViewBridge(viewModel) {
         projectY(screenX, screenY, depth)
       );
     };
-    if (viewModel === "point-cloud-orbit" && sourceLine) {
+    if (sourceLine) {
       globalThis.line = function projectedSpatialLine(x1, y1, x2, y2) {
-        const z1 = Number(globalThis.z);
-        const z2 = Number(globalThis.Z);
+        const z1 = pointDepth();
+        const z2 = lineEndDepth();
         if (![x1, y1, x2, y2, z1, z2].every(Number.isFinite)) {
           return sourceLine(x1, y1, x2, y2);
         }

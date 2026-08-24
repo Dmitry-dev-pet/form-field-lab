@@ -8,6 +8,7 @@ import {
   PELAGION_LINEAGE
 } from "../src/data/communityDna.js";
 import {
+  PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT,
@@ -15,6 +16,7 @@ import {
   PELAGION_LIVING_GENOME_CHARACTERS,
   PELAGION_RAW_VARIANTS
 } from "../src/data/pelagionGenome.js";
+import { selectRawBudgetVariant } from "../src/lib/codeBudget.js";
 
 function executeGenomeFrames(code) {
   let points = [];
@@ -103,4 +105,23 @@ test("the living-stroke Pelagion is a second autonomous genome inside 280 charac
   assert.notDeepEqual(frames.second, frames.first);
   assert.deepEqual(frames.secondStrokes, frames.firstStrokes);
   assert.notDeepEqual(frames.firstStrokes[0], frames.firstStrokes.at(-1));
+});
+
+test("Pelagion budgets select real anatomy in both motion modes", () => {
+  const expectations = {
+    canonical: [279, 408, 551],
+    "living-stroke": [280, 409, 552]
+  };
+  for (const [mode, variants] of Object.entries(PELAGION_BUDGET_VARIANTS_BY_MODE)) {
+    assert.deepEqual(variants.map(variant => variant.sketch.code.length), expectations[mode]);
+    for (const [budget, rank] of [[280, 0], [512, 1], [768, 2]]) {
+      const selected = selectRawBudgetVariant(variants, budget);
+      assert.equal(selected.variant.rank, rank);
+      assert.ok(selected.characters <= budget);
+      assert.doesNotThrow(() => new Function(selected.variant.sketch.code));
+    }
+    assert.doesNotMatch(variants[0].sketch.code, /line\(/);
+    assert.match(variants[1].sketch.code, /stroke\(w,110,70\)/);
+    assert.match(variants[2].sketch.code, /line\(/);
+  }
 });

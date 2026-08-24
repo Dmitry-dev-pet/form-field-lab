@@ -160,8 +160,12 @@ const geneticImprintResult = computed(() => compileImprintSource(
   imprintSource.value,
   { yaw: 0, pitch: 0, time: 0 }
 ));
-const budgetSelection = computed(() => selectedForm.value.budgetVariants
-  ? selectRawBudgetVariant(selectedForm.value.budgetVariants, rawBudget.value)
+const budgetVariantSet = computed(() => selectedForm.value.budgetVariantsByMode?.[bareVariant.value]
+  || selectedForm.value.budgetVariants
+  || null);
+const hasBudgetVariants = computed(() => Boolean(budgetVariantSet.value));
+const budgetSelection = computed(() => budgetVariantSet.value
+  ? selectRawBudgetVariant(budgetVariantSet.value, rawBudget.value)
   : null);
 const isImprintBare = computed(() => supportsImprint.value
   && bareVariant.value === "imprint"
@@ -192,7 +196,7 @@ const savedImprintRecord = computed(() => geneticImprintResult.value
 const nextEntityLabel = computed(() => `P${nextMutationNumber(savedEntityRecords.value)}`);
 const bareRunnerLabel = computed(() => isTopologyGenome.value
   ? `${compiledTopologyGenome.value.preset.label}: итоговый ${compiledTopologyGenome.value.characters}-символьный RAW-геном`
-  : selectedForm.value.budgetVariants
+  : hasBudgetVariants.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} из ${rawBudget.value} символов`
   : selectedForm.value.sketch
     ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
@@ -203,7 +207,7 @@ const bareRunnerLabel = computed(() => isTopologyGenome.value
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isTopologyGenome.value
   ? `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
-  : selectedForm.value.budgetVariants
+  : hasBudgetVariants.value
     ? `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
     ? "На холсте без преобразований выполняется исходный p5.js-код автора."
@@ -657,7 +661,7 @@ onBeforeUnmount(() => {
               aria-valuemin="0"
               :aria-valuemax="rawBudget"
             ><span :class="{ invalid: !rawBudgetStatus.withinLimit }" :style="{ width: `${Math.min(100, bareCodeLength / rawBudget * 100)}%` }"></span></div>
-            <template v-if="selectedForm.budgetVariants">
+            <template v-if="hasBudgetVariants">
               <p class="budget-variant-note"><strong>{{ selectedRawVariant.title }}</strong> выбран автоматически по фактической длине кода.</p>
               <ul class="budget-feature-list" aria-label="Признаки, вошедшие в RAW">
                 <li v-for="feature in rawBudgetStatus.activeFeatures" :key="feature"><span aria-hidden="true">+</span>{{ feature }}</li>
@@ -672,7 +676,7 @@ onBeforeUnmount(() => {
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} из {{ rawBudget }} символов</dd></div>
             <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>последний ракурс · вне генома · 0 символов</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
-            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие константы RAW" : selectedForm.budgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие константы RAW" : hasBudgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
 
           <div v-if="selectedRawVariant" class="genome-comparison">
@@ -681,7 +685,7 @@ onBeforeUnmount(() => {
               <i aria-hidden="true">↔</i>
               <span><small>{{ selectedRawVariant.label }}</small>{{ bareCodeLength }}</span>
             </div>
-            <p class="comparison-label">{{ selectedForm.budgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
+            <p class="comparison-label">{{ hasBudgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ bareSketch.code }}</code></pre>
@@ -757,7 +761,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
-          <p v-else-if="selectedForm.budgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> признаки снимаются только в указанном списке и только до запуска. Память координат, анимация и сохранённая камера входят даже в 280; вращение не изменяет частицы и не расходует символы.</p>
+          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>
