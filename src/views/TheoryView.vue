@@ -15,6 +15,26 @@ import {
   SPHERE_GRID_GENOME_CHARACTERS,
   SPHERE_GRID_GENOME_LIMIT
 } from "../data/sphereGridGenome.js";
+import {
+  compileTopologyGenome,
+  TOPOLOGY_GENOME_PRESETS,
+  topologyGenomeDefaults
+} from "../data/topologyGenomes.js";
+import { GRID_TOPOLOGY_PRESETS } from "../lib/meshTopology.js";
+
+const topologyGenomeRows = TOPOLOGY_GENOME_PRESETS.map(preset => {
+  const topology = GRID_TOPOLOGY_PRESETS.find(item => item.id === preset.id);
+  const compiled = compileTopologyGenome(topologyGenomeDefaults(preset.id));
+  return Object.freeze({
+    id: preset.id,
+    label: preset.label,
+    characters: compiled.characters,
+    code: compiled.code,
+    euler: preset.id === "sphere" ? 2 : preset.id === "plane" ? 1 : 0,
+    boundaries: topology.boundaries,
+    orientable: topology.orientable
+  });
+});
 
 const latexSource = String.raw`\begin{aligned}
 y_i &= \frac{i}{995}, \\
@@ -113,7 +133,10 @@ e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
-\chi(\mathcal M)&=|V|-|E|+|F|.&&
+\chi(\mathcal M)&=|V|-|E|+|F|,\\
+G_\tau(\theta)&=\operatorname{compile}(\tau,\theta),
+&|G_\tau(\theta)|&\le 280,\\
+\operatorname{SPA}(\tau,\theta,t)&=\operatorname{decode}(G_\tau(\theta),t).&&
 \end{aligned}
 
 \begin{aligned}
@@ -410,7 +433,7 @@ onMounted(async () => {
 
       <article id="sphere-grid" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>06 / TOPOLOGY ATLAS</span><h2>Вершины, рёбра и грани</h2></div>
+          <div><span>06 / FIVE RAW GENOMES</span><h2>Топология внутри 280 символов</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('sphereGrid', sphereGridLatexSource)">{{ copyLabels.sphereGrid }}</button>
             <button class="button" type="button" @click="copy('sphereGridSeed', SPHERE_GRID_GENOME)">{{ copyLabels.sphereGridSeed }}</button>
@@ -418,13 +441,16 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Теперь M0 — не один шар, а общий контракт поверхности. Формула <code>P(i,t)</code> вычисляет положение вершины, множество <code>E</code> решает, какие вершины соединены, а <code>F</code> перечисляет треугольные или четырёхугольные грани. Камере и цветовому полю всё равно, какой закон связей выбран.</p>
+            <p>M0 состоит из пяти самостоятельных исполняемых геномов. Выбор топологии <code>τ</code> и коротких целочисленных параметров <code>θ</code> сначала компилируется в p5.js-код <code>G</code>. Только после проверки лимита SPA расшифровывает этот же закон в управляемую пространственную модель.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
               \mathcal M(t)&amp;=(V,E,F,\mathbf P(t)),
               &amp;\mathbf P_i(t)&amp;=(x_i(t),y_i(t),z_i(t)),\\
-              \chi(\mathcal M)&amp;=|V|-|E|+|F|.
+              \chi(\mathcal M)&amp;=|V|-|E|+|F|,\\
+              G_\tau(\theta)&amp;=\operatorname{compile}(\tau,\theta),
+              &amp;|G_\tau(\theta)|&amp;\le 280,\\
+              \operatorname{SPA}(\tau,\theta,t)&amp;=\operatorname{decode}(G_\tau(\theta),t).
               \end{aligned}
               \]
             </div>
@@ -440,33 +466,38 @@ onMounted(async () => {
             </div>
             <div class="topology-table-wrap">
               <table class="topology-table">
-                <thead><tr><th>Поверхность</th><th>χ</th><th>Границы</th><th>Ориентация</th></tr></thead>
+                <thead><tr><th>Поверхность</th><th>RAW</th><th>χ</th><th>Границы</th><th>Ориентация</th></tr></thead>
                 <tbody>
-                  <tr><td>Сфера</td><td>2</td><td>0</td><td>да</td></tr>
-                  <tr><td>Плоскость</td><td>1</td><td>1</td><td>да</td></tr>
-                  <tr><td>Цилиндр</td><td>0</td><td>2</td><td>да</td></tr>
-                  <tr><td>Тор</td><td>0</td><td>0</td><td>да</td></tr>
-                  <tr><td>Мёбиус</td><td>0</td><td>1</td><td>нет</td></tr>
+                  <tr v-for="genome in topologyGenomeRows" :key="genome.id">
+                    <td>{{ genome.label }}</td>
+                    <td>{{ genome.characters }}/280</td>
+                    <td>{{ genome.euler }}</td>
+                    <td>{{ genome.boundaries }}</td>
+                    <td>{{ genome.orientable ? "да" : "нет" }}</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
-              <span>Автономная сеточная формула</span>
+              <span>Сфера · исполняемый RAW</span>
               <strong>{{ SPHERE_GRID_GENOME_CHARACTERS }} / {{ SPHERE_GRID_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ SPHERE_GRID_GENOME }}</code></pre>
-            <p>RAW-версия остаётся 276-символьным каноническим семенем сферы: соседние рёбра, автоматический поворот и ручная 3D-проекция помещаются в один пост. Пять топологий — расширенный фенотип SPA; перенос всего атласа в тот же лимит разрушил бы читаемый закон.</p>
+            <p>Плоскость, цилиндр, тор и лента Мёбиуса больше не являются расширениями, существующими только в SPA. У каждого варианта есть собственная формула, сетка, анимация и ручная 3D-проекция; даже крайние положения всех генетических ползунков остаются внутри лимита.</p>
+            <ul class="topology-genome-counts" aria-label="Размеры пяти исходных геномов">
+              <li v-for="genome in topologyGenomeRows" :key="genome.id"><span>{{ genome.label }}</span><code>{{ genome.characters }}/280</code></li>
+            </ul>
             <div class="pelagion-links">
-              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть атлас топологий →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть редактор RAW-геномов →</RouterLink>
               <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid', view: 'bare' } }">Запустить RAW-формулу →</RouterLink>
             </div>
           </div>
         </div>
         <div class="tiny-code-context">
-          <p><strong>Что проверяет опыт.</strong> Топология не требует отдельной физики и не обязана совпадать с формой в пространстве. Тор и лента Мёбиуса имеют одинаковое \(\chi=0\), но только Мёбиус неориентируем. Более экзотические законы тоже допустимы; некоторые из них, например бутылка Клейна, неизбежно самопересекутся при показе в обычном трёхмерном пространстве.</p>
-          <p><strong>Граница управления.</strong> Перетаскивание пальцем меняет только матрицу камеры. Оно не перестраивает <code>V</code>, <code>E</code> или <code>F</code> и не создаёт мутацию.</p>
+          <p><strong>Источник истины.</strong> Итогом является только строка <code>Gτ(θ)</code>. SPA не добавляет к сущности цвет, физику, дополнительные режимы рёбер или скрытое состояние: она показывает формулу, её точную длину и пространственную расшифровку.</p>
+          <p><strong>Граница управления.</strong> Перетаскивание пальцем меняет только матрицу камеры и потому не меняет ни одного символа RAW. Генетические ползунки, наоборот, немедленно пересобирают исполняемый код.</p>
         </div>
       </article>
 

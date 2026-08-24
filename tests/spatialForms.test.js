@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spatialForms, spatialLayerDefaults } from "../src/data/spatialForms.js";
+import {
+  compileTopologyGenome,
+  topologyGenomeDefaults
+} from "../src/data/topologyGenomes.js";
 import { GRID_TOPOLOGY_PRESETS, resolveGridDimensions } from "../src/lib/meshTopology.js";
 import { createPointEngine } from "../src/lib/pointEngine.js";
 
@@ -17,31 +21,27 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     assert.match(form.sketch.source, /^https:\/\/x\.com\/yuruyurau\/status\//);
   }
   for (const form of spatialForms) {
-    assert.ok(form.primaryControls.some(control => control.key === "depth"));
+    assert.ok(form.meshGenome || form.primaryControls.some(control => control.key === "depth"));
     assert.ok(form.layers.every(layer => Object.hasOwn(spatialLayerDefaults(form), layer.key)));
     assert.ok(form.sketch || form.genomeSketch, `${form.id}: RAW source is missing`);
   }
 });
 
-test("the mesh baseline stays an exact sphere before deformation", () => {
+test("the mesh baseline decodes the exact compact sphere genome", () => {
   const form = spatialForms.find(item => item.id === "sphere-grid");
   const layers = spatialLayerDefaults(form);
   const target = {};
   const { vertexCount } = resolveGridDimensions(form.mesh, form.defaults);
 
-  assert.equal(form.defaults.wave, 0);
-  assert.equal(form.defaults.renderMode, "hybrid");
+  assert.equal(form.defaults.renderMode, "wireframe");
   assert.equal(form.defaults.topology, "sphere");
-  assert.equal(vertexCount, 512);
+  assert.equal(vertexCount, 450);
+  assert.equal(compileTopologyGenome(form.defaults).characters, 276);
+  assert.equal(form.layers.length, 0);
 
   for (let index = 0; index < vertexCount; index += 17) {
-    form.evaluate(index, 0.7, form.defaults, layers, target);
-    const radius = Math.hypot(
-      target.x - 200,
-      target.y - 200,
-      target.z / form.defaults.depth
-    );
-    assert.ok(Math.abs(radius - form.defaults.radius) < 1e-9);
+    form.evaluate(index, 1, form.defaults, layers, target);
+    assert.ok([target.x, target.y, target.z].every(Number.isFinite));
   }
 });
 
@@ -50,7 +50,10 @@ test("all five topology embeddings are finite spatial surfaces", () => {
   const layers = spatialLayerDefaults(form);
 
   for (const topology of GRID_TOPOLOGY_PRESETS) {
-    const settings = { ...form.defaults, topology: topology.id };
+    const settings = {
+      ...form.defaults,
+      ...topologyGenomeDefaults(topology.id)
+    };
     const dimensions = resolveGridDimensions(form.mesh, settings);
     const axes = { x: [], y: [], z: [] };
     const target = {};

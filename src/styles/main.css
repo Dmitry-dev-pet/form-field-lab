@@ -864,6 +864,79 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.live-genome-panel {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 21px;
+  padding: 14px;
+  border: 1px solid rgba(215,255,88,0.28);
+  border-radius: 14px;
+  background: rgba(215,255,88,0.035);
+}
+
+.live-genome-panel > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.live-genome-panel header div { display: grid; gap: 3px; }
+.live-genome-panel header span {
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.live-genome-panel header small,
+.live-genome-panel > p {
+  color: var(--quiet);
+  font-size: 0.58rem;
+  line-height: 1.45;
+}
+
+.live-genome-panel header strong {
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.genome-budget-track {
+  height: 3px;
+  overflow: hidden;
+  background: rgba(244,243,237,0.1);
+}
+
+.genome-budget-track span {
+  display: block;
+  height: 100%;
+  background: var(--acid);
+}
+
+.live-genome-panel pre {
+  max-width: 100%;
+  max-height: 150px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-size: 0.57rem;
+  line-height: 1.55;
+}
+
+.live-genome-panel > p { margin: 0; }
+.live-genome-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.live-genome-actions .button { min-width: 0; }
+.live-genome-panel.invalid { border-color: rgba(255,179,179,0.5); }
+.live-genome-panel.invalid header strong,
+.live-genome-panel.invalid > p { color: var(--danger); }
+.live-genome-panel.invalid .genome-budget-track span { background: var(--danger); }
+
 .control-list,
 .advanced-controls { display: grid; gap: 16px; }
 
@@ -1615,6 +1688,25 @@ mjx-container[display="true"] {
 .pelagion-genome pre { padding: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .pelagion-genome p { margin: 14px 0 0; color: var(--quiet); font-size: 0.68rem; line-height: 1.62; }
 .pelagion-genome code { color: var(--cyan); }
+.topology-genome-counts {
+  display: grid;
+  gap: 5px;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.topology-genome-counts li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--quiet);
+  font-size: 0.64rem;
+}
+
+.topology-genome-counts code { color: var(--acid); }
 .pelagion-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 18px; }
 .pelagion-links a { color: var(--acid); font-size: 0.67rem; text-decoration: none; }
 .pelagion-links a:hover { text-decoration: underline; }

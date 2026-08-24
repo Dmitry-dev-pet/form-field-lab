@@ -6,6 +6,10 @@ import ParametricCanvas from "../components/ParametricCanvas.vue";
 import SketchRunner from "../components/SketchRunner.vue";
 import { useColorFormula } from "../composables/useColorFormula.js";
 import { spatialForms, spatialFormById, spatialLayerDefaults } from "../data/spatialForms.js";
+import {
+  compileTopologyGenome,
+  topologyGenomeDefaults
+} from "../data/topologyGenomes.js";
 import { DEFAULT_COLOR_STATE } from "../lib/colorFormula.js";
 import {
   compileChronophoreImprint,
@@ -101,6 +105,7 @@ const invertOrbitY = ref(true);
 const preset = ref(basePresetLabel(initialForm));
 const reactionMessage = ref("");
 const mutationMessage = ref("");
+const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref("canonical");
 const spaSnapshot = ref(initialForm.savedPose || null);
 const imprintSnapshot = ref(null);
@@ -110,7 +115,16 @@ let mutationTimer;
 if (initialForm.savedColor) Object.assign(color, initialForm.savedColor);
 
 const supportsImprint = computed(() => selectedForm.value.imprintKind === "chronophore");
-const canonicalSketch = computed(() => selectedForm.value.sketch || selectedForm.value.genomeSketch);
+const isTopologyGenome = computed(() => Boolean(selectedForm.value.meshGenome));
+const compiledTopologyGenome = computed(() => isTopologyGenome.value
+  ? compileTopologyGenome(settings)
+  : null);
+const canonicalSketch = computed(() => compiledTopologyGenome.value?.sketch
+  || selectedForm.value.sketch
+  || selectedForm.value.genomeSketch);
+const canvasColor = computed(() => isTopologyGenome.value
+  ? { mode: "solid", colorA: "#ffffff", colorB: "#ffffff" }
+  : color);
 const imprintSource = computed(() => imprintSnapshot.value || {
   settings: { ...settings },
   layers: { ...layers },
@@ -150,17 +164,22 @@ const savedImprintRecord = computed(() => geneticImprintResult.value
   ? savedEntityRecords.value.find(record => record.code === geneticImprintResult.value.code)
   : null);
 const nextEntityLabel = computed(() => `P${nextMutationNumber(savedEntityRecords.value)}`);
-const bareRunnerLabel = computed(() => selectedForm.value.sketch
-  ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
+const bareRunnerLabel = computed(() => isTopologyGenome.value
+  ? `${compiledTopologyGenome.value.preset.label}: итоговый ${compiledTopologyGenome.value.characters}-символьный RAW-геном`
+  : selectedForm.value.sketch
+    ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
   : isImprintBare.value
     ? `${selectedForm.value.title}: исполняемый отпечаток текущего состояния SPA`
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
-const bareLead = computed(() => selectedForm.value.sketch
-  ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
+const bareLead = computed(() => isTopologyGenome.value
+  ? `Это итоговый исполняемый код выбранной формы: ${bareCodeLength.value} из 280 символов. SPA только расшифровывает и настраивает его константы.`
+  : selectedForm.value.sketch
+    ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
   : isImprintBare.value
     ? "Исполняемый отпечаток переносит в автономный p5.js-код текущую фазу, пространственную позу, параметры и формульный цвет SPA."
     : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
-const primaryControls = computed(() => selectedForm.value.primaryControls);
+const primaryControls = computed(() => compiledTopologyGenome.value?.preset.controls
+  || selectedForm.value.primaryControls);
 const advancedControls = computed(() => selectedForm.value.advancedControls);
 const selectedTopology = computed(() => selectedForm.value.mesh
   ? resolveGridTopology(selectedForm.value.mesh, settings)
@@ -178,7 +197,7 @@ const boundaryLabel = computed(() => {
 const pointStatus = computed(() => {
   const form = selectedForm.value;
   if (form.mesh) {
-    return `#${formNumber(form)} · ${selectedTopology.value.label} · ${meshMetrics.value.vertexCount.toLocaleString("ru-RU")} узлов · 400²`;
+    return `#${formNumber(form)} · ${selectedTopology.value.label} · RAW ${compiledTopologyGenome.value.characters}/280 · 400²`;
   }
   return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`;
 });
@@ -190,6 +209,7 @@ function formNumber(form) {
 
 function basePresetLabel(form) {
   if (form.savedRecord) return "Мутация";
+  if (form.meshGenome) return "RAW ≤ 280";
   return form.sketch ? "Original" : "Синтез";
 }
 
@@ -200,6 +220,11 @@ function theoryTarget(form) {
 
 function formatValue(control, value) {
   if (control.format === "speed") return `${Number(value).toFixed(2)}×`;
+  if (control.format === "integerSpeed") return `${Math.round(Number(value))}×`;
+  if (control.format === "codeFraction") {
+    const digits = String(Math.round(Number(value))).padStart(2, "0");
+    return digits.endsWith("0") ? `.${digits[0]}` : `.${digits}`;
+  }
   if (control.format === "percent") return `${Math.round(Number(value) * 100)}%`;
   if (control.format === "count") return Number(value).toLocaleString("ru-RU");
   if (Number.isInteger(control.digits)) return Number(value).toFixed(control.digits);
@@ -227,8 +252,23 @@ function setRenderMode(mode) {
 
 function setTopology(topologyId) {
   if (!selectedForm.value.mesh?.topologies.some(item => item.id === topologyId)) return;
-  settings.topology = topologyId;
-  preset.value = "Топология";
+  if (isTopologyGenome.value) {
+    const sharedGenome = {
+      genomeProjection: settings.genomeProjection,
+      genomeSpeed: settings.genomeSpeed,
+      alpha: settings.alpha
+    };
+    Object.assign(settings, topologyGenomeDefaults(topologyId), sharedGenome, {
+      topology: topologyId
+    });
+    settings.speed = 1;
+    settings.lineWidth = 0.72;
+    settings.renderMode = "wireframe";
+    settings.backgroundColor = "#090909";
+  } else {
+    settings.topology = topologyId;
+  }
+  preset.value = "RAW выбран";
 }
 
 function replaceReactive(target, source) {
@@ -290,10 +330,28 @@ function randomStep(min, max, step) {
 }
 
 function randomize() {
+  if (compiledTopologyGenome.value) {
+    for (const control of compiledTopologyGenome.value.preset.controls) {
+      settings[control.key] = randomStep(control.min, control.max, control.step);
+    }
+    preset.value = "RAW случайный";
+    return;
+  }
   Object.entries(selectedForm.value.randomRanges).forEach(([key, [min, max, step]]) => {
     settings[key] = Number(randomStep(min, max, step).toFixed(6));
   });
   preset.value = "Случайный";
+}
+
+async function copyTopologyGenome() {
+  if (!compiledTopologyGenome.value) return;
+  try {
+    await navigator.clipboard.writeText(compiledTopologyGenome.value.code);
+    genomeCopyLabel.value = "Скопировано ✓";
+  } catch {
+    genomeCopyLabel.value = "Не удалось";
+  }
+  window.setTimeout(() => { genomeCopyLabel.value = "Копировать RAW"; }, 1500);
 }
 
 function captureImprint() {
@@ -434,7 +492,7 @@ onBeforeUnmount(() => {
           :form="selectedForm"
           :settings="settings"
           :layers="layers"
-          :color="color"
+          :color="canvasColor"
           :color-evaluator="colorEvaluator"
           :initial-state="spaSnapshot"
           :invert-y="invertOrbitY"
@@ -465,7 +523,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? barePaused ? "pause / raw" : "raw / p5.js" : spaPaused ? "pause" : "live" }}</span>
-          <span v-if="isBareMode">{{ bareCodeLength }} chars · {{ isImprintBare ? "SPA imprint" : "canonical" }} · isolated</span>
+          <span v-if="isBareMode">{{ bareCodeLength }} chars · {{ isTopologyGenome ? "result" : isImprintBare ? "SPA imprint" : "canonical" }} · isolated</span>
           <span v-else>{{ selectedForm.supportsStimulus ? "button / reaction · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
         </div>
         <p class="sr-only" aria-live="polite">{{ reactionMessage }}</p>
@@ -505,7 +563,7 @@ onBeforeUnmount(() => {
         <div v-if="isBareMode" class="bare-mode-panel">
           <div>
             <p class="panel-kicker">RAW / GENOTYPE FEEDBACK</p>
-            <h2>{{ isImprintBare ? "Отпечаток SPA" : "Код без лаборатории" }}</h2>
+            <h2>{{ isTopologyGenome ? "Итоговый RAW" : isImprintBare ? "Отпечаток SPA" : "Код без лаборатории" }}</h2>
             <p>{{ bareLead }}</p>
           </div>
 
@@ -518,7 +576,7 @@ onBeforeUnmount(() => {
             <div><dt>Исполнение</dt><dd>p5.js в изолированном iframe</dd></div>
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} символов</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
-            <div><dt>Источник</dt><dd>{{ isImprintBare ? "поза, параметры и цвет SPA" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие генетические параметры SPA" : isImprintBare ? "поза, параметры и цвет SPA" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
 
           <div v-if="isImprintBare" class="genome-comparison">
@@ -573,12 +631,13 @@ onBeforeUnmount(() => {
             </template>
           </div>
 
-          <p class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
+          <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не демонстрационная замена, а точный результат выбора в SPA. Любое изменение генетического ползунка пересобирает этот код; ракурс камеры в него не записывается.</p>
+          <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>
 
         <template v-else>
           <div class="panel-title-row">
-            <h2>Параметры</h2>
+            <h2>{{ isTopologyGenome ? "Генетические параметры" : "Параметры" }}</h2>
             <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
           </div>
 
@@ -605,6 +664,33 @@ onBeforeUnmount(() => {
             </dl>
             <p class="topology-summary">{{ meshMetrics.orientable ? "ориентируемая" : "неориентируемая" }} · {{ boundaryLabel }}</p>
           </div>
+
+          <section
+            v-if="compiledTopologyGenome"
+            class="live-genome-panel"
+            :class="{ invalid: !compiledTopologyGenome.withinLimit }"
+            aria-label="Итоговый исполняемый RAW-геном"
+          >
+            <header>
+              <div><span>Исполняемый RAW</span><small>это и есть результат</small></div>
+              <strong aria-live="polite">{{ compiledTopologyGenome.characters }} / {{ compiledTopologyGenome.limit }}</strong>
+            </header>
+            <div
+              class="genome-budget-track"
+              role="progressbar"
+              aria-label="Использование лимита генома"
+              :aria-valuenow="compiledTopologyGenome.characters"
+              aria-valuemin="0"
+              :aria-valuemax="compiledTopologyGenome.limit"
+            ><span :style="{ width: `${compiledTopologyGenome.characters / compiledTopologyGenome.limit * 100}%` }"></span></div>
+            <pre><code>{{ compiledTopologyGenome.code }}</code></pre>
+            <p v-if="compiledTopologyGenome.withinLimit">Геном исполняется самостоятельно и проходит лимит 280 символов.</p>
+            <p v-else role="alert">Лимит превышен: этот вариант не может считаться сущностью.</p>
+            <div class="live-genome-actions">
+              <button class="button" type="button" @click="copyTopologyGenome">{{ genomeCopyLabel }}</button>
+              <button class="button primary" type="button" :disabled="!compiledTopologyGenome.withinLimit" @click="setViewMode(LAB_VIEW_MODE.bare)">Запустить RAW</button>
+            </div>
+          </section>
 
           <div v-if="selectedForm.renderModes" class="mesh-mode-field">
             <div class="mesh-mode-title">
@@ -665,7 +751,7 @@ onBeforeUnmount(() => {
             >Инверсия Y · {{ invertOrbitY ? "вкл." : "выкл." }}</button>
           </div>
 
-          <details class="control-details color-details" open>
+          <details v-if="!isTopologyGenome" class="control-details color-details" open>
             <summary>Цветовая формула</summary>
             <ColorFormulaControls
               v-model:mode="color.mode"
@@ -679,7 +765,7 @@ onBeforeUnmount(() => {
             />
           </details>
 
-          <details class="control-details">
+          <details v-if="advancedControls.length || selectedForm.layers.length" class="control-details">
             <summary>Точная настройка и анатомия</summary>
             <div class="advanced-controls">
               <label v-for="control in advancedControls" :key="control.key" class="range-field">

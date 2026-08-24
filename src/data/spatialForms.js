@@ -2,10 +2,10 @@ import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import { PELAGION_GENOME_SKETCH } from "./pelagionGenome.js";
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
+import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
   decodeGridVertex,
   GRID_TOPOLOGY_PRESETS,
-  MESH_RENDER_MODES,
   resolveGridDimensions
 } from "../lib/meshTopology.js";
 
@@ -130,67 +130,59 @@ const TOPOLOGY_GRID = Object.freeze({
 function topologyGridPoint(index, time, settings, layers, target) {
   const dimensions = resolveGridDimensions(TOPOLOGY_GRID, settings);
   const vertex = decodeGridVertex(TOPOLOGY_GRID, dimensions, index, target);
-  const { columns, topology } = dimensions;
-  const normalizedU = topology.id === "plane"
-    ? vertex.column / Math.max(1, columns - 1)
-    : vertex.column / columns;
-  const normalizedV = vertex.row / Math.max(1, dimensions.rows - 1);
-  const u = TAU * normalizedU;
-  const v = Math.PI * normalizedV;
-  const wave = layers.wave
-    ? settings.wave * Math.sin(
-      settings.waveFrequency * u
-      + settings.waveVertical * v
-      - time * settings.waveSpeed
-    )
-    : 0;
-  const radius = settings.radius + wave;
-  const crossSection = Math.max(4, Number(settings.crossSection) || 0);
+  const { columns, rows, topology } = dimensions;
+  const scale = Number(settings.genomeA) || 1;
+  const secondary = Number(settings.genomeB) || 1;
+  const projection = (Number(settings.genomeProjection) || 0) / 100;
+  const genomeTime = time * (Number(settings.genomeSpeed) || 1);
+  const u = TAU * vertex.column / columns;
+  const normalizedV = vertex.row / Math.max(1, rows - 1);
   let x;
   let y;
   let z;
 
   if (topology.id === "plane") {
-    x = (normalizedU - 0.5) * radius * 1.8;
-    y = (0.5 - normalizedV) * settings.height;
-    z = wave;
+    const planeU = vertex.column * 13 - 156;
+    const planeV = vertex.row * 23 + 70;
+    const wave = scale * Math.sin(planeU / secondary - genomeTime / 20);
+    const angle = genomeTime / 99;
+    x = planeU * Math.cos(angle) + wave * Math.sin(angle);
+    y = planeV - wave * Math.cos(angle) * projection - 200;
+    z = -planeU * Math.sin(angle) + wave * Math.cos(angle);
   } else if (topology.id === "cylinder") {
-    x = radius * Math.cos(u);
-    y = (0.5 - normalizedV) * settings.height;
-    z = radius * Math.sin(u);
+    const angle = u - genomeTime / 99;
+    x = scale * Math.cos(angle);
+    y = vertex.row * 18 - scale * Math.sin(angle) * projection - 130;
+    z = scale * Math.sin(angle);
   } else if (topology.id === "torus") {
-    const torusV = TAU * vertex.row / dimensions.rows;
-    const majorRadius = Math.max(crossSection + 8, settings.radius - crossSection);
-    const localRadius = crossSection + wave;
-    x = (majorRadius + localRadius * Math.cos(torusV)) * Math.cos(u);
-    y = localRadius * Math.sin(torusV);
-    z = (majorRadius + localRadius * Math.cos(torusV)) * Math.sin(u);
+    const torusV = TAU * vertex.row / rows;
+    const radius = scale + secondary * Math.cos(torusV);
+    const angle = u - genomeTime / 99;
+    x = radius * Math.cos(angle);
+    y = secondary * Math.sin(torusV) * 0.88 - radius * Math.sin(angle) * projection;
+    z = radius * Math.sin(angle);
   } else if (topology.id === "mobius") {
-    const majorRadius = Math.max(crossSection + 8, settings.radius - crossSection);
-    const strip = (normalizedV - 0.5) * 2 * crossSection;
-    const twistedRadius = majorRadius + strip * Math.cos(u / 2) + wave;
-    x = twistedRadius * Math.cos(u);
-    y = strip * Math.sin(u / 2);
-    z = twistedRadius * Math.sin(u);
+    const strip = vertex.row * secondary - secondary * 7;
+    const radius = scale + strip * Math.cos(u / 2);
+    const angle = u - genomeTime / 99;
+    x = radius * Math.cos(angle);
+    y = strip * Math.sin(u / 2) * 0.88 - radius * Math.sin(angle) * projection;
+    z = radius * Math.sin(angle);
   } else {
-    const ringRadius = radius * Math.sin(v);
-    x = ringRadius * Math.cos(u);
-    y = radius * Math.cos(v);
-    z = ringRadius * Math.sin(u);
+    const v = Math.PI * vertex.row / (rows - 1);
+    const radius = scale * Math.sin(v);
+    const angle = u - genomeTime / 99;
+    x = radius * Math.cos(angle);
+    y = scale * Math.cos(v) * 0.88 - radius * Math.sin(angle) * projection;
+    z = radius * Math.sin(angle);
   }
 
-  const rotation = layers.rotation ? time * settings.rotation : 0;
-  const rotationCos = Math.cos(rotation);
-  const rotationSin = Math.sin(rotation);
-  const rotatedX = x * rotationCos + z * rotationSin;
-  const rotatedZ = -x * rotationSin + z * rotationCos;
-
-  target.x = rotatedX + 200;
+  target.x = x + 200;
   target.y = y + 200;
-  target.z = rotatedZ * settings.depth;
+  target.z = z;
   target.parameter = normalizedV;
   target.k = Math.sin(u);
-  target.e = Math.cos(v);
+  target.e = Math.cos(Math.PI * normalizedV);
   target.d = Math.hypot(x, y, z);
   target.c = u;
   target.branch = vertex.column;
@@ -579,52 +571,24 @@ export const spatialForms = Object.freeze([
     id: "sphere-grid",
     displayNumber: "M0",
     sketchNumber: null,
-    shortLabel: "Топологии",
-    title: "Атлас топологий",
-    association: "опыт · вершины · рёбра · грани",
-    description: "Один рендерер собирает сферу, плоскость, цилиндр, тор и ленту Мёбиуса из независимых законов вершин, рёбер и граней. Физика не нужна: движение остаётся чистой формулой.",
+    shortLabel: "RAW-топологии",
+    title: "Атлас 280-геномов",
+    association: "5 исполняемых геномов · каждый ≤ 280",
+    description: "Сфера, плоскость, цилиндр, тор и лента Мёбиуса существуют как пять самостоятельных p5.js-геномов. SPA только выбирает формулу, меняет её короткие константы и расшифровывает результат.",
     origin: "mesh-study",
     genomeSketch: SPHERE_GRID_GENOME_SKETCH,
+    meshGenome: true,
     mesh: TOPOLOGY_GRID,
-    renderModes: MESH_RENDER_MODES,
-    timeStep: 0.012,
+    timeStep: 1,
     defaults: {
-      topology: "sphere", speed: 1, radius: 118, depth: 1,
-      columns: 30, rows: 19, rotation: 0.8,
-      crossSection: 36, height: 190,
-      wave: 0, waveFrequency: 3, waveVertical: 2, waveSpeed: 1.4,
-      lineWidth: 0.72, renderMode: "hybrid", alpha: 106,
-      backgroundColor: "#05090c"
+      ...topologyGenomeDefaults("sphere"),
+      speed: 1, lineWidth: 0.72, renderMode: "wireframe",
+      backgroundColor: "#090909"
     },
-    primaryControls: [
-      speed,
-      control("radius", "Радиус", 55, 155, 1),
-      depth,
-      control("columns", "Меридианы", 12, 64, 1),
-      control("rows", "Параллели", 8, 40, 1),
-      control("rotation", "Вращение формулы", 0, 2.5, 0.05, { digits: 2 }),
-      control("wave", "Отклонение от шара", 0, 28, 0.5, { digits: 1 }),
-      alpha
-    ],
-    advancedControls: [
-      control("crossSection", "Радиус сечения / полуширина", 12, 62, 1),
-      control("height", "Высота листа / цилиндра", 90, 260, 2),
-      control("waveFrequency", "Волн по долготе", 1, 12, 1),
-      control("waveVertical", "Волн по широте", 0, 8, 1),
-      control("waveSpeed", "Скорость волны", 0, 4, 0.1, { digits: 1 }),
-      control("lineWidth", "Толщина рёбер", 0.25, 2, 0.05, { digits: 2 })
-    ],
-    layers: [
-      { key: "rotation", label: "Вращение формулы", default: true },
-      { key: "wave", label: "Фазовая волна", default: true }
-    ],
-    randomRanges: {
-      speed: [0.4, 1.8, 0.05], radius: [82, 138, 1], depth: [0.6, 1.5, 0.05],
-      columns: [18, 52, 1], rows: [10, 30, 1], rotation: [0.25, 1.7, 0.05],
-      crossSection: [22, 48, 1], height: [140, 230, 2],
-      wave: [0, 18, 0.5], waveFrequency: [2, 9, 1], waveVertical: [0, 6, 1],
-      waveSpeed: [0.4, 3, 0.1], lineWidth: [0.4, 1.35, 0.05], alpha: [65, 165, 1]
-    },
+    primaryControls: [],
+    advancedControls: [],
+    layers: [],
+    randomRanges: {},
     evaluate: topologyGridPoint
   },
   {

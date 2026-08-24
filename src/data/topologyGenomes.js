@@ -1,0 +1,163 @@
+export const TOPOLOGY_GENOME_LIMIT = 280;
+
+const control = (key, label, min, max, step = 1, options = {}) => Object.freeze({
+  key, label, min, max, step, ...options
+});
+
+function integer(value, fallback, min, max) {
+  const number = Math.round(Number(value));
+  return Math.min(max, Math.max(min, Number.isFinite(number) ? number : fallback));
+}
+
+function decimalHundredths(value) {
+  const digits = String(integer(value, 48, 20, 79)).padStart(2, "0");
+  return digits.endsWith("0") ? `.${digits[0]}` : `.${digits}`;
+}
+
+function movingTime(speed) {
+  return speed === 1 ? "t" : `t*${speed}`;
+}
+
+function preset(definition) {
+  return Object.freeze({
+    limit: TOPOLOGY_GENOME_LIMIT,
+    ...definition,
+    defaults: Object.freeze({ topology: definition.id, ...definition.defaults }),
+    controls: Object.freeze(definition.controls)
+  });
+}
+
+export const TOPOLOGY_GENOME_PRESETS = Object.freeze([
+  preset({
+    id: "sphere",
+    label: "Сфера",
+    shortLabel: "S²",
+    grid: Object.freeze({ columns: 32, rows: 16 }),
+    defaults: { genomeA: 99, genomeB: 30, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Радиус", 60, 99),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,q=${a}*sin(v),a=u-${time}/99)=>[q*cos(a)+200,${a}*cos(v)*.88-q*sin(a)*${projection}+200]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=480;i--;){u=i%32*PI/16,v=(i>>5)*PI/15,A=P(u,v),B=P(u+PI/16,v),C=P(u,v+PI/15),line(...A,...B),line(...A,...C)}}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
+    id: "plane",
+    label: "Плоскость",
+    shortLabel: "R²",
+    grid: Object.freeze({ columns: 26, rows: 13 }),
+    defaults: { genomeA: 12, genomeB: 35, genomeProjection: 40, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Амплитуда волны", 10, 29),
+      control("genomeB", "Длина волны", 20, 49),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, b, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,z=${a}*sin(u/${b}-${time}/20),a=${time}/99)=>[u*cos(a)+z*sin(a)+200,v-z*cos(a)*${projection}]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=300;i--;){u=i%25*13-156,v=(i/25|0)*23+70,A=P(u,v),B=P(u+13,v),C=P(u,v+23),line(...A,...B),line(...A,...C)}}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
+    id: "cylinder",
+    label: "Цилиндр",
+    shortLabel: "S¹×I",
+    grid: Object.freeze({ columns: 32, rows: 16 }),
+    defaults: { genomeA: 99, genomeB: 30, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Радиус", 60, 99),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,a=u-${time}/99)=>[${a}*cos(a)+200,v-${a}*sin(a)*${projection}+70]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=480;i--;){u=i%32*PI/16,v=(i>>5)*18,A=P(u,v),B=P(u+PI/16,v),C=P(u,v+18),line(...A,...B),line(...A,...C)}}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
+    id: "torus",
+    label: "Тор",
+    shortLabel: "T²",
+    grid: Object.freeze({ columns: 32, rows: 16 }),
+    defaults: { genomeA: 70, genomeB: 30, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Большой радиус", 50, 89),
+      control("genomeB", "Радиус трубки", 20, 39),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, b, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,q=${a}+${b}*cos(v),a=u-${time}/99)=>[q*cos(a)+200,${b}*sin(v)*.88-q*sin(a)*${projection}+200]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=512;i--;){u=i%32*PI/16,v=(i>>5)*PI/8,A=P(u,v),B=P(u+PI/16,v),C=P(u,v+PI/8),line(...A,...B),line(...A,...C)}}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
+    id: "mobius",
+    label: "Мёбиус",
+    shortLabel: "M",
+    grid: Object.freeze({ columns: 32, rows: 15 }),
+    defaults: { genomeA: 70, genomeB: 4, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Радиус кольца", 50, 89),
+      control("genomeB", "Ширина ленты", 3, 7),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a, b, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,q=${a}+v*cos(u/2),a=u-${time}/99)=>[q*cos(a)+200,v*sin(u/2)*.88-q*sin(a)*${projection}+200]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=480;i--;){u=i%32*PI/16,v=(i>>5)*${b}-${b * 7},A=P(u,v),B=P(u+PI/16,v),C=P(u,v+${b}),line(...A,...B),line(...A,...C)}}//#つぶやきProcessing`;
+    }
+  })
+]);
+
+const presetById = new Map(TOPOLOGY_GENOME_PRESETS.map(item => [item.id, item]));
+
+export function topologyGenomePreset(id) {
+  return presetById.get(id) || TOPOLOGY_GENOME_PRESETS[0];
+}
+
+export function compileTopologyGenome(settings = {}) {
+  const selected = topologyGenomePreset(settings.topology);
+  const parameters = {
+    a: integer(settings.genomeA, selected.defaults.genomeA, selected.controls[0].min, selected.controls[0].max),
+    b: integer(settings.genomeB, selected.defaults.genomeB, 3, 49),
+    projection: decimalHundredths(settings.genomeProjection ?? selected.defaults.genomeProjection),
+    projectionValue: integer(settings.genomeProjection, selected.defaults.genomeProjection, 20, 79),
+    speed: integer(settings.genomeSpeed, selected.defaults.genomeSpeed, 1, 9),
+    alpha: integer(settings.alpha, selected.defaults.alpha, 30, 99)
+  };
+  const code = selected.compile(parameters);
+  const identity = [selected.id, parameters.a, parameters.b, parameters.projectionValue, parameters.speed, parameters.alpha].join("-");
+  return Object.freeze({
+    id: `topology-genome-${identity}`,
+    code,
+    characters: code.length,
+    limit: TOPOLOGY_GENOME_LIMIT,
+    withinLimit: code.length <= TOPOLOGY_GENOME_LIMIT,
+    preset: selected,
+    parameters: Object.freeze(parameters),
+    sketch: Object.freeze({ id: `topology-genome-${identity}`, code })
+  });
+}
+
+export function topologyGenomeDefaults(id = "sphere") {
+  const selected = topologyGenomePreset(id);
+  return {
+    ...selected.defaults,
+    columns: selected.grid.columns,
+    rows: selected.grid.rows
+  };
+}
