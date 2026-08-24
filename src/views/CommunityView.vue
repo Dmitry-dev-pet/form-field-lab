@@ -75,14 +75,14 @@ async function copyGenome() {
 
       <div class="seed-lab">
         <div class="seed-stage">
-          <SketchRunner :sketch="PELAGION_LIVING_GENOME_SKETCH" label="Пелагион 280 — неизменное основание линии" />
+          <SketchRunner :sketch="PELAGION_LIVING_GENOME_SKETCH" label="Цельный Пелагион 274 — неизменное основание линии" />
           <div class="seed-counter"><strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }}</strong> / {{ PELAGION_GENOME_LIMIT }} · запас {{ remainingCharacters }}</div>
         </div>
         <div class="seed-copy">
           <div>
             <p class="panel-kicker">Pelagion / embryo</p>
             <h2>Геном помещается в твит</h2>
-            <p>Это удачный Пелагион с силовым гребком: читаемое тело, хвостовой плавник, формульный цвет, движение и настоящая координата <code>z</code>. Лаборатория всегда начинает именно с него; бюджеты 512 и 768 только дописывают ядро и редкие связи, не меняя исходный слой.</p>
+            <p>Это точный цельный «Живой гребок RAW» из версии <code>34fe67e</code>: единый профиль оболочки, формульный цвет, движение и настоящая координата <code>z</code>. Лаборатория всегда начинает именно с него; бюджеты 512 и 768 только дописывают внутреннюю ленту и продольную ткань, не меняя исходный слой.</p>
           </div>
           <div class="seed-actions">
             <RouterLink class="button primary" :to="{ name: 'lab', query: { form: 'pelagion' } }">Разбудить сущность</RouterLink>

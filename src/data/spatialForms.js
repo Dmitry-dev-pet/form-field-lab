@@ -635,8 +635,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Пелагион",
     title: "Пелагион",
-    association: "тело · плавник · хвост · гребок",
-    description: "Пелагический организм с читаемым овальным телом и хвостовым плавником. Глубинная волна проходит от центра к хвосту, а движение пальца вращает всё пространство.",
+    association: "цельная оболочка · мембрана · живой гребок",
+    description: "Пелагический организм с непрерывным вытянутым телом: одна формула ведёт оболочку от головы к хвосту, а единая волна сжимает и раскрывает весь объём.",
     origin: "community-synthesis",
     genomeSketch: PELAGION_LIVING_GENOME_SKETCH,
     budgetVariants: PELAGION_EVOLUTION_VARIANTS,
@@ -644,12 +644,12 @@ export const spatialForms = Object.freeze([
       Object.freeze({
         id: PELAGION_MOTION_MODE.continuous,
         label: "Плавное скольжение",
-        description: "Тело мягко дышит, хвост следует за ним, а силуэт остаётся устойчивым."
+        description: "Цельная оболочка мягко дышит, а её вытянутый край следует общей волне."
       }),
       Object.freeze({
         id: PELAGION_MOTION_MODE.livingStroke,
         label: "Силовой гребок",
-        description: "Единая фаза проходит через глубину корпуса и хвостовой плавник, не меняя идентичность формы."
+        description: "Единая фаза проходит через весь объём, не разрывая оболочку на отдельные части."
       })
     ]),
     savedColor: Object.freeze({

@@ -93,35 +93,20 @@ R\sin c_i+k_ip_i\\R\sin(hc_i)+e_ip_i\\\lambda R\cos c_i
 \end{aligned}`;
 
 const pelagionLatexSource = String.raw`\begin{aligned}
-q_i&=\left\lfloor i/200\right\rfloor,
-&\theta_i&=(i\bmod200)/32,
-&h_i&=[q_i>29],\\
-u_i&=\begin{cases}q_i,&h_i=0,\\q_i-30,&h_i=1,\end{cases}
-&r_i&=15\sqrt{u_i},\\
-\mathbf P_i^{\rm body}(t)&=
-\begin{bmatrix}
-r_i\cos\theta_i\\
-0.6r_i\sin\theta_i\\
-18-u_i/2+b(t,u_i,\theta_i)
-\end{bmatrix},
-&q_i&\le29,\\
-\mathbf P_i^{\rm tail}(t)&=
-\begin{bmatrix}
-80+5u_i\\
-u_i\sin\theta_i\\
-g(t,u_i)
-\end{bmatrix},
-&q_i&>29,\\
-s(t,u)&=\sin(4t-u/9),
-&b_{\rm stroke}&=9s\sin^2\theta,
-&g_{\rm stroke}&=16s,\\
-I_{\rm core}&=\{i:\neg h_i\land i\bmod8=0\},
-&\mathbf P_i^{\rm core}&=0.42\mathbf P_i,\\
-I_{\rm edge}&=\{i:u_i>0\land i\bmod25=0\},
-&E_i&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-1,\theta_i)\right),\\
-x_i'&=x_i\cos a+z_i\sin a+130,
+u_i&=i/2000,
+&\theta_i&=(i\bmod40)/6,
+&s_i(t)&=\sin^3(4t-u_i),\\
+r_i(t)&=60\sin^{0.6}\!\left(\frac{\pi u_i}{5}\right)\left(1+\frac{s_i}{9}\right),\\
+x_i(t)&=(u_i-2.5)(60-5s_i),
+&y_i(t)&=r_i\cos\theta_i+4u_i^2s_i,\\
+z_i(t)&=r_i\sin\theta_i(1+s_i/4),\\
+I_{\rm axis}&=\{i:i\bmod40=0\},
+&I_{\rm ribbon}&=\{i:i\bmod8=0\},\\
+I_{\rm edge}&=\{i:u_i>0.02\land i\bmod10=0\},
+&E_i&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-0.02,\theta_i)\right),\\
+x_i'&=x_i\cos a+z_i\sin a+200,
 &y_i'&=y_i+200,
-&a(t)&=\sin(t)/5.
+&a(t)&=t/3.
 \end{aligned}`;
 
 const chronophoreLatexSource = String.raw`\begin{aligned}
@@ -599,34 +584,28 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Индекс сразу делится на 50 пространственных сечений: первые 30 образуют овальное тело, последние 20 продолжают его в хвостовой плавник. Удачный 280-символьный силовой гребок теперь служит неизменным основанием всей линии.</p>
+            <p>Источник линии — точный 274-символьный «Живой гребок RAW» из версии <code>34fe67e</code>. Параметр <code>u</code> непрерывно проходит от головы к хвосту, а 40 угловых отсчётов собирают вокруг него одну оболочку. Организм нигде не разделяется на отдельные тело и хвост.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              q_i&amp;=\left\lfloor i/200\right\rfloor,
-              &amp;\theta_i&amp;=(i\bmod200)/32,
-              &amp;h_i&amp;=[q_i&gt;29],\\
-              u_i&amp;=\begin{cases}q_i,&amp;h_i=0,\\q_i-30,&amp;h_i=1,\end{cases}
-              &amp;r_i&amp;=15\sqrt{u_i}.
+              u_i&amp;=i/2000,
+              &amp;\theta_i&amp;=(i\bmod40)/6,\\
+              s_i(t)&amp;=\sin^3(4t-u_i),
+              &amp;r_i(t)&amp;=60\sin^{0.6}\!\left(\frac{\pi u_i}{5}\right)\left(1+\frac{s_i}{9}\right).
               \end{aligned}
               \]
             </div>
-            <p>Тело строится концентрическими эллипсами, а хвост — поперечными сечениями, которые расширяются к плавнику. Координата <code>z</code> делает центр выпуклым и несёт движение:</p>
+            <p>Один радиус <code>r_i</code> одновременно задаёт ширину и глубину цельной оболочки. Фаза <code>s_i</code> сжимает продольную координату и раскрывает поперечное сечение:</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              \mathbf P_i^{\rm body}(t)&amp;=
-              \begin{bmatrix}
-              r_i\cos\theta_i\\0.6r_i\sin\theta_i\\18-u_i/2+b(t,u_i,\theta_i)
-              \end{bmatrix},\\
-              \mathbf P_i^{\rm tail}(t)&amp;=
-              \begin{bmatrix}
-              80+5u_i\\u_i\sin\theta_i\\g(t,u_i)
-              \end{bmatrix}.
+              x_i(t)&amp;=(u_i-2.5)(60-5s_i),\\
+              y_i(t)&amp;=r_i\cos\theta_i+4u_i^2s_i,\\
+              z_i(t)&amp;=r_i\sin\theta_i(1+s_i/4).
               \end{aligned}
               \]
             </div>
-            <p>Архивный предок использует \(b=9\sin t\sin^2\theta\). В основном RAW одна фаза \(s=\sin(4t-u/9)\) задаёт \(b=9s\sin^2\theta\) и \(g=16s\). Формульный RGB-цвет \((160,9u,255)\) проявляет центр, край и плавник и больше не ослабляется на старших уровнях.</p>
+            <p>Формульный RGB-цвет \((180+70s_i,220,255)\) идёт по той же фазе, поэтому гребок читается одновременно в геометрии и свете. Ручная проекция сохраняет настоящую координату <code>z</code> и свободную камеру.</p>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
@@ -644,7 +623,7 @@ onMounted(async () => {
                 <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>Бюджет 280 исполняет прежнего Пелагиона без изменений. Уровень 512 приписывает к тому же циклу только редкие точки ядра и ось хвоста; 768 сохраняет всё предыдущее и добавляет 384 полупрозрачные продольные связи. Каждый следующий RAW начинается с буквального цикла 280-версии. Ручная 2D-проекция <code>x′ = x cos(a) + z sin(a)</code>, камера и текущая фаза переходят между уровнями вне лимита.</p>
+            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает к его точному циклу внутреннюю ленту и ось; 768 сохраняет всё предыдущее и добавляет 995 полупрозрачных продольных нитей. Каждый следующий RAW начинается с буквального цикла исторической версии. Камера и текущая фаза переходят между уровнями вне лимита.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
