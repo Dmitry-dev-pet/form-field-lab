@@ -241,6 +241,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           :sketch="bareSketch"
           :label="bareRunnerLabel"
           :paused="barePaused"
+          frame-driven
         />
         <div
           v-if="isBareMode && barePaused"

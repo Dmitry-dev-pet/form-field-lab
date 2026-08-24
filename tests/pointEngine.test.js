@@ -31,4 +31,6 @@ test("sandbox runner includes the original source and motion bridge", () => {
   assert.match(html, /p5@1\.11\.3/);
   assert.match(html, /cos\(y\*31\+t\)/);
   assert.match(html, /sketch-motion/);
+  assert.match(html, /sketch-frame/);
+  assert.match(html, /redraw/);
 });
