@@ -1,71 +1,38 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import ColorFormulaControls from "../components/ColorFormulaControls.vue";
 import ParametricCanvas from "../components/ParametricCanvas.vue";
 import { useColorFormula } from "../composables/useColorFormula.js";
+import { spatialForms, spatialFormById, spatialLayerDefaults } from "../data/spatialForms.js";
 
 const route = useRoute();
 const router = useRouter();
 const { color, evaluator: colorEvaluator, error: colorFormulaError, resetColor } = useColorFormula(route, router);
 
-const original = Object.freeze({
-  speed: 1,
-  forms: 3,
-  radius: 79,
-  height: 99,
-  depth: 1,
-  waveFrequency: 31,
-  pulse: 3,
-  pointCount: 20000,
-  alpha: 96,
-  phaseStep: 8,
-  radialDivisor: 99,
-  distanceOffset: 6,
-  featherDivisor: 13,
-  backgroundColor: "#090909"
-});
-
-const settings = reactive({ ...original });
-const layers = reactive({ symmetry: true, pulse: true, ripple: true, feather: true });
+const requestedFormId = Array.isArray(route.query.form) ? route.query.form[0] : route.query.form;
+const initialForm = spatialFormById(requestedFormId);
+const selectedFormId = ref(initialForm.id);
+const selectedForm = computed(() => spatialFormById(selectedFormId.value));
+const settings = reactive({ ...initialForm.defaults });
+const layers = reactive(spatialLayerDefaults(initialForm));
 const canvas = ref(null);
 const paused = ref(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 const invertOrbitY = ref(true);
-const preset = ref("Original · раскрытие");
+const preset = ref("Original");
+const primaryControls = computed(() => selectedForm.value.primaryControls);
+const advancedControls = computed(() => selectedForm.value.advancedControls);
+const pointStatus = computed(() => `#${formNumber(selectedForm.value)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`);
 
-const primaryControls = [
-  { key: "speed", label: "Скорость", min: 0, max: 3, step: 0.05 },
-  { key: "forms", label: "Формы", min: 1, max: 8, step: 1 },
-  { key: "radius", label: "Размер", min: 30, max: 140, step: 1 },
-  { key: "height", label: "Высота", min: 30, max: 170, step: 1 },
-  { key: "depth", label: "Глубина", min: 0, max: 2, step: 0.05 },
-  { key: "waveFrequency", label: "Волны", min: 5, max: 60, step: 1 },
-  { key: "pulse", label: "Пульсация", min: 0, max: 8, step: 0.1 },
-  { key: "pointCount", label: "Точки", min: 2000, max: 40000, step: 1000 },
-  { key: "alpha", label: "Прозрачность", min: 10, max: 255, step: 1 }
-];
+function formNumber(form) {
+  return String(form.sketchNumber).padStart(2, "0");
+}
 
-const advancedControls = [
-  { key: "phaseStep", label: "Фазовый шаг", min: 0, max: 16, step: 0.1 },
-  { key: "radialDivisor", label: "Плотность рёбер", min: 35, max: 200, step: 1 },
-  { key: "distanceOffset", label: "Радиальное смещение", min: 0, max: 12, step: 0.1 },
-  { key: "featherDivisor", label: "Длина волокон", min: 5, max: 30, step: 1 }
-];
-
-const layerLabels = {
-  symmetry: "Симметрия",
-  pulse: "Пульсация",
-  ripple: "Рябь",
-  feather: "Волокна"
-};
-
-const pointStatus = computed(() => `${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`);
-
-function formatValue(key, value) {
-  if (key === "speed") return `${Number(value).toFixed(2)}×`;
-  if (key === "depth") return `${Math.round(Number(value) * 100)}%`;
-  if (["pulse", "phaseStep", "distanceOffset"].includes(key)) return Number(value).toFixed(1);
-  if (key === "pointCount") return Number(value).toLocaleString("ru-RU");
+function formatValue(control, value) {
+  if (control.format === "speed") return `${Number(value).toFixed(2)}×`;
+  if (control.format === "percent") return `${Math.round(Number(value) * 100)}%`;
+  if (control.format === "count") return Number(value).toLocaleString("ru-RU");
+  if (Number.isInteger(control.digits)) return Number(value).toFixed(control.digits);
   return String(Math.round(value));
 }
 
@@ -83,13 +50,19 @@ function toggleLayer(key) {
   preset.value = "Анатомия";
 }
 
+function replaceReactive(target, source) {
+  Object.keys(target).forEach(key => { delete target[key]; });
+  Object.assign(target, source);
+}
+
 function reset() {
-  Object.assign(settings, original);
+  const form = selectedForm.value;
+  replaceReactive(settings, form.defaults);
+  replaceReactive(layers, spatialLayerDefaults(form));
   resetColor();
-  Object.keys(layers).forEach(key => { layers[key] = true; });
   paused.value = false;
   invertOrbitY.value = true;
-  preset.value = "Original · раскрытие";
+  preset.value = "Original";
   canvas.value?.resetTime();
   canvas.value?.resetView();
 }
@@ -104,23 +77,40 @@ function randomStep(min, max, step) {
 }
 
 function randomize() {
-  Object.assign(settings, {
-    speed: randomStep(0.25, 2.5, 0.05),
-    forms: randomStep(2, 7, 1),
-    radius: randomStep(48, 120, 1),
-    height: randomStep(60, 145, 1),
-    depth: randomStep(0.5, 1.6, 0.05),
-    waveFrequency: randomStep(12, 55, 1),
-    pulse: randomStep(0.5, 6, 0.1),
-    pointCount: randomStep(12000, 32000, 1000),
-    alpha: randomStep(50, 170, 1),
-    phaseStep: randomStep(4, 13, 0.1),
-    radialDivisor: randomStep(55, 165, 1),
-    distanceOffset: randomStep(3, 10, 0.1),
-    featherDivisor: randomStep(8, 24, 1)
+  Object.entries(selectedForm.value.randomRanges).forEach(([key, [min, max, step]]) => {
+    settings[key] = Number(randomStep(min, max, step).toFixed(6));
   });
   preset.value = "Случайный";
 }
+
+async function selectForm(formId, updateRoute = true) {
+  const form = spatialFormById(formId);
+  if (form.id === selectedFormId.value) return;
+
+  selectedFormId.value = form.id;
+  replaceReactive(settings, form.defaults);
+  replaceReactive(layers, spatialLayerDefaults(form));
+  preset.value = "Original";
+  await nextTick();
+  canvas.value?.resetTime();
+  canvas.value?.resetView();
+
+  if (updateRoute) {
+    const query = { ...route.query };
+    if (form.id === spatialForms[0].id) delete query.form;
+    else query.form = form.id;
+    router.replace({ query }).catch(() => undefined);
+  }
+}
+
+watch(
+  () => route.query.form,
+  value => {
+    const formId = Array.isArray(value) ? value[0] : value;
+    const form = spatialFormById(formId);
+    if (form.id !== selectedFormId.value) selectForm(form.id, false);
+  }
+);
 </script>
 
 <template>
@@ -130,13 +120,14 @@ function randomize() {
         <p class="eyebrow">Generative study / Lab</p>
         <h1 class="display-title">Form / Field</h1>
       </div>
-      <p class="view-lead">Двадцать тысяч координат складываются в живую структуру. Фаза раскрыта в третью координату: проведите пальцем по форме, чтобы обойти её вокруг центра.</p>
+      <p class="view-lead"><strong>{{ selectedForm.title }}.</strong> {{ selectedForm.description }} Проведите пальцем по форме, чтобы обойти её вокруг центра.</p>
     </header>
 
     <div class="lab-workspace">
       <div class="canvas-stage">
         <ParametricCanvas
           ref="canvas"
+          :form="selectedForm"
           :settings="settings"
           :layers="layers"
           :color="color"
@@ -151,14 +142,35 @@ function randomize() {
       </div>
 
       <aside class="control-panel" aria-label="Параметры визуализации">
+        <div class="form-picker">
+          <p class="panel-kicker">Исходная форма</p>
+          <div class="form-choice-grid" role="group" aria-label="Выбор исходного скетча">
+            <button
+              v-for="form in spatialForms"
+              :key="form.id"
+              class="form-choice"
+              type="button"
+              :aria-pressed="selectedForm.id === form.id"
+              @click="selectForm(form.id)"
+            >
+              <strong>#{{ formNumber(form) }}</strong>
+              <span>{{ form.shortLabel }}</span>
+            </button>
+          </div>
+          <p class="form-context">
+            <span>{{ selectedForm.association }}</span>
+            <RouterLink :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }">оригинал и код →</RouterLink>
+          </p>
+        </div>
+
         <div class="panel-title-row">
           <h2>Параметры</h2>
-          <span class="status-badge">Форма · {{ preset }}</span>
+          <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
         </div>
 
         <div class="control-list">
           <label v-for="control in primaryControls" :key="control.key" class="range-field">
-            <span>{{ control.label }} <output>{{ formatValue(control.key, settings[control.key]) }}</output></span>
+            <span>{{ control.label }} <output>{{ formatValue(control, settings[control.key]) }}</output></span>
             <input
               v-model.number="settings[control.key]"
               type="range"
@@ -205,7 +217,7 @@ function randomize() {
           <summary>Точная настройка и анатомия</summary>
           <div class="advanced-controls">
             <label v-for="control in advancedControls" :key="control.key" class="range-field">
-              <span>{{ control.label }} <output>{{ formatValue(control.key, settings[control.key]) }}</output></span>
+              <span>{{ control.label }} <output>{{ formatValue(control, settings[control.key]) }}</output></span>
               <input
                 v-model.number="settings[control.key]"
                 type="range"
@@ -222,13 +234,13 @@ function randomize() {
               <div class="anatomy-title"><strong>Анатомия</strong><small>нажмите, чтобы убрать</small></div>
               <div class="layer-grid">
                 <button
-                  v-for="(label, key) in layerLabels"
-                  :key="key"
+                  v-for="layer in selectedForm.layers"
+                  :key="layer.key"
                   class="layer-toggle"
                   type="button"
-                  :aria-pressed="layers[key]"
-                  @click="toggleLayer(key)"
-                >{{ label }}</button>
+                  :aria-pressed="layers[layer.key]"
+                  @click="toggleLayer(layer.key)"
+                >{{ layer.label }}</button>
               </div>
             </div>
           </div>

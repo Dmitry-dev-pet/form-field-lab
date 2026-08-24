@@ -4,12 +4,12 @@ import { buildColorPalette } from "../lib/colorFormula.js";
 import {
   clampOrbitPitch,
   createOrbitRotation,
-  latentPhaseDepth,
   orbitPitchDelta,
   rotateSpatialPoint
 } from "../lib/spatialProjection.js";
 
 const props = defineProps({
+  form: { type: Object, required: true },
   settings: { type: Object, required: true },
   layers: { type: Object, required: true },
   color: { type: Object, required: true },
@@ -37,6 +37,10 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const orbitRadiansPerPixel = 0.008;
 const inertiaPerFrame = 0.9;
 const colorBuckets = Array.from({ length: 24 }, () => []);
+const formPoint = {
+  x: 0, y: 0, z: 0, parameter: 0, k: 0, e: 0, d: 0, c: 0,
+  branch: 0, forms: 1
+};
 const colorScope = {
   i: 0, y: 0, k: 0, e: 0, d: 0, c: 0, t: 0, branch: 0, forms: 0,
   x: 0, Y: 0, z: 0, u: 0, r: 0, angle: 0, mix: 0
@@ -44,7 +48,7 @@ const colorScope = {
 
 function render() {
   if (!context) return;
-  const { settings, layers } = props;
+  const { form, settings, layers } = props;
   context.fillStyle = settings.backgroundColor;
   context.fillRect(0, 0, 400, 400);
 
@@ -59,50 +63,44 @@ function render() {
   colorBuckets.forEach(bucket => { bucket.length = 0; });
   if (!formulaColor) context.fillStyle = palette[0];
 
-  const formCount = Math.max(1, Math.round(settings.forms));
-  const normalizedPhaseStep = settings.phaseStep * 3 / formCount;
-  const depthScale = Number.isFinite(settings.depth) ? settings.depth : 0;
   const orbitRotation = createOrbitRotation(yaw, pitch);
 
   for (let index = settings.pointCount; index--;) {
-    const y = index / 995;
-    const k = (4 + Math.cos(y * settings.waveFrequency + time))
-      * Math.cos(index / settings.radialDivisor);
-    const e = y / 5 - 11;
-    const d = Math.hypot(k, e) - settings.distanceOffset;
-    const branchPhase = layers.symmetry ? (index % formCount) * normalizedPhaseStep : 0;
-    const c = d / 2 - time / 2 + branchPhase;
-    const radialSize = settings.radius + k * k;
-    const x = radialSize * Math.cos(c) + 200;
-    const pulse = layers.pulse
-      ? d * d * (settings.pulse / 3) * Math.sin(time * 3 - d)
-      : 0;
-    const ripple = layers.ripple ? 3 * Math.sin(k * 2) : 0;
-    const feather = layers.feather
-      ? y / settings.featherDivisor * k * (e + Math.sin(e * 4 - d * 4))
-      : 0;
-    const screenY = settings.height * Math.sin(c / 3) + 200 + pulse + ripple + feather;
-    const z = latentPhaseDepth(radialSize, c, depthScale);
-    rotateSpatialPoint(x - 200, screenY - 200, z, orbitRotation, rotatedPoint);
+    form.evaluate(index, time, settings, layers, formPoint);
+    if (!Number.isFinite(formPoint.x)
+      || !Number.isFinite(formPoint.y)
+      || !Number.isFinite(formPoint.z)) continue;
+
+    rotateSpatialPoint(
+      formPoint.x - 200,
+      formPoint.y - 200,
+      formPoint.z,
+      orbitRotation,
+      rotatedPoint
+    );
     const projectedX = rotatedPoint.x + 200;
     const projectedY = rotatedPoint.y + 200;
 
     if (formulaColor) {
       colorScope.i = index;
-      colorScope.y = y;
-      colorScope.k = k;
-      colorScope.e = e;
-      colorScope.d = d;
-      colorScope.c = c;
+      colorScope.y = formPoint.parameter;
+      colorScope.k = formPoint.k;
+      colorScope.e = formPoint.e;
+      colorScope.d = formPoint.d;
+      colorScope.c = formPoint.c;
       colorScope.t = time;
-      colorScope.branch = index % formCount;
-      colorScope.forms = formCount;
-      colorScope.x = x;
-      colorScope.Y = screenY;
-      colorScope.z = z;
+      colorScope.branch = formPoint.branch;
+      colorScope.forms = formPoint.forms;
+      colorScope.x = formPoint.x;
+      colorScope.Y = formPoint.y;
+      colorScope.z = formPoint.z;
       if (formulaVariables.has("u")) colorScope.u = index / Math.max(1, settings.pointCount - 1);
-      if (formulaVariables.has("r")) colorScope.r = Math.hypot(x - 200, screenY - 200);
-      if (formulaVariables.has("angle")) colorScope.angle = Math.atan2(screenY - 200, x - 200);
+      if (formulaVariables.has("r")) {
+        colorScope.r = Math.hypot(formPoint.x - 200, formPoint.y - 200);
+      }
+      if (formulaVariables.has("angle")) {
+        colorScope.angle = Math.atan2(formPoint.y - 200, formPoint.x - 200);
+      }
       colorScope.mix = 0;
       const bucketIndex = Math.round(props.colorEvaluator(colorScope) * (colorBuckets.length - 1));
       colorBuckets[bucketIndex].push(projectedX, projectedY);
@@ -139,7 +137,7 @@ function animate(timestamp) {
   }
 
   if (!props.paused) {
-    time += Math.PI / 60 * props.settings.speed;
+    time += props.form.timeStep * props.settings.speed;
     render();
   } else if (viewChanged) {
     render();
@@ -223,7 +221,14 @@ function handleOrbitKey(event) {
 }
 
 watch(
-  [() => props.settings, () => props.layers, () => props.color, () => props.colorEvaluator, () => props.paused],
+  [
+    () => props.form,
+    () => props.settings,
+    () => props.layers,
+    () => props.color,
+    () => props.colorEvaluator,
+    () => props.paused
+  ],
   () => { if (props.paused) render(); },
   { deep: true }
 );
@@ -248,7 +253,7 @@ defineExpose({ resetTime, resetView, render });
     height="400"
     tabindex="0"
     role="img"
-    :aria-label="`Пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
+    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
     @pointerdown="beginOrbit"
     @pointermove="moveOrbit"
     @pointerup="finishOrbit"

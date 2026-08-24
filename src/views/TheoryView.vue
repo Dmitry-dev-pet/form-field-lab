@@ -33,6 +33,24 @@ Y_i-200 \\
 (x_i',Y_i') &= (p_{i,x}'+200,\ p_{i,y}'+200).
 \end{aligned}`;
 
+const movementLatexSource = String.raw`\begin{aligned}
+\text{Пловец \#01:}\qquad
+y_i&=i/254, & k_i&=A\cos(\nu y_i), & e_i&=y_i-L,\\
+d_i&=\sqrt{k_i^2+e_i^2}/S, & c_i&=d_i/3-t, & \rho_i&=R+k_i^2+Gd_i,\\
+\mathbf p_i&=
+\begin{bmatrix}
+\rho_i\sin c_i\\Y_i-200\\\lambda\rho_i\cos c_i
+\end{bmatrix}.\\[1em]
+\text{Пульсатор \#06:}\qquad
+m_i&=\Delta(i\bmod M), &
+d_i&=\frac{(k_i^2+e_i^2)^{3/2}}{S}+B-\frac{P}{3}\sin^3(t/2+m_i),\\
+c_i&=d_i/Q-t/D+m_i, & p_i&=d_i^{\sin(d_i^2-t+m_i)},\\
+\mathbf p_i&=
+\begin{bmatrix}
+R\sin c_i+k_ip_i\\R\sin(hc_i)+e_ip_i\\\lambda R\cos c_i
+\end{bmatrix}.
+\end{aligned}`;
+
 const kernelSource = `const ORIGINAL = {
   speed: 1, forms: 3, radius: 79, height: 99, depth: 1,
   waveFrequency: 31, pulse: 3, pointCount: 20000,
@@ -46,8 +64,10 @@ for (let i = settings.pointCount; i--;) {
     * cos(i / settings.radialDivisor);
   const e = y / 5 - 11;
   const d = mag(k, e) - settings.distanceOffset;
+  const branchPhase = (i % settings.forms)
+    * settings.phaseStep * 3 / settings.forms;
   const c = d / 2 - time / 2
-    + (i % settings.forms) * settings.phaseStep;
+    + branchPhase;
 
   const radialSize = settings.radius + k * k;
   const x = radialSize * cos(c) + 200;
@@ -76,6 +96,7 @@ const defaultCopyLabels = {
   latex: "Копировать TeX",
   color: "Копировать TeX",
   spatial: "Копировать TeX",
+  movement: "Копировать TeX",
   code: "Копировать JS"
 };
 const copyLabels = ref({ ...defaultCopyLabels });
@@ -132,7 +153,7 @@ onMounted(async () => {
     <div class="theory-grid">
       <article class="theory-card">
         <header class="card-header">
-          <div><span>01 / MODEL</span><h2>Математическая модель</h2></div>
+          <div><span>01 / MODEL · SKETCH #05</span><h2>Модель ветвящейся формы</h2></div>
           <button class="button" type="button" @click="copy('latex', latexSource)">{{ copyLabels.latex }}</button>
         </header>
         <div class="theory-body">
@@ -176,10 +197,14 @@ onMounted(async () => {
 
       <article class="theory-card">
         <header class="card-header">
-          <div><span>02 / SOURCE</span><h2>Читаемое ядро</h2></div>
+          <div><span>02 / SOURCE · SKETCH #05</span><h2>Читаемое ядро</h2></div>
           <button class="button" type="button" @click="copy('code', kernelSource)">{{ copyLabels.code }}</button>
         </header>
         <pre class="tall-code"><code>{{ kernelSource }}</code></pre>
+        <div class="tiny-code-context">
+          <p><strong>Почему исходник занимает две строки?</strong> Это работа для <code>#つぶやきProcessing</code>: открытого code-golf челленджа, где исполняемый Processing/p5.js-скетч должен уместиться примерно в 280 символов одного поста. Короткие имена, глобальные переменные и присваивания внутри выражений здесь — часть формы.</p>
+          <a href="https://tsubuyaki-p5-editor.glitch.me/" target="_blank" rel="noopener noreferrer">Редактор челленджа со счётчиком 280 ↗</a>
+        </div>
         <details class="source-details">
           <summary>Исходная code-golf версия</summary>
           <pre><code>{{ golfSource }}</code></pre>
@@ -241,6 +266,56 @@ onMounted(async () => {
           </div>
           <p>Переключатель «Инверсия Y» меняет знак вертикального жеста: \((\Delta\beta)_{\mathrm{drag}}=\sigma_y s\,\Delta y\), где \(\sigma_y=-1\) в инвертированном режиме.</p>
           <p>При \(\alpha=\beta=0\) глубина не влияет на экранные координаты, поэтому фронтальный вид остаётся исходной работой автора.</p>
+        </div>
+      </article>
+
+      <article class="theory-card movement-theory">
+        <header class="card-header">
+          <div><span>05 / MOVEMENT ARCHETYPES</span><h2>Пловец и пульсатор</h2></div>
+          <button class="button" type="button" @click="copy('movement', movementLatexSource)">{{ copyLabels.movement }}</button>
+        </header>
+        <div class="theory-body">
+          <p>Два других исходника строят движение по-разному. В обоих случаях третью координату добавляет лаборатория; исходная фронтальная проекция автора остаётся неизменной.</p>
+          <div class="movement-equations">
+            <section>
+              <h3>Пловец · #01</h3>
+              <p>Фаза (c_i) бежит вдоль продольной координаты (d_i), а хвостовая волна растёт вместе с расстоянием. Получается кинематика гибкого тела.</p>
+              <div class="math-scroll">
+                \[
+                \begin{aligned}
+                y_i&amp;=i/254, &amp;k_i&amp;=A\cos(\nu y_i), &amp;e_i&amp;=y_i-L,\\
+                d_i&amp;=\sqrt{k_i^2+e_i^2}/S, &amp;c_i&amp;=d_i/3-t,\\
+                \rho_i&amp;=R+k_i^2+Gd_i, &amp;
+                \mathbf p_i&amp;=
+                \begin{bmatrix}
+                \rho_i\sin c_i\\Y_i-200\\\lambda\rho_i\cos c_i
+                \end{bmatrix}.
+                \end{aligned}
+                \]
+              </div>
+              <RouterLink :to="{ name: 'sketch', params: { id: '2091540720628932622' } }">Оригинальный скетч #01 →</RouterLink>
+            </section>
+
+            <section>
+              <h3>Пульсатор · #06</h3>
+              <p>Шестнадцать копий получают разные фазовые сдвиги (m_i). Нелинейная степень (p_i) синхронно раскрывает и стягивает слои — как гребок медузы или манты.</p>
+              <div class="math-scroll">
+                \[
+                \begin{aligned}
+                m_i&amp;=\Delta(i\bmod M),\\
+                d_i&amp;=\frac{(k_i^2+e_i^2)^{3/2}}{S}+B-\frac{P}{3}\sin^3(t/2+m_i),\\
+                c_i&amp;=d_i/Q-t/D+m_i, &amp;p_i&amp;=d_i^{\sin(d_i^2-t+m_i)},\\
+                \mathbf p_i&amp;=
+                \begin{bmatrix}
+                R\sin c_i+k_ip_i\\R\sin(hc_i)+e_ip_i\\\lambda R\cos c_i
+                \end{bmatrix}.
+                \end{aligned}
+                \]
+              </div>
+              <RouterLink :to="{ name: 'sketch', params: { id: '2090832898488459699' } }">Оригинальный скетч #06 →</RouterLink>
+            </section>
+          </div>
+          <p class="method-note"><strong>Граница интерпретации.</strong> Эти формулы хорошо воспроизводят визуальные архетипы живого движения, но не являются биомеханической моделью мышц, жидкости или нервной системы организма.</p>
         </div>
       </article>
     </div>
