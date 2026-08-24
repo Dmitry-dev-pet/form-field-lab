@@ -33,7 +33,8 @@ test("Pelagion lineage keeps direct archive evidence", () => {
 test("the autonomous Pelagion genome stays inside the challenge limit", () => {
   assert.equal(PELAGION_GENOME_CHARACTERS, PELAGION_GENOME.length);
   assert.ok(PELAGION_GENOME_CHARACTERS <= PELAGION_GENOME_LIMIT);
-  assert.match(PELAGION_GENOME, /WEBGL/);
-  assert.match(PELAGION_GENOME, /point\([^,]+,[^,]+,[^)]+\)/);
+  assert.doesNotMatch(PELAGION_GENOME, /WEBGL/);
+  assert.match(PELAGION_GENOME, /z=r\*sin\(v\)/);
+  assert.match(PELAGION_GENOME, /x\*cos\(a\)\+z\*sin\(a\)/);
   assert.doesNotThrow(() => new Function(PELAGION_GENOME));
 });

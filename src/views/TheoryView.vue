@@ -394,7 +394,7 @@ onMounted(async () => {
               <strong>{{ PELAGION_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_GENOME }}</code></pre>
-            <p>В 280-символьной версии остаются тело, движение, цвет и координата <code>z</code>. Жест, след, частицы и исследовательские контролы принадлежат среде SPA.</p>
+            <p>В 280-символьной версии остаются тело, движение, цвет и независимая координата <code>z</code>. Поворот вокруг Y проецируется формулой <code>x′ = x cos(a) + z sin(a)</code> в совместимый 2D canvas; жест, след, частицы и исследовательские контролы принадлежат среде SPA.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
