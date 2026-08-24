@@ -1,10 +1,10 @@
 import { selectRawBudgetVariant } from "../lib/codeBudget.js";
 
-export const MNEMOPHORE_CORE_GENOME = `p=[],t=0,draw=_=>{t||createCanvas(w=400,w);background(9,32).stroke(w,80);t+=.03;p=p.map(v=>(point(x=v.x*110+200,y=v.y*110+200),z=v.z*110,v.add(sin(v.y*9+t)/90,cos(v.x*8-t)/90,sin(v.x*7+v.y*6)/120)))[999]?p.slice(-980):[...p,...Array(20).fill().map(p5.Vector.random3D)]}`;
+export const MNEMOPHORE_CORE_GENOME = `t=0,draw=_=>{t++||(createCanvas(w=400,w),p=Array(1e3).fill().map(_=>createVector()));background(9,24).stroke(w,90);p.map((v,i)=>(q=i/50|0,a=i%50/8,h=i%5,r=h?80*sin(PI*q/27)**.7+8*sin(t/20-q):20,v.lerp(r*cos(a),h?q*5-50:30+q*9,r*sin(a),.04),z=v.z,point(v.x+200,v.y+130)))}`;
 
-export const MNEMOPHORE_COLOR_GENOME = `p=[],t=0,draw=_=>{t||(createCanvas(w=400,w),colorMode(HSB));background(9,24);t+=.03;p=p.map((v,i)=>(stroke((i/4+t*90)%255,180+75*sin(v.z*6),255,90),point(x=v.x*110+200,y=v.y*110+200),z=v.z*110,v.add(sin(v.y*9+t)/90,cos(v.x*8-t)/90,sin(v.x*7+v.y*6)/120)))[999]?p.slice(-980):[...p,...Array(20).fill().map(p5.Vector.random3D)]}`;
+export const MNEMOPHORE_COLOR_GENOME = `t=0,draw=_=>{t++||(createCanvas(w=400,w),p=Array(1e3).fill().map(_=>createVector()),colorMode(HSB));background(9,18);p.map((v,i)=>(q=i/50|0,a=i%50/8,h=i%5,n=h==1,r=n?22*sin(PI*q/19):h?80*sin(PI*q/27)**.7+8*sin(t/20-q):20,s=!h*q*sin(t/15-q/2+a),X=r*cos(a)+s,Y=n?q*2.5-20:h?q*5-50:30+q*9,Z=r*sin(a)+!h*q*cos(t/15-q/2+a),v.lerp(X,Y,Z,.035),stroke(n?45:165+q*4+40*!h,210,255,75),z=v.z,point(v.x+200,v.y+130)))}`;
 
-export const MNEMOPHORE_NETWORK_GENOME = `p=[],t=0,draw=_=>{t||(createCanvas(w=400,w),colorMode(HSB));background(9,14);t+=.022;p=p.map((v,i)=>(x=v.x*112+200,y=v.y*112+200,z=v.z*112,u=p[i-1]||v,U=p[i-34]||v,X=u.x*112+200,Y=u.y*112+200,Z=u.z*112,stroke((i+t*110)%255,190+65*sin(v.z*5),255,62),i%3||line(x,y,X,Y),X=U.x*112+200,Y=U.y*112+200,Z=U.z*112,i%5||line(x,y,X,Y),point(x,y),v.add((sin(v.y*9+t)+cos(v.z*5-t))/160,(cos(v.x*8-t)+sin(v.z*7+t))/160,(sin(v.x*7+v.y*6)+cos(t+v.z*8))/180)))[1499]?p.slice(-1470):[...p,...Array(30).fill().map(p5.Vector.random3D)]}`;
+export const MNEMOPHORE_NETWORK_GENOME = `t=0,draw=_=>{t++||(createCanvas(w=400,w),p=Array(1e3).fill().map(_=>createVector()),colorMode(HSB));background(9,14);strokeWeight(.5);p.map((v,i)=>(q=i/50|0,a=i%50/8,h=i%5,n=h==1,r=n?22*sin(PI*q/19):h?80*sin(PI*q/27)**.7+8*sin(t/20-q):20,s=!h*q*sin(t/15-q/2+a),X=r*cos(a)+s,Y=n?q*2.5-20:h?q*5-50:30+q*9,Z=r*sin(a)+!h*q*cos(t/15-q/2+a),v.lerp(X,Y,Z,.035),stroke(n?45:165+q*4+40*!h,210,255,62),z=v.z,U=p[i-50]||v,q&&(Z=U.z,line(v.x+200,v.y+130,U.x+200,U.y+130)),h>2&&(U=p[i-1],Z=U.z,line(v.x+200,v.y+130,U.x+200,U.y+130)),point(v.x+200,v.y+130)))}`;
 
 const sketch = (id, code) => Object.freeze({
   id,
@@ -17,27 +17,27 @@ export const MNEMOPHORE_RAW_VARIANTS = Object.freeze([
     id: "memory-core",
     rank: 0,
     label: "Память",
-    title: "Ядро памяти",
-    description: "Точки рождаются на сфере, сохраняются между кадрами и заменяются поколениями.",
-    features: Object.freeze(["память координат", "рождение и замена", "3D-камера"]),
+    title: "Купол и шлейф",
+    description: "Постоянные точки запаздывают за пульсирующим куполом и собираются в десять лент памяти.",
+    features: Object.freeze(["узнаваемый купол", "память координат", "десять лент", "3D-камера"]),
     sketch: sketch("mnemophore-memory-core", MNEMOPHORE_CORE_GENOME)
   }),
   Object.freeze({
     id: "memory-color",
     rank: 1,
     label: "Цвет",
-    title: "Хроматическая память",
-    description: "К ядру добавляется цветовая формула, связанная с возрастом и положением частицы.",
-    features: Object.freeze(["память координат", "рождение и замена", "3D-камера", "формульный цвет"]),
+    title: "Светящееся ядро",
+    description: "Внутри того же купола появляется отдельное ядро, формульный цвет и волна вдоль лент.",
+    features: Object.freeze(["узнаваемый купол", "память координат", "десять лент", "3D-камера", "светящееся ядро", "формульный цвет"]),
     sketch: sketch("mnemophore-memory-color", MNEMOPHORE_COLOR_GENOME)
   }),
   Object.freeze({
     id: "memory-network",
     rank: 2,
     label: "Сеть",
-    title: "Сеть памяти",
-    description: "Два процедурных соседства соединяют частицы в меняющуюся пространственную ткань.",
-    features: Object.freeze(["память координат", "рождение и замена", "3D-камера", "формульный цвет", "два семейства рёбер"]),
+    title: "Мембрана памяти",
+    description: "Меридианы и поперечные рёбра проявляют структуру купола, ядра и каждой ленты.",
+    features: Object.freeze(["узнаваемый купол", "память координат", "десять лент", "3D-камера", "светящееся ядро", "формульный цвет", "структурная мембрана"]),
     sketch: sketch("mnemophore-memory-network", MNEMOPHORE_NETWORK_GENOME)
   })
 ]);

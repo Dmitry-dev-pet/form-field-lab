@@ -142,21 +142,19 @@ e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
 \end{aligned}`;
 
 const mnemophoreLatexSource = String.raw`\begin{aligned}
-\mathbf p_i^{(0)}&=R_i
-\begin{bmatrix}
-\sin\phi_i\cos\theta_i\\
-\cos\phi_i\\
-\sin\phi_i\sin\theta_i
-\end{bmatrix},
-&\theta_i&=i\,\pi(3-\sqrt5),\\
-\mathbf v_i^{(n)}&=F(\mathbf p_i^{(n)},t_n)
-+\kappa(R-\|\mathbf p_i^{(n)}\|)\hat{\mathbf p}_i^{(n)},\\
-\mathbf p_i^{(n+1)}&=\mathbf p_i^{(n)}+\eta\mathbf v_i^{(n)},
-&a_i^{(n+1)}&=a_i^{(n)}+L^{-1},\\
-a_i\ge1&\Rightarrow
-(\mathbf p_i,a_i,g_i)\gets
-(\mathbf p_i^{(0)}(g_i+1),0,g_i+1),\\
-u_i&=\operatorname{clamp}_{[0,1]}(0.08+0.78a_i+0.72\|\mathbf v_i\|).
+q_i&=\left\lfloor i/50\right\rfloor,
+&\alpha_i&=(i\bmod 50)/8,
+&h_i&=i\bmod 5,\\
+r_i(t)&=\begin{cases}
+20,&h_i=0,\\
+80\sin^{0.7}(\pi q_i/27)+8\sin(t/20-q_i),&h_i>0,
+\end{cases}\\
+y_i&=\begin{cases}9q_i+30,&h_i=0,\\5q_i-50,&h_i>0,\end{cases}
+&\mathbf B_i(t)&=
+\begin{bmatrix}r_i(t)\cos\alpha_i\\y_i\\r_i(t)\sin\alpha_i\end{bmatrix},\\
+\mathbf p_i^{(n+1)}&=(1-\lambda)\mathbf p_i^{(n)}
++\lambda\mathbf B_i(t_n),
+&0&<\lambda\ll1.
 \end{aligned}`;
 
 const sphereGridLatexSource = String.raw`\begin{aligned}
@@ -717,7 +715,7 @@ onMounted(async () => {
 
       <article id="mnemophore" class="theory-card pelagion-theory chronophore-theory">
         <header class="card-header">
-          <div><span>09 / MEMORY ORGANISM</span><h2>Мнемофора: координаты с биографией</h2></div>
+          <div><span>09 / MEMORY ORGANISM</span><h2>Мнемофора: купол, помнящий движение</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('mnemophore', mnemophoreLatexSource)">{{ copyLabels.mnemophore }}</button>
             <button class="button" type="button" @click="copy('mnemophoreSeed', MNEMOPHORE_CORE_GENOME)">{{ copyLabels.mnemophoreSeed }}</button>
@@ -725,40 +723,40 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Параметрическая контрольная модель каждый кадр отображает индекс точки на оболочку заново. RAW Мнемофоры вместо этого хранит для каждой частицы координаты, возраст, номер поколения и скорость. Поэтому одинакового текущего времени уже недостаточно, чтобы восстановить форму: нужна вся предыдущая траектория.</p>
+            <p>RAW Мнемофоры хранит координаты каждой точки между кадрами. Формула задаёт не готовую картинку, а движущуюся цель: пульсирующий купол и десять лент под ним. Точки догоняют эту цель с небольшим запаздыванием, поэтому одинакового текущего времени недостаточно, чтобы восстановить форму: важна предыдущая траектория.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              \mathbf p_i^{(0)}&amp;=R_i
+              q_i&amp;=\left\lfloor i/50\right\rfloor,
+              &amp;\alpha_i&amp;=(i\bmod 50)/8,
+              &amp;h_i&amp;=i\bmod 5,\\
+              r_i(t)&amp;=\begin{cases}
+              20,&amp;h_i=0,\\
+              80\sin^{0.7}(\pi q_i/27)+8\sin(t/20-q_i),&amp;h_i&gt;0,
+              \end{cases}\\
+              y_i&amp;=\begin{cases}9q_i+30,&amp;h_i=0,\\5q_i-50,&amp;h_i&gt;0.\end{cases}
+              \end{aligned}
+              \]
+            </div>
+            <p>Индекс делит тысячу точек на 20 уровней купола. Остаток (h_i=0) выбирает ровно десять продольных лент; остальные точки собирают оболочку. Их координаты обновляются рекуррентно:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \mathbf B_i(t)&amp;=
               \begin{bmatrix}
-              \sin\phi_i\cos\theta_i\\
-              \cos\phi_i\\
-              \sin\phi_i\sin\theta_i
-              \end{bmatrix},
-              &amp;\theta_i&amp;=i\pi(3-\sqrt5),\\
-              \mathbf p_i^{(n+1)}&amp;=\mathbf p_i^{(n)}+\eta\mathbf v_i^{(n)},
-              &amp;\mathbf v_i^{(n)}&amp;=F(\mathbf p_i^{(n)},t_n)
-              +\kappa(R-\|\mathbf p_i^{(n)}\|)\hat{\mathbf p}_i^{(n)}.
+              r_i(t)\cos\alpha_i\\y_i\\r_i(t)\sin\alpha_i
+              \end{bmatrix},\\
+              \mathbf p_i^{(n+1)}&amp;=(1-\lambda)\mathbf p_i^{(n)}
+              +\lambda\mathbf B_i(t_n),
+              &amp;0&lt;\lambda\ll1.
               \end{aligned}
               \]
             </div>
-            <p>Поле (F) смешивает синусы трёх координат. Радиальная поправка не диктует готовую форму, а лишь слабо возвращает поток к области рождения. Возраст (a_i) растёт независимо; достигнув единицы, частица получает новую точку на оболочке и увеличивает номер поколения:</p>
-            <div class="math-scroll">
-              \[
-              \begin{aligned}
-              a_i^{(n+1)}&amp;=a_i^{(n)}+L^{-1},\\
-              a_i\ge1&amp;\Rightarrow
-              (\mathbf p_i,a_i,g_i)\gets
-              (\mathbf p_i^{(0)}(g_i+1),0,g_i+1),\\
-              u_i&amp;=\operatorname{clamp}_{[0,1]}(0.08+0.78a_i+0.72\|\mathbf v_i\|).
-              \end{aligned}
-              \]
-            </div>
-            <p>Цвет поэтому сообщает не только положение, но и биографию: молодой медленный материал тяготеет к первому цвету, старый или быстро движущийся — ко второму.</p>
+            <p>В уровне 512 отдельная подгруппа (h_i=1) образует светящееся внутреннее ядро, а синусоидальная поправка ведёт волну вдоль лент. Цвет кодирует уровень купола и отличает ядро от шлейфа. Уровень 768 соединяет соседей в мембрану, не меняя сам организм.</p>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
-              <span>Минимальное ядро памяти</span>
+              <span>Купол и шлейф</span>
               <strong>{{ MNEMOPHORE_CORE_GENOME.length }} / 280</strong>
             </div>
             <pre><code>{{ MNEMOPHORE_CORE_GENOME }}</code></pre>
@@ -767,14 +765,14 @@ onMounted(async () => {
                 <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>При 280 символах остаются память координат, обновление поколений и внешняя 3D-камера. Больший бюджет сначала возвращает формульный цвет, затем два процедурных семейства рёбер. Лаборатория выбирает только реально помещающийся код и исполняет именно его.</p>
+            <p>При 280 символах уже видны пульсирующий купол, десять лент, память координат и внешняя 3D-камера. Бюджет 512 добавляет ядро, волну и формульный цвет; 768 — продольные и поперечные рёбра мембраны. Лаборатория выбирает только реально помещающийся код и исполняет именно его.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore' } }">Открыть бюджет RAW →</RouterLink>
             </div>
           </div>
         </div>
         <div class="tiny-code-context">
-          <p><strong>Происхождение идеи.</strong> Мнемофора — самостоятельная реализация Form / Field, но принцип массива частиц, который обновляется и постепенно заменяется, сознательно развивает публичный <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">скетч @yuruyurau ↗</a>. Авторство исходной работы не переносится на нашу сущность.</p>
+          <p><strong>Происхождение идеи.</strong> Мнемофора — самостоятельная реализация Form / Field, но принцип сохраняемого массива частиц, который каждый кадр обновляет собственные координаты, сознательно развивает публичный <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">скетч @yuruyurau ↗</a>. Авторство исходной работы не переносится на нашу сущность.</p>
           <p><strong>Граница наблюдателя.</strong> Кватернион камеры хранится отдельно. Касание вращает уже существующую историю и не вызывает перерождение, мутацию или новый случайный посев.</p>
         </div>
       </article>

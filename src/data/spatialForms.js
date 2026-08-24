@@ -814,8 +814,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Мнемофора",
     title: "Мнемофора",
-    association: "состояние · возраст · поле · обновление",
-    description: "Первая сущность лаборатории, чьи координаты переживают кадр. Частицы рождаются на оболочке, запоминают собственную траекторию, стареют и уступают место следующему поколению.",
+    association: "состояние · купол · ядро · шлейф",
+    description: "Первая сущность лаборатории, чьи координаты переживают кадр. Точки догоняют общий пульсирующий купол, сохраняя в запаздывании его траекторию и десять длинных лент.",
     origin: "form-field-synthesis",
     genomeSketch: MNEMOPHORE_GENOME_SKETCH,
     budgetVariants: MNEMOPHORE_RAW_VARIANTS,
@@ -829,7 +829,7 @@ export const spatialForms = Object.freeze([
       Object.freeze({
         id: "stateful",
         label: "С памятью",
-        description: "Координаты сохраняются между кадрами; поле, возраст и обновление поколений постепенно меняют тело."
+        description: "Координаты сохраняются между кадрами и плавно догоняют движущуюся цель, превращая запаздывание в память тела."
       })
     ]),
     savedColor: Object.freeze({
