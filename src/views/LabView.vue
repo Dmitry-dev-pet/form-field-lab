@@ -30,6 +30,7 @@ const settings = reactive({ ...original });
 const layers = reactive({ symmetry: true, pulse: true, ripple: true, feather: true });
 const canvas = ref(null);
 const paused = ref(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const invertOrbitY = ref(true);
 const preset = ref("Original · раскрытие");
 
 const primaryControls = [
@@ -87,6 +88,7 @@ function reset() {
   resetColor();
   Object.keys(layers).forEach(key => { layers[key] = true; });
   paused.value = false;
+  invertOrbitY.value = true;
   preset.value = "Original · раскрытие";
   canvas.value?.resetTime();
   canvas.value?.resetView();
@@ -139,6 +141,7 @@ function randomize() {
           :layers="layers"
           :color="color"
           :color-evaluator="colorEvaluator"
+          :invert-y="invertOrbitY"
           :paused="paused"
         />
         <div class="canvas-meta" aria-hidden="true">
@@ -175,7 +178,13 @@ function randomize() {
           </button>
           <button class="button" type="button" @click="reset">Сбросить</button>
           <button class="button" type="button" @click="randomize">Случайный</button>
-          <button class="button wide" type="button" @click="frontView">Вид спереди</button>
+          <button class="button" type="button" @click="frontView">Вид спереди</button>
+          <button
+            class="button"
+            type="button"
+            :aria-pressed="invertOrbitY"
+            @click="invertOrbitY = !invertOrbitY"
+          >Инверсия Y · {{ invertOrbitY ? "вкл." : "выкл." }}</button>
         </div>
 
         <details class="control-details color-details" open>

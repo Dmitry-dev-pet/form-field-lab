@@ -5,6 +5,7 @@ import {
   clampOrbitPitch,
   createOrbitRotation,
   latentPhaseDepth,
+  orbitPitchDelta,
   rotateSpatialPoint
 } from "../src/lib/spatialProjection.js";
 
@@ -37,4 +38,9 @@ test("phase depth completes the cosine coordinate into a circle", () => {
 test("orbit pitch is clamped before the camera can flip", () => {
   assert.equal(clampOrbitPitch(Math.PI), MAX_ORBIT_PITCH);
   assert.equal(clampOrbitPitch(-Math.PI), -MAX_ORBIT_PITCH);
+});
+
+test("Y inversion reverses only the vertical drag direction", () => {
+  assert.equal(orbitPitchDelta(20, 0.01, false), 0.2);
+  assert.equal(orbitPitchDelta(20, 0.01, true), -0.2);
 });

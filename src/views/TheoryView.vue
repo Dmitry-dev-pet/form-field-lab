@@ -28,6 +28,8 @@ Y_i-200 \\
 \lambda\rho_i\sin c_i
 \end{bmatrix}, \\
 \mathbf p_i' &= R_x(\beta)R_y(\alpha)\mathbf p_i, \\
+(\Delta\beta)_{\mathrm{drag}} &= \sigma_y s\,\Delta y,
+\quad \sigma_y\in\{-1,+1\}, \\
 (x_i',Y_i') &= (p_{i,x}'+200,\ p_{i,y}'+200).
 \end{aligned}`;
 
@@ -237,6 +239,7 @@ onMounted(async () => {
             (x_i',Y_i')=(p_{i,x}'+200,\ p_{i,y}'+200).
             \]
           </div>
+          <p>Переключатель «Инверсия Y» меняет знак вертикального жеста: \((\Delta\beta)_{\mathrm{drag}}=\sigma_y s\,\Delta y\), где \(\sigma_y=-1\) в инвертированном режиме.</p>
           <p>При \(\alpha=\beta=0\) глубина не влияет на экранные координаты, поэтому фронтальный вид остаётся исходной работой автора.</p>
         </div>
       </article>

@@ -8,6 +8,11 @@ export function clampOrbitPitch(pitch) {
   return Math.max(-MAX_ORBIT_PITCH, Math.min(MAX_ORBIT_PITCH, pitch));
 }
 
+export function orbitPitchDelta(pixelDelta, radiansPerPixel, inverted = false) {
+  const direction = inverted ? -1 : 1;
+  return pixelDelta * radiansPerPixel * direction;
+}
+
 export function createOrbitRotation(yaw = 0, pitch = 0) {
   return {
     cosYaw: Math.cos(yaw),

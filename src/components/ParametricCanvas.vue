@@ -5,6 +5,7 @@ import {
   clampOrbitPitch,
   createOrbitRotation,
   latentPhaseDepth,
+  orbitPitchDelta,
   rotateSpatialPoint
 } from "../lib/spatialProjection.js";
 
@@ -13,6 +14,7 @@ const props = defineProps({
   layers: { type: Object, required: true },
   color: { type: Object, required: true },
   colorEvaluator: { type: Function, required: true },
+  invertY: { type: Boolean, default: true },
   paused: { type: Boolean, default: false }
 });
 
@@ -181,10 +183,11 @@ function moveOrbit(event) {
   const deltaY = event.clientY - pointerY;
   const elapsed = Math.max(8, event.timeStamp - pointerTime);
   const yawDelta = deltaX * orbitRadiansPerPixel;
+  const pitchDelta = orbitPitchDelta(deltaY, orbitRadiansPerPixel, props.invertY);
   const previousPitch = pitch;
 
   yaw += yawDelta;
-  pitch = clampOrbitPitch(pitch + deltaY * orbitRadiansPerPixel);
+  pitch = clampOrbitPitch(pitch + pitchDelta);
   yawVelocity = yawDelta / (elapsed / (1000 / 60));
   pitchVelocity = (pitch - previousPitch) / (elapsed / (1000 / 60));
   pointerX = event.clientX;
@@ -245,7 +248,7 @@ defineExpose({ resetTime, resetView, render });
     height="400"
     tabindex="0"
     role="img"
-    :aria-label="`Пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра.`"
+    :aria-label="`Пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
     @pointerdown="beginOrbit"
     @pointermove="moveOrbit"
     @pointerup="finishOrbit"
