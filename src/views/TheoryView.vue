@@ -100,10 +100,14 @@ r_i(t)&=60\sin^{0.6}\!\left(\frac{\pi u_i}{5}\right)\left(1+\frac{s_i}{9}\right)
 x_i(t)&=(u_i-2.5)(60-5s_i),
 &y_i(t)&=r_i\cos\theta_i+4u_i^2s_i,\\
 z_i(t)&=r_i\sin\theta_i(1+s_i/4),\\
+\mathbf P_i&=[x_i,y_i,z_i]^{\mathsf T},\\
 I_{\rm axis}&=\{i:i\bmod40=0\},
-&I_{\rm ribbon}&=\{i:i\bmod8=0\},\\
-I_{\rm edge}&=\{i:u_i>0.02\land i\bmod10=0\},
-&E_i&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-0.02,\theta_i)\right),\\
+&I_{\rm organ}&=\{i:i\bmod4=0\},\\
+\mathbf P_i^{\rm organ}&=[x_i,0.45r_i\cos\theta_i+4u_i^2s_i,0.45z_i]^{\mathsf T},\\
+I_{\rm cross}&=\{i:i\bmod200<40\},
+&E_i^{\rm cross}&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i,\theta_i+1/6)\right),\\
+I_{\rm long}&=\{i:i\bmod10=0\},
+&E_i^{\rm long}&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-0.08,\theta_i)\right),\\
 x_i'&=x_i\cos a+z_i\sin a+200,
 &y_i'&=y_i+200,
 &a(t)&=t/3.
@@ -623,7 +627,7 @@ onMounted(async () => {
                 <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает к его точному циклу внутреннюю ленту и ось; 768 сохраняет всё предыдущее и добавляет 995 полупрозрачных продольных нитей. Каждый следующий RAW начинается с буквального цикла исторической версии. Камера и текущая фаза переходят между уровнями вне лимита.</p>
+            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает к его точному циклу 2500 ярких точек внутреннего органа и 250 точек золотой оси. Уровень 768 сохраняет оба слоя и добавляет 2000 поперечных и 1000 продольных связей — поэтому оболочка превращается в явно читаемую двухнаправленную сетку. Каждый следующий RAW начинается с буквального цикла исторической версии. Камера и текущая фаза переходят между уровнями вне лимита.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>

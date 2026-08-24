@@ -118,7 +118,7 @@ test("the living-stroke Pelagion is a second autonomous genome inside 280 charac
 test("Pelagion budgets preserve one exact organism and only append anatomy", () => {
   assert.deepEqual(
     PELAGION_EVOLUTION_VARIANTS.map(variant => variant.sketch.code.length),
-    [274, 434, 660]
+    [274, 461, 746]
   );
   for (const [budget, rank] of [[280, 0], [512, 1], [768, 2]]) {
     const selected = selectRawBudgetVariant(PELAGION_EVOLUTION_VARIANTS, budget);
@@ -132,6 +132,9 @@ test("Pelagion budgets preserve one exact organism and only append anatomy", () 
   assert.ok(PELAGION_LIVING_STRUCTURE_GENOME.startsWith(`${unchangedLoop};`));
   assert.match(PELAGION_LIVING_CORE_GENOME, /stroke\(180\+70\*s,220,255\);point/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /stroke\(180\+70\*s,220,255\);point/);
+  assert.match(PELAGION_LIVING_CORE_GENOME, /stroke\(255,55,170,210\)/);
+  assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /i%200<40/);
+  assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /i%10\|\|/);
   assert.doesNotMatch(PELAGION_LIVING_CORE_GENOME, /line\(/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /line\(/);
 
@@ -139,9 +142,9 @@ test("Pelagion budgets preserve one exact organism and only append anatomy", () 
   const coreFrame = executeGenomeFrames(PELAGION_LIVING_CORE_GENOME);
   const structureFrame = executeGenomeFrames(PELAGION_LIVING_STRUCTURE_GENOME);
   assert.equal(baseFrame.first.length, 10000);
-  assert.equal(coreFrame.first.length, 11500);
+  assert.equal(coreFrame.first.length, 12750);
   assert.equal(structureFrame.first.length, coreFrame.first.length);
   assert.equal(baseFrame.firstLines.length, 0);
   assert.equal(coreFrame.firstLines.length, 0);
-  assert.equal(structureFrame.firstLines.length, 995);
+  assert.equal(structureFrame.firstLines.length, 3000);
 });
