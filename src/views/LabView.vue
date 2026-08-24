@@ -38,7 +38,10 @@ const settings = reactive({ ...initialForm.defaults });
 const layers = reactive(spatialLayerDefaults(initialForm));
 const canvas = ref(null);
 const bareRunner = ref(null);
-const paused = ref(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+const reducedMotionRequested = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const spaPaused = ref(reducedMotionRequested);
+const barePaused = ref(reducedMotionRequested);
+const barePauseReason = ref(reducedMotionRequested ? "system" : "");
 const invertOrbitY = ref(true);
 const preset = ref(basePresetLabel(initialForm));
 const reactionMessage = ref("");
@@ -88,7 +91,7 @@ function reset() {
   replaceReactive(settings, form.defaults);
   replaceReactive(layers, spatialLayerDefaults(form));
   resetColor();
-  paused.value = false;
+  spaPaused.value = false;
   invertOrbitY.value = true;
   preset.value = basePresetLabel(form);
   canvas.value?.resetTime();
@@ -101,6 +104,19 @@ function frontView() {
 
 function restartBareSketch() {
   bareRunner.value?.reload();
+}
+
+function startBareMotion() {
+  barePaused.value = false;
+  barePauseReason.value = "";
+}
+
+function toggleBareMotion() {
+  if (barePaused.value) startBareMotion();
+  else {
+    barePaused.value = true;
+    barePauseReason.value = "user";
+  }
 }
 
 function provoke() {
@@ -214,7 +230,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           :color="color"
           :color-evaluator="colorEvaluator"
           :invert-y="invertOrbitY"
-          :paused="paused"
+          :paused="spaPaused"
           @stimulate="announceStimulus"
         />
         <SketchRunner
@@ -224,10 +240,23 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           class="lab-raw-runner"
           :sketch="bareSketch"
           :label="bareRunnerLabel"
-          :paused="paused"
+          :paused="barePaused"
         />
+        <div
+          v-if="isBareMode && barePaused"
+          class="raw-paused-overlay"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          <div>
+            <span>{{ barePauseReason === "system" ? "SYSTEM / REDUCE MOTION" : "RAW / PAUSED" }}</span>
+            <strong>Анимация остановлена</strong>
+          </div>
+          <button class="button primary" type="button" @click="startBareMotion">Запустить анимацию</button>
+        </div>
         <div class="canvas-meta" aria-hidden="true">
-          <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? paused ? "pause / raw" : "raw / p5.js" : paused ? "pause" : "live" }}</span>
+          <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? barePaused ? "pause / raw" : "raw / p5.js" : spaPaused ? "pause" : "live" }}</span>
           <span v-if="isBareMode">{{ bareCodeLength }} chars · isolated · no SPA</span>
           <span v-else>{{ selectedForm.supportsStimulus ? "tap / provoke · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
         </div>
@@ -276,7 +305,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           <div class="bare-mode-actions">
             <div class="bare-transport">
               <button class="button primary" type="button" @click="restartBareSketch">Перезапустить</button>
-              <button class="button" type="button" :aria-pressed="paused" @click="paused = !paused">{{ paused ? "Продолжить" : "Приостановить" }}</button>
+              <button class="button" type="button" :aria-pressed="barePaused" @click="toggleBareMotion">{{ barePaused ? "Продолжить" : "Приостановить" }}</button>
             </div>
             <RouterLink
               v-if="selectedForm.sketch"
@@ -325,10 +354,10 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
               class="button"
               :class="{ primary: !selectedForm.supportsStimulus, wide: !selectedForm.supportsStimulus }"
               type="button"
-              :aria-pressed="paused"
-              @click="paused = !paused"
+              :aria-pressed="spaPaused"
+              @click="spaPaused = !spaPaused"
             >
-              {{ paused ? "Продолжить" : "Приостановить" }}
+              {{ spaPaused ? "Продолжить" : "Приостановить" }}
             </button>
             <button class="button" type="button" @click="reset">Сбросить</button>
             <button class="button" type="button" @click="randomize">Случайный</button>
