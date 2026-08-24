@@ -8,6 +8,10 @@ import {
   GRID_TOPOLOGY_PRESETS,
   resolveGridDimensions
 } from "../lib/meshTopology.js";
+import {
+  PELAGION_MOTION_MODE,
+  pelagionMotionState
+} from "../lib/motionChoreography.js";
 
 const control = (key, label, min, max, step, options = {}) => ({
   key, label, min, max, step, ...options
@@ -209,7 +213,8 @@ function topologyGridPoint(index, time, settings, layers, target) {
 function pelagionSpine(parameter, time, settings, layers, interaction, target) {
   const u = Math.max(0, Math.min(1, parameter));
   const tail = u ** 1.65;
-  const phase = TAU * (u * settings.swimWaves - time);
+  pelagionMotionState(u, time, settings, target);
+  const phase = TAU * (u * settings.swimWaves - target.travel);
   const profile = Math.max(0, Math.sin(Math.PI * u)) ** settings.taper;
   const field = layers.field
     ? settings.fieldStrength * Math.sin(
@@ -223,12 +228,12 @@ function pelagionSpine(parameter, time, settings, layers, interaction, target) {
   const touchY = Number.isFinite(interaction?.y) ? interaction.y : 0;
 
   target._centerX = 200
-    + settings.length * (u - 0.5) * (1 - shock * 0.12);
+    + settings.length * (u - 0.5) * target.axialScale * (1 - shock * 0.12);
   target._centerY = 200
-    + settings.swim * tail * Math.sin(phase)
+    + settings.swim * tail * target.effort * Math.sin(phase)
     + field * profile
     + touchY * settings.response * shock;
-  target._centerZ = settings.swim * 0.42 * tail * Math.cos(phase)
+  target._centerZ = settings.swim * 0.42 * tail * target.effort * Math.cos(phase)
     + field * 0.5 * Math.cos(u * 9 + time)
     + touchX * settings.response * shock;
   target._profile = profile;
@@ -253,20 +258,24 @@ function pelagionPoint(index, time, settings, layers, target, interaction) {
     pelagionSpine(anchor, time, settings, layers, interaction, target);
 
     const anchorRadius = settings.radius * target._profile;
-    const wave = time * 2.1 - q * settings.tendrilFrequency + branchPhase;
+    pelagionMotionState(Math.min(1, anchor + q * 0.24), time, settings, target);
+    const choreographed = settings.motionMode === PELAGION_MOTION_MODE.livingStroke;
+    const wave = target.travel * 2.1 - q * settings.tendrilFrequency + branchPhase;
+    const followThrough = choreographed ? 0.62 + 0.68 * target.stroke : 1;
     const flare = 1 + (layers.response ? interaction?.strength || 0 : 0) * 0.9;
     target.x = target._centerX + q * settings.tendrilLength;
     target.y = target._centerY
       + anchorRadius * 0.54 * Math.cos(branchPhase)
-      + settings.tendrilWave * q * Math.sin(wave) * flare;
+      + settings.tendrilWave * q * Math.sin(wave) * followThrough * flare;
     target.z = target._centerZ
       + anchorRadius * 0.85 * Math.sin(branchPhase) * settings.depth
-      + settings.tendrilWave * q * Math.cos(wave) * settings.depth * flare;
+      + settings.tendrilWave * q * Math.cos(wave) * settings.depth
+        * followThrough * flare;
     target.parameter = q;
-    target.k = Math.sin(wave);
+    target.k = choreographed ? target.stroke * 2 - 1 : Math.sin(wave);
     target.e = target._profile;
     target.d = q * settings.tendrilLength;
-    target.c = branchPhase;
+    target.c = branchPhase + (choreographed ? target.localPhase : 0);
     target.branch = branch;
     target.forms = tentacleCount;
     return target;
@@ -276,25 +285,28 @@ function pelagionPoint(index, time, settings, layers, target, interaction) {
   const segmentCount = Math.max(2, Math.ceil(settings.pointCount / ringSamples));
   const u = Math.min(1, Math.floor(index / ringSamples) / (segmentCount - 1));
   const ring = index % ringSamples;
+  const choreographed = settings.motionMode === PELAGION_MOTION_MODE.livingStroke;
   const theta = TAU * ring / ringSamples
     + settings.twist * u
-    + 0.08 * Math.sin(time + u * 9);
+    + 0.08 * Math.sin(choreographed ? time * settings.strokeFrequency - u * settings.followThrough : time + u * 9);
   pelagionSpine(u, time, settings, layers, interaction, target);
 
   const pulse = layers.body
-    ? 1 + settings.pulse * Math.sin(
-      time * settings.pulseFrequency - u * TAU * 1.7
-    ) ** 3
+    ? 1 + settings.pulse * (choreographed
+      ? target.stroke * 2 - 1
+      : Math.sin(time * settings.pulseFrequency - u * TAU * 1.7) ** 3)
     : 0.02;
   const radius = settings.radius * target._profile * pulse
-    * (1 - target._shock * 0.28);
+    * target.volumeScale * (1 - target._shock * 0.28);
   const rib = 0.9 + 0.1 * Math.sin(
     theta * settings.ribs + u * TAU * 3 - time
   );
   const membrane = layers.membrane
     ? 1 + settings.membrane * target._profile
       * Math.abs(Math.sin(theta)) ** 6
-      * (0.78 + 0.22 * Math.sin(u * TAU * 2 - time))
+      * (choreographed
+        ? 0.68 + 0.44 * target.stroke
+        : 0.78 + 0.22 * Math.sin(u * TAU * 2 - time))
       * (1 + target._shock)
     : 1;
 
@@ -304,10 +316,12 @@ function pelagionPoint(index, time, settings, layers, target, interaction) {
   target.z = target._centerZ
     + radius * Math.sin(theta) * settings.depth * membrane;
   target.parameter = u;
-  target.k = target._field / Math.max(1, settings.fieldStrength);
+  target.k = choreographed
+    ? target.stroke * 2 - 1
+    : target._field / Math.max(1, settings.fieldStrength);
   target.e = target._profile;
   target.d = radius;
-  target.c = theta;
+  target.c = theta + (choreographed ? target.localPhase : 0);
   target.branch = ring;
   target.forms = ringSamples;
   return target;
@@ -617,12 +631,33 @@ export const spatialForms = Object.freeze([
     description: "Новая сущность соединяет связное параметрическое тело, настоящую пространственную мембрану, течение и память света. Короткое касание возмущает организм; движение пальца вращает пространство.",
     origin: "community-synthesis",
     genomeSketch: PELAGION_GENOME_SKETCH,
+    motionModes: Object.freeze([
+      Object.freeze({
+        id: PELAGION_MOTION_MODE.continuous,
+        label: "Ровный поток",
+        description: "Прежняя механика: все части движутся непрерывно и почти с одинаковым усилием."
+      }),
+      Object.freeze({
+        id: PELAGION_MOTION_MODE.livingStroke,
+        label: "Живой гребок",
+        description: "Единый импульс проходит от корпуса к хвосту; продольное сжатие компенсируется поперечным, а мембрана, нити и цвет запаздывают вслед за ним."
+      })
+    ]),
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "stroke",
+      expression: "smoothstep(-0.6, 0.72, k + 0.16 * sin(c))",
+      colorA: "#58ffe7",
+      colorB: "#d7ff58"
+    }),
     supportsStimulus: true,
     stimulusMessage: "Пелагион сжался и раскрыл мембрану в ответ на возмущение.",
     trailLayer: "memory",
     timeStep: 0.012,
     defaults: {
-      speed: 1, length: 245, radius: 58, depth: 1,
+      speed: 1, motionMode: PELAGION_MOTION_MODE.livingStroke,
+      strokeFrequency: 4.4, strokeAccent: 0.78, followThrough: 3.4,
+      length: 245, radius: 58, depth: 1,
       swim: 31, swimWaves: 1.35, taper: 0.68,
       pulse: 0.14, pulseFrequency: 2.1,
       membrane: 1.35, twist: 5.5, ribs: 5, ringSamples: 34,
@@ -645,6 +680,9 @@ export const spatialForms = Object.freeze([
     ],
     advancedControls: [
       control("swimWaves", "Волн вдоль тела", 0.4, 3, 0.05, { digits: 2 }),
+      control("strokeFrequency", "Темп гребка", 1.5, 8, 0.1, { digits: 1 }),
+      control("strokeAccent", "Акцент гребка", 0, 0.95, 0.01, { format: "percent" }),
+      control("followThrough", "Запаздывание хвоста", 0, 6.2, 0.1, { digits: 1 }),
       control("taper", "Профиль корпуса", 0.35, 1.8, 0.05, { digits: 2 }),
       control("pulse", "Дыхание", 0, 0.4, 0.01, { digits: 2 }),
       control("pulseFrequency", "Ритм дыхания", 0.5, 5, 0.1, { digits: 1 }),
@@ -667,7 +705,9 @@ export const spatialForms = Object.freeze([
       { key: "memory", label: "Память света", default: true }
     ],
     randomRanges: {
-      speed: [0.45, 1.8, 0.05], length: [180, 285, 1], radius: [38, 78, 1],
+      speed: [0.45, 1.8, 0.05], strokeFrequency: [2.6, 6.2, 0.1],
+      strokeAccent: [0.45, 0.9, 0.01], followThrough: [1.8, 5.4, 0.1],
+      length: [180, 285, 1], radius: [38, 78, 1],
       depth: [0.6, 1.55, 0.05], swim: [12, 54, 1], swimWaves: [0.75, 2.35, 0.05],
       taper: [0.45, 1.2, 0.05], pulse: [0.04, 0.3, 0.01],
       pulseFrequency: [1.1, 3.7, 0.1], membrane: [0.45, 2.4, 0.05],

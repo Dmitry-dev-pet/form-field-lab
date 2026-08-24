@@ -795,6 +795,7 @@ a:focus-visible {
 }
 
 .mesh-mode-switch { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.motion-mode-field .mesh-mode-switch { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .topology-switch { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .mesh-mode-switch button,

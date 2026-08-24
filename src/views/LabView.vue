@@ -184,6 +184,10 @@ const advancedControls = computed(() => selectedForm.value.advancedControls);
 const selectedTopology = computed(() => selectedForm.value.mesh
   ? resolveGridTopology(selectedForm.value.mesh, settings)
   : null);
+const selectedMotionMode = computed(() => selectedForm.value.motionModes
+  ?.find(mode => mode.id === settings.motionMode)
+  || selectedForm.value.motionModes?.[0]
+  || null);
 const isTopologyMorph = computed(() => Boolean(selectedTopology.value?.morph));
 const meshMetrics = computed(() => selectedForm.value.mesh
   ? measureGridTopology(selectedForm.value.mesh, settings)
@@ -211,6 +215,10 @@ function formNumber(form) {
 function basePresetLabel(form) {
   if (form.savedRecord) return "Мутация";
   if (form.meshGenome) return "RAW ≤ 280";
+  if (form.motionModes) {
+    return form.motionModes.find(mode => mode.id === form.defaults.motionMode)?.label
+      || "Хореография";
+  }
   return form.sketch ? "Original" : "Синтез";
 }
 
@@ -249,6 +257,13 @@ function toggleLayer(key) {
 function setRenderMode(mode) {
   settings.renderMode = readMeshRenderMode(mode);
   changed();
+}
+
+function setMotionMode(modeId) {
+  const mode = selectedForm.value.motionModes?.find(item => item.id === modeId);
+  if (!mode) return;
+  settings.motionMode = mode.id;
+  preset.value = mode.label;
 }
 
 function setTopology(topologyId) {
@@ -708,6 +723,23 @@ onBeforeUnmount(() => {
                 @click="setRenderMode(mode.id)"
               >{{ mode.label }}</button>
             </div>
+          </div>
+
+          <div v-if="selectedForm.motionModes" class="mesh-mode-field motion-mode-field">
+            <div class="mesh-mode-title">
+              <strong>Хореография</strong>
+              <small>одна фаза · всё тело</small>
+            </div>
+            <div class="mesh-mode-switch" role="group" aria-label="Хореография движения сущности">
+              <button
+                v-for="mode in selectedForm.motionModes"
+                :key="mode.id"
+                type="button"
+                :aria-pressed="selectedMotionMode.id === mode.id"
+                @click="setMotionMode(mode.id)"
+              >{{ mode.label }}</button>
+            </div>
+            <p class="topology-description">{{ selectedMotionMode.description }}</p>
           </div>
 
           <div class="control-list">

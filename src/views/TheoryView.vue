@@ -88,21 +88,27 @@ R\sin c_i+k_ip_i\\R\sin(hc_i)+e_ip_i\\\lambda R\cos c_i
 const pelagionLatexSource = String.raw`\begin{aligned}
 u_i &= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1},
 & \theta_i &= 2\pi\frac{i\bmod S}{S}+\tau u_i,\\
+\beta(u,t)&=\omega_s t-\ell u,
+&h(v)&=v^2(3-2v),\\
+s(u,t)&=h\!\left(\frac{1-\cos\beta}{2}\right),
+&\hat t(u,t)&=t+\frac{a}{\omega_s}\sin\beta,\\
+a_x(u,t)&=1-0.14a\,s\sin^{0.7}(\pi u),
+&a_r(u,t)&=a_x^{-1/2},\\
 \mathbf C(u,t) &=
 \begin{bmatrix}
-L(u-\tfrac12)\\
-A u^{1.65}\sin\!\left(2\pi(\nu u-t)\right)+F(u,t)\\
-0.42A u^{1.65}\cos\!\left(2\pi(\nu u-t)\right)
+La_x(u-\tfrac12)\\
+A u^{1.65}(0.28+0.72s)\sin\!\left(2\pi(\nu u-\hat t)\right)+F(u,t)\\
+0.42A u^{1.65}(0.28+0.72s)\cos\!\left(2\pi(\nu u-\hat t)\right)
 \end{bmatrix},\\
 r(u,t) &= R\sin^{\gamma}(\pi u)
-\left[1+P\sin^3(\omega t-3.4\pi u)\right],\\
+\,a_r\left[1+P(2s-1)\right],\\
 \mathbf P(u,\theta,t) &= \mathbf C(u,t)+
 \begin{bmatrix}
 0.12r\sin(2\theta+2\pi u-t)\\
 0.72r\cos\theta\\
 \lambda r\sin\theta\,M(u,\theta,t)
 \end{bmatrix},\\
-M(u,\theta,t) &= 1+B\sin^{\gamma}(\pi u)|\sin\theta|^6,\\
+M(u,\theta,t) &= 1+B\sin^{\gamma}(\pi u)|\sin\theta|^6(0.68+0.44s),\\
 Q(u) &= q\exp\!\left[-28(u-u_{touch})^2\right].
 \end{aligned}`;
 
@@ -562,31 +568,37 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Параметр <code>u</code> идёт вдоль позвоночника, а <code>θ</code> обходит поперечное сечение. Вместе они задают настоящую поверхность.</p>
+            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Параметр <code>u</code> идёт вдоль позвоночника, а <code>θ</code> обходит поперечное сечение. Вместе они задают настоящую поверхность. Переключатель «Ровный поток / Живой гребок» позволяет непосредственно сравнить прежнюю механику с новой хореографией.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
               u_i &amp;= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1},
               &amp;\theta_i &amp;= 2\pi\frac{i\bmod S}{S}+\tau u_i,\\
+              \beta(u,t)&amp;=\omega_s t-\ell u,
+              &amp;s(u,t)&amp;=h\!\left(\frac{1-\cos\beta}{2}\right),\\
+              \hat t(u,t)&amp;=t+\frac{a}{\omega_s}\sin\beta,
+              &amp;h(v)&amp;=v^2(3-2v),\\
               \mathbf C(u,t) &amp;=
               \begin{bmatrix}
-              L(u-\tfrac12)\\
-              A u^{1.65}\sin(2\pi(\nu u-t))+F(u,t)\\
-              0.42A u^{1.65}\cos(2\pi(\nu u-t))
+              La_x(u-\tfrac12)\\
+              A u^{1.65}(0.28+0.72s)\sin(2\pi(\nu u-\hat t))+F(u,t)\\
+              0.42A u^{1.65}(0.28+0.72s)\cos(2\pi(\nu u-\hat t))
               \end{bmatrix}.
               \end{aligned}
               \]
             </div>
-            <p>Радиус дышит вдоль тела, а мембрана раскрывает боковые участки в координате (z):</p>
+            <p>Гребок имеет плавные вход и выход, а запаздывание \(\ell u\) переносит усилие к хвосту. Во время силовой фазы продольный масштаб \(a_x\) уменьшается, поперечный \(a_r=a_x^{-1/2}\) растёт, поэтому часть деформации squash/stretch удовлетворяет \(a_xa_r^2=1\). Отдельный параметр дыхания всё ещё может менять объём. Та же величина \(s\) управляет мембраной, нитями и формульным цветом.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              r(u,t)&amp;=R\sin^{\gamma}(\pi u)\left[1+P\sin^3(\omega t-3.4\pi u)\right],\\
+              a_x&amp;=1-0.14a\,s\sin^{0.7}(\pi u),
+              &amp;a_r&amp;=a_x^{-1/2},\\
+              r(u,t)&amp;=R\sin^{\gamma}(\pi u)a_r\left[1+P(2s-1)\right],\\
               \mathbf P&amp;=\mathbf C+
               \begin{bmatrix}
               0.12r\sin(2\theta+2\pi u-t)\\
               0.72r\cos\theta\\
-              \lambda r\sin\theta\left(1+B\sin^{\gamma}(\pi u)|\sin\theta|^6\right)
+              \lambda r\sin\theta\left(1+B\sin^{\gamma}(\pi u)|\sin\theta|^6(0.68+0.44s)\right)
               \end{bmatrix}.
               \end{aligned}
               \]
@@ -599,7 +611,7 @@ onMounted(async () => {
               <strong>{{ PELAGION_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_GENOME }}</code></pre>
-            <p>В 280-символьной версии остаются тело, движение, цвет и независимая координата <code>z</code>. Поворот вокруг Y проецируется формулой <code>x′ = x cos(a) + z sin(a)</code> в совместимый 2D canvas; жест, след, частицы и исследовательские контролы принадлежат среде SPA.</p>
+            <p>В 280-символьной версии остаются тело, минимальное непрерывное движение, цвет и независимая координата <code>z</code>. Поворот вокруг Y проецируется формулой <code>x′ = x cos(a) + z sin(a)</code> в совместимый 2D canvas; полноценная хореография, жест, след, частицы и исследовательские контролы принадлежат фенотипу SPA и не раздувают автономный эмбрион.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
