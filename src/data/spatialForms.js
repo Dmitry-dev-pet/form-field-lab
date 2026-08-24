@@ -1,6 +1,9 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
-import { PELAGION_GENOME_SKETCH } from "./pelagionGenome.js";
+import {
+  PELAGION_GENOME_SKETCH,
+  PELAGION_RAW_VARIANTS
+} from "./pelagionGenome.js";
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
 import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
@@ -631,6 +634,7 @@ export const spatialForms = Object.freeze([
     description: "Новая сущность соединяет связное параметрическое тело, настоящую пространственную мембрану, течение и память света. Короткое касание возмущает организм; движение пальца вращает пространство.",
     origin: "community-synthesis",
     genomeSketch: PELAGION_GENOME_SKETCH,
+    rawVariants: PELAGION_RAW_VARIANTS,
     motionModes: Object.freeze([
       Object.freeze({
         id: PELAGION_MOTION_MODE.continuous,

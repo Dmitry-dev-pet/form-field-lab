@@ -8,7 +8,9 @@ import {
 import {
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
-  PELAGION_GENOME_LIMIT
+  PELAGION_GENOME_LIMIT,
+  PELAGION_LIVING_GENOME,
+  PELAGION_LIVING_GENOME_CHARACTERS
 } from "../data/pelagionGenome.js";
 import {
   compileTopologyGenome,
@@ -234,6 +236,7 @@ const defaultCopyLabels = {
   chronophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
+  livingSeed: "Копировать RAW гребка",
   chronophoreSeed: "Копировать 280",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
@@ -564,6 +567,7 @@ onMounted(async () => {
           <div class="card-actions">
             <button class="button" type="button" @click="copy('pelagion', pelagionLatexSource)">{{ copyLabels.pelagion }}</button>
             <button class="button" type="button" @click="copy('seed', PELAGION_GENOME)">{{ copyLabels.seed }}</button>
+            <button class="button" type="button" @click="copy('livingSeed', PELAGION_LIVING_GENOME)">{{ copyLabels.livingSeed }}</button>
           </div>
         </header>
         <div class="theory-body pelagion-theory-grid">
@@ -611,7 +615,12 @@ onMounted(async () => {
               <strong>{{ PELAGION_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_GENOME }}</code></pre>
-            <p>В 280-символьной версии остаются тело, минимальное непрерывное движение, цвет и независимая координата <code>z</code>. Поворот вокруг Y проецируется формулой <code>x′ = x cos(a) + z sin(a)</code> в совместимый 2D canvas; полноценная хореография, жест, след, частицы и исследовательские контролы принадлежат фенотипу SPA и не раздувают автономный эмбрион.</p>
+            <div class="genome-meter">
+              <span>RAW живого гребка</span>
+              <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
+            <p>Первый RAW сохраняет минимальное непрерывное движение. Во втором одна величина <code>s=sin(4t-u)³</code> одновременно сжимает корпус, расширяет поперечное сечение и глубину, ведёт хвост и цвет. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома; более точная компенсация объёма, отклик и след остаются расширением SPA.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>

@@ -33,3 +33,16 @@ test("sandbox runner includes the original source and motion bridge", () => {
   assert.match(html, /sketch-motion/);
   assert.doesNotMatch(html, /sketch-frame/);
 });
+
+test("the Pelagion runner adds a spatial camera bridge outside the RAW code", () => {
+  const code = "t=0,draw=_=>{t++||createCanvas(400,400);point(200,200)}";
+  const html = runnerDocument(code, { viewModel: "pelagion-orbit" });
+
+  assert.match(html, /pelagion-orbit/);
+  assert.match(html, /projectedPelagionPoint/);
+  assert.match(html, /sketch-view-state/);
+  assert.match(html, /sketch-view-snapshot/);
+  assert.match(html, /canvas\?\.width === 400/);
+  assert.match(html, /touch-action:none/);
+  assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
+});
