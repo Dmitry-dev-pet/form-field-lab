@@ -551,6 +551,47 @@ a:focus-visible {
 
 .imprint-mode-switch button:disabled { cursor: not-allowed; opacity: 0.45; }
 
+.microevolution-field { display: grid; gap: 8px; }
+
+.microevolution-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 0.69rem;
+  font-weight: 700;
+}
+
+.microevolution-label small {
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.5rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.micro-variant-switch {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.micro-variant-switch button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+
+.micro-variant-switch button small {
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.56rem;
+}
+
+.micro-variant-switch button[aria-pressed="true"] small { color: inherit; }
+
 .raw-budget-panel {
   display: grid;
   gap: 13px;
@@ -1817,6 +1858,19 @@ mjx-container[display="true"] {
 .pelagion-genome pre { padding: 16px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .pelagion-genome p { margin: 14px 0 0; color: var(--quiet); font-size: 0.68rem; line-height: 1.62; }
 .pelagion-genome code { color: var(--cyan); }
+.pelagion-micro-list { margin-top: 12px; border-bottom: 1px solid var(--line); }
+.pelagion-micro-list .source-details { margin: 0; }
+.pelagion-micro-list summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+}
+.pelagion-micro-list summary::after { display: none; }
+.pelagion-micro-list summary code { margin-left: auto; color: var(--acid); }
+.pelagion-micro-list pre { margin: 0; padding: 13px 0; }
+.pelagion-micro-list details > p { margin: 0 0 12px; }
 .topology-genome-counts {
   display: grid;
   gap: 5px;

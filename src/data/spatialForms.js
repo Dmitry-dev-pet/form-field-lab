@@ -1,8 +1,10 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import {
+  PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_EVOLUTION_VARIANTS,
-  PELAGION_LIVING_GENOME_SKETCH
+  PELAGION_LIVING_GENOME_SKETCH,
+  PELAGION_MICRO_VARIANTS
 } from "./pelagionGenome.js";
 import {
   MNEMOPHORE_GENOME_SKETCH,
@@ -639,7 +641,9 @@ export const spatialForms = Object.freeze([
     description: "Пелагический организм с непрерывным вытянутым телом: одна формула ведёт оболочку от головы к хвосту, а единая волна сжимает и раскрывает весь объём.",
     origin: "community-synthesis",
     genomeSketch: PELAGION_LIVING_GENOME_SKETCH,
+    rawVariants: PELAGION_MICRO_VARIANTS,
     budgetVariants: PELAGION_EVOLUTION_VARIANTS,
+    budgetVariantsByMode: PELAGION_BUDGET_VARIANTS_BY_MODE,
     motionModes: Object.freeze([
       Object.freeze({
         id: PELAGION_MOTION_MODE.continuous,

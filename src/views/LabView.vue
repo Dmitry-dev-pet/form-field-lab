@@ -213,7 +213,7 @@ const bareLead = computed(() => isTopologyGenome.value
   ? `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : hasBudgetVariants.value
     ? selectedForm.value.id === "pelagion"
-      ? `Исторический цельный RAW Пелагиона на 274 символа исполняется без изменений; лимит ${rawBudget.value} только дописывает к нему помещающийся слой: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
+      ? `Выбранный корневой RAW микроэволюции сохраняется целиком; лимит ${rawBudget.value} только дописывает к нему помещающийся слой: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
       : `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
     ? "На холсте без преобразований выполняется исходный p5.js-код автора."
@@ -465,7 +465,7 @@ async function setBareVariant(variant) {
   } else if (selectedForm.value.rawVariants?.some(item => item.id === variant)) {
     bareVariant.value = variant;
   } else {
-    bareVariant.value = "canonical";
+    bareVariant.value = defaultBareVariant(selectedForm.value);
   }
   barePaused.value = false;
 }
@@ -625,14 +625,17 @@ onBeforeUnmount(() => {
             <button type="button" :aria-pressed="bareVariant === 'imprint'" :disabled="!imprintResult" @click="setBareVariant('imprint')">RAW-мутация</button>
           </div>
 
-          <div v-else-if="selectedForm.rawVariants" class="imprint-mode-switch" role="group" aria-label="RAW-вариант Пелагиона">
-            <button
-              v-for="variant in selectedForm.rawVariants"
-              :key="variant.id"
-              type="button"
-              :aria-pressed="bareVariant === variant.id"
-              @click="setBareVariant(variant.id)"
-            >{{ variant.label }}</button>
+          <div v-else-if="selectedForm.rawVariants" class="microevolution-field">
+            <div class="microevolution-label"><span>Микроэволюция 280</span><small>корневой RAW</small></div>
+            <div class="imprint-mode-switch micro-variant-switch" role="group" aria-label="Микроэволюция 280">
+              <button
+                v-for="variant in selectedForm.rawVariants"
+                :key="variant.id"
+                type="button"
+                :aria-pressed="bareVariant === variant.id"
+                @click="setBareVariant(variant.id)"
+              ><span>{{ variant.label }}</span><small>{{ variant.sketch.code.length }}</small></button>
+            </div>
           </div>
 
           <section class="raw-budget-panel" aria-label="Регулируемый лимит RAW-кода">
@@ -709,7 +712,7 @@ onBeforeUnmount(() => {
               <i aria-hidden="true">↔</i>
               <span><small>{{ selectedRawVariant.label }}</small>{{ bareCodeLength }}</span>
             </div>
-            <p class="comparison-label">{{ selectedForm.id === 'pelagion' ? "Цикл цельного RAW 274 сохранён буквально; следующий код только добавляет слой" : hasBudgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
+            <p class="comparison-label">{{ selectedForm.id === 'pelagion' ? "Выбранный корневой RAW сохранён буквально; следующий код только добавляет слой" : hasBudgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ bareSketch.code }}</code></pre>
@@ -785,7 +788,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
-          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "уровни не заменяют организм: 512 добавляет к точному циклу 274 орган, 768 — двухнаправленную сетку, а 900 — автономный импульс и локальное сокращение ткани. Камера и фаза переходят без перезапуска; касание остаётся только камерой." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
+          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "микроэволюция выбирает корневую формулу не длиннее 280; уровни 512/768/900 не заменяют её, а добавляют орган, двухнаправленную сетку и автономный импульс. Камера и фаза переходят без перезапуска; касание остаётся только камерой." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>

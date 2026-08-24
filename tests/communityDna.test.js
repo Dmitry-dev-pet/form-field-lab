@@ -8,6 +8,7 @@ import {
   PELAGION_LINEAGE
 } from "../src/data/communityDna.js";
 import {
+  PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_EVOLUTION_VARIANTS,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
@@ -17,6 +18,7 @@ import {
   PELAGION_LIVING_GENOME_CHARACTERS,
   PELAGION_LIVING_NERVOUS_GENOME,
   PELAGION_LIVING_STRUCTURE_GENOME,
+  PELAGION_MICRO_VARIANTS,
   PELAGION_RAW_VARIANTS
 } from "../src/data/pelagionGenome.js";
 import { selectRawBudgetVariant } from "../src/lib/codeBudget.js";
@@ -155,4 +157,70 @@ test("Pelagion budgets preserve one exact organism and only append anatomy", () 
   assert.equal(coreFrame.firstLines.length, 0);
   assert.equal(structureFrame.firstLines.length, 3000);
   assert.equal(nervousFrame.firstLines.length, 3250);
+});
+
+test("Pelagion microevolution produces four autonomous roots inside 280 characters", () => {
+  assert.deepEqual(PELAGION_MICRO_VARIANTS.map(variant => variant.id), [
+    "living-stroke",
+    "chiral-twin",
+    "sharp-pulse",
+    "color-polarity"
+  ]);
+  assert.deepEqual(
+    PELAGION_MICRO_VARIANTS.map(variant => variant.sketch.code.length),
+    [274, 279, 274, 273]
+  );
+  assert.deepEqual(
+    PELAGION_MICRO_VARIANTS.map(variant => variant.operators),
+    [[], ["twist", "split", "polarity"], ["sharp"], ["polarity"]]
+  );
+  assert.equal(PELAGION_MICRO_VARIANTS[0].sketch.code, PELAGION_LIVING_GENOME);
+
+  const [canonical, chiral, sharp, polarity] = PELAGION_MICRO_VARIANTS;
+  assert.match(chiral.sketch.code, /v=i%40\/6\+u/);
+  assert.match(chiral.sketch.code, /s=sin\(t\*4-u\+i%2\)\*\*3/);
+  assert.match(chiral.sketch.code, /stroke\(180\+70\*s,44\*u,w\)/);
+  assert.match(sharp.sketch.code, /s=sin\(t\*4-u\)\*\*5/);
+  assert.match(polarity.sketch.code, /stroke\(180\+70\*s,44\*u,w\)/);
+
+  for (const variant of PELAGION_MICRO_VARIANTS) {
+    assert.ok(variant.sketch.code.length <= PELAGION_GENOME_LIMIT);
+    assert.doesNotThrow(() => new Function(variant.sketch.code));
+  }
+
+  const canonicalFrame = executeGenomeFrames(canonical.sketch.code);
+  const chiralFrame = executeGenomeFrames(chiral.sketch.code);
+  const sharpFrame = executeGenomeFrames(sharp.sketch.code);
+  const polarityFrame = executeGenomeFrames(polarity.sketch.code);
+  assert.notDeepEqual(chiralFrame.first, canonicalFrame.first);
+  assert.notDeepEqual(sharpFrame.first, canonicalFrame.first);
+  assert.deepEqual(polarityFrame.first, canonicalFrame.first);
+  assert.notDeepEqual(polarityFrame.firstStrokes, canonicalFrame.firstStrokes);
+});
+
+test("every Pelagion micro-root inherits the same additive budget anatomy", () => {
+  const expectedLengths = {
+    "living-stroke": [274, 461, 746, 873],
+    "chiral-twin": [279, 466, 751, 878],
+    "sharp-pulse": [274, 461, 746, 873],
+    "color-polarity": [273, 460, 745, 872]
+  };
+
+  assert.deepEqual(Object.keys(PELAGION_BUDGET_VARIANTS_BY_MODE), PELAGION_MICRO_VARIANTS.map(variant => variant.id));
+  for (const root of PELAGION_MICRO_VARIANTS) {
+    const variants = PELAGION_BUDGET_VARIANTS_BY_MODE[root.id];
+    assert.equal(variants, root.budgetVariants);
+    assert.deepEqual(variants.map(variant => variant.sketch.code.length), expectedLengths[root.id]);
+    const rootLoop = root.sketch.code.slice(0, root.sketch.code.indexOf("}}//#"));
+    assert.equal(variants[0].sketch.code, root.sketch.code);
+    for (const variant of variants.slice(1)) {
+      assert.ok(variant.sketch.code.startsWith(`${rootLoop};`));
+      assert.doesNotThrow(() => new Function(variant.sketch.code));
+    }
+    for (const [budget, rank] of [[280, 0], [512, 1], [768, 2], [900, 3]]) {
+      const selected = selectRawBudgetVariant(variants, budget);
+      assert.equal(selected.variant.rank, rank);
+      assert.ok(selected.characters <= budget);
+    }
+  }
 });

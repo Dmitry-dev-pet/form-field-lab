@@ -13,6 +13,7 @@ import {
   PELAGION_LIVING_GENOME_CHARACTERS,
   PELAGION_LIVING_GENOME_SKETCH,
   PELAGION_GENOME_LIMIT,
+  PELAGION_MICRO_VARIANTS,
 } from "../data/pelagionGenome.js";
 
 const copyLabel = ref("Копировать геном");
@@ -82,7 +83,12 @@ async function copyGenome() {
           <div>
             <p class="panel-kicker">Pelagion / embryo</p>
             <h2>Геном помещается в твит</h2>
-            <p>Это точный цельный «Живой гребок RAW» из версии <code>34fe67e</code>: единый профиль оболочки, формульный цвет, движение и настоящая координата <code>z</code>. Лаборатория всегда начинает именно с него; 512 дописывает внутренний орган, 768 — поперечно-продольную сетку, а 900 — автономный нервный импульс и локальную реакцию ткани, не меняя исходный слой.</p>
+            <p>Это точный цельный «Живой гребок RAW» из версии <code>34fe67e</code>: единый профиль оболочки, формульный цвет, движение и настоящая координата <code>z</code>. Он остаётся каноном, рядом с которым лаборатория выращивает три проверяемых микрогенома внутри того же лимита 280. Любой выбранный корень затем получает орган при 512, сетку при 768 и автономный нервный импульс при 900, не меняя свой исходный слой.</p>
+            <ul class="topology-genome-counts" aria-label="Микроэволюция Пелагиона">
+              <li v-for="variant in PELAGION_MICRO_VARIANTS" :key="variant.id">
+                <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
           </div>
           <div class="seed-actions">
             <RouterLink class="button primary" :to="{ name: 'lab', query: { form: 'pelagion' } }">Разбудить сущность</RouterLink>

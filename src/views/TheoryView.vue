@@ -11,7 +11,8 @@ import {
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT,
   PELAGION_LIVING_GENOME,
-  PELAGION_LIVING_GENOME_CHARACTERS
+  PELAGION_LIVING_GENOME_CHARACTERS,
+  PELAGION_MICRO_VARIANTS
 } from "../data/pelagionGenome.js";
 import {
   MNEMOPHORE_CORE_GENOME,
@@ -615,6 +616,18 @@ onMounted(async () => {
               \]
             </div>
             <p>Формульный RGB-цвет \((180+70s_i,220,255)\) идёт по той же фазе, поэтому гребок читается одновременно в геометрии и свете. Ручная проекция сохраняет настоящую координату <code>z</code> и свободную камеру.</p>
+            <p><strong>Микроэволюция 280.</strong> Три ближайших родственника возникают не из новых рендереров, а из четырёх проверяемых замен внутри той же строки. Ограничение отбрасывает любой корень длиннее 280 символов:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \mathcal M_{\rm twist}:&amp;\quad \theta_i\mapsto\theta_i+u_i,\\
+              \mathcal M_{\rm split}:&amp;\quad s_i\mapsto\sin^3(4t-u_i+(i\bmod2)),\\
+              \mathcal M_{\rm sharp}:&amp;\quad s_i\mapsto\sin^5(4t-u_i),\\
+              \mathcal M_{\rm polarity}:&amp;\quad \mathbf C_i\mapsto(180+70s_i,44u_i,400).
+              \end{aligned}
+              \]
+            </div>
+            <p>Хиральный близнец соединяет <code>twist + split + polarity</code>; резкий пульс и цветовая полярность применяют по одному оператору. Это четыре самостоятельных корня, а не пресеты камеры: при увеличении бюджета каждый сохраняет собственный цикл и получает ту же добавочную анатомию.</p>
             <p>У нервного уровня есть собственная фаза-пейсмейкер. Её восьмая степень сужает свет до локального фронта, а масштаб поперечного сечения передаёт импульс ткани:</p>
             <div class="math-scroll">
               \[
@@ -637,12 +650,20 @@ onMounted(async () => {
               <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
+            <div class="pelagion-micro-list" aria-label="Корни микроэволюции Пелагиона">
+              <details v-for="variant in PELAGION_MICRO_VARIANTS" :key="variant.id" class="source-details">
+                <summary><span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }} / 280</code></summary>
+                <pre><code>{{ variant.sketch.code }}</code></pre>
+                <p>{{ variant.description }}</p>
+                <p><strong>Рост:</strong> {{ variant.budgetVariants.map(item => item.sketch.code.length).join(" → ") }}</p>
+              </details>
+            </div>
             <ul class="topology-genome-counts" aria-label="Вложенные бюджеты Пелагиона">
               <li v-for="(variant, index) in PELAGION_EVOLUTION_VARIANTS" :key="variant.id">
                 <span>{{ [280, 512, 768, 900][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает 2500 точек внутреннего органа и 250 точек золотой оси. Уровень 768 сохраняет оба слоя и добавляет 2000 поперечных и 1000 продольных связей. Уровень 900 вводит независимую фазу <code>n_i</code>: 1000 золотых точек проводят узкий импульс вдоль сетки, 250 радиальных связей передают его от оси, а множитель <code>1 + n_i / 8</code> локально расширяет активную ткань. Исходные 10 000 точек не меняются. Камера и текущая фаза переходят между уровнями вне лимита; касание не входит в геном.</p>
+            <p>Бюджет 280 исполняет выбранный корневой RAW; канон остаётся точной исторической строкой на 274 символа. Уровень 512 приписывает 2500 точек внутреннего органа и 250 точек золотой оси. Уровень 768 сохраняет оба слоя и добавляет 2000 поперечных и 1000 продольных связей. Уровень 900 вводит независимую фазу <code>n_i</code>: 1000 золотых точек проводят узкий импульс вдоль сетки, 250 радиальных связей передают его от оси, а множитель <code>1 + n_i / 8</code> локально расширяет активную ткань. Исходные 10 000 точек каждого корня не меняются. Камера и текущая фаза переходят между уровнями вне лимита; касание не входит в геном.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
