@@ -3,6 +3,12 @@ import {
   normalizeFormulaExpression,
   normalizeHexColor
 } from "./colorFormula.js";
+import {
+  createOrbitRotation,
+  normalizeQuaternion,
+  quaternionToEuler,
+  quaternionToRotationMatrix
+} from "./spatialProjection.js";
 
 export const GENOME_ENTITY_STORAGE_KEY = "form-field-lab:genome-entities:v1";
 export const GENOME_ENTITY_VERSION = 1;
@@ -93,9 +99,21 @@ function colorStateChanged(before = DEFAULT_COLOR_STATE, after = DEFAULT_COLOR_S
 }
 
 export function normalizeSpatialSnapshot(snapshot = {}) {
+  const orientation = normalizeQuaternion(
+    snapshot.orientation && typeof snapshot.orientation === "object"
+      ? snapshot.orientation
+      : createOrbitRotation(
+        Number(snapshot.yaw) || 0,
+        clamp(snapshot.pitch, -Math.PI * 0.49, Math.PI * 0.49),
+        Number(snapshot.roll) || 0
+      )
+  );
+  const euler = quaternionToEuler(orientation);
   return Object.freeze({
-    yaw: Number(snapshot.yaw) || 0,
-    pitch: clamp(snapshot.pitch, -Math.PI * 0.49, Math.PI * 0.49),
+    orientation: Object.freeze({ ...orientation }),
+    yaw: euler.yaw,
+    pitch: euler.pitch,
+    roll: euler.roll,
     time: Math.max(0, Number(snapshot.time) || 0)
   });
 }
@@ -119,10 +137,7 @@ export function compileChronophoreImprint({
   const tubeRadius = layerValue(layers, "fibers") ? settings.tubeRadius : 0;
   const flow = layerValue(layers, "flow") ? settings.flow : 0;
   const fiberSpeed = layerValue(layers, "flow") ? settings.fiberSpeed : 0;
-  const yawCos = Math.cos(spatial.yaw);
-  const yawSin = Math.sin(spatial.yaw);
-  const pitchCos = Math.cos(spatial.pitch);
-  const pitchSin = Math.sin(spatial.pitch);
+  const rotation = quaternionToRotationMatrix(spatial.orientation);
   const background = normalizeHexColor(settings.backgroundColor, "#05070c");
   const colorA = hexToRgb(color.colorA, DEFAULT_COLOR_STATE.colorA);
   const colorB = hexToRgb(color.colorB, DEFAULT_COLOR_STATE.colorB);
@@ -130,7 +145,7 @@ export function compileChronophoreImprint({
   const alpha = Math.round(clamp(settings.alpha, 1, 255));
   const step = 0.012 * clamp(settings.speed, 0, 8);
 
-  const code = `${formula.helpers}o=${compactNumber(spatial.time)},t=0,draw=_=>{t||createCanvas(w=400,w);background("${background}");for(t+=${compactNumber(step)},i=${pointCount};i--;){T=t+o;u=(i/${pointCount}+T*${compactNumber(flow)})%1;a=TAU*${windingP}*u;v=TAU*${windingQ}*u+T*${compactNumber(settings.knotDrift)};b=TAU*(i%${strands}/${strands}+${compactNumber(settings.fiberTwist)}*u)+T*${compactNumber(fiberSpeed)};g=${compactNumber(knotRadius)}*(1+${compactNumber(settings.pulse)}*sin(T*${compactNumber(settings.pulseFrequency)}-TAU*${windingQ}*u));r=${compactNumber(settings.radius)}+g*cos(v)+${compactNumber(tubeRadius)}*cos(b);z=${compactNumber(settings.depth)}*(g*sin(v)+${compactNumber(tubeRadius)}*sin(b));x=r*cos(a);Y=r*sin(a);X=x*${compactNumber(yawCos)}+z*${compactNumber(yawSin)};Z=-x*${compactNumber(yawSin)}+z*${compactNumber(yawCos)};y=u;k=sin(v);e=0;d=z;c=v+b;branch=i%${strands};forms=${strands};angle=atan2(Y,x);mix=0;s=constrain(${formula.expression},0,1);stroke(${colorA[0]}+${colorB[0]-colorA[0]}*s,${colorA[1]}+${colorB[1]-colorA[1]}*s,${colorA[2]}+${colorB[2]-colorA[2]}*s,${alpha});point(X+200,Y*${compactNumber(pitchCos)}-Z*${compactNumber(pitchSin)}+200)}}`;
+  const code = `${formula.helpers}o=${compactNumber(spatial.time)},t=0,draw=_=>{t||createCanvas(w=400,w);background("${background}");for(t+=${compactNumber(step)},i=${pointCount};i--;){T=t+o;u=(i/${pointCount}+T*${compactNumber(flow)})%1;a=TAU*${windingP}*u;v=TAU*${windingQ}*u+T*${compactNumber(settings.knotDrift)};b=TAU*(i%${strands}/${strands}+${compactNumber(settings.fiberTwist)}*u)+T*${compactNumber(fiberSpeed)};g=${compactNumber(knotRadius)}*(1+${compactNumber(settings.pulse)}*sin(T*${compactNumber(settings.pulseFrequency)}-TAU*${windingQ}*u));r=${compactNumber(settings.radius)}+g*cos(v)+${compactNumber(tubeRadius)}*cos(b);z=${compactNumber(settings.depth)}*(g*sin(v)+${compactNumber(tubeRadius)}*sin(b));x=r*cos(a);Y=r*sin(a);X=x*${compactNumber(rotation.m00)}+Y*${compactNumber(rotation.m01)}+z*${compactNumber(rotation.m02)};V=x*${compactNumber(rotation.m10)}+Y*${compactNumber(rotation.m11)}+z*${compactNumber(rotation.m12)};y=u;k=sin(v);e=0;d=z;c=v+b;branch=i%${strands};forms=${strands};angle=atan2(Y,x);mix=0;s=constrain(${formula.expression},0,1);stroke(${colorA[0]}+${colorB[0]-colorA[0]}*s,${colorA[1]}+${colorB[1]-colorA[1]}*s,${colorA[2]}+${colorB[2]-colorA[2]}*s,${alpha});point(X+200,V+200)}}`;
 
   const mutations = [];
   for (const [key, label] of CORE_SETTINGS) {
@@ -164,6 +179,7 @@ export function compileChronophoreImprint({
   const viewState = Object.freeze([
     { key: "yaw", label: "ракурс Y", value: `${displayNumber(spatial.yaw * 180 / Math.PI, 1)}°` },
     { key: "pitch", label: "ракурс X", value: `${displayNumber(spatial.pitch * 180 / Math.PI, 1)}°` },
+    { key: "roll", label: "крен Z", value: `${displayNumber(spatial.roll * 180 / Math.PI, 1)}°` },
     { key: "time", label: "фаза запуска", value: displayNumber(spatial.time) }
   ]);
 
@@ -210,7 +226,9 @@ export function createSavedEntityRecord({
     settings: { ...settings },
     layers: { ...layers },
     color: { ...color },
-    pose: { ...pose },
+    pose: pose.orientation
+      ? { ...pose, orientation: { ...pose.orientation } }
+      : { ...pose },
     mutations: imprint.mutations.map(mutation => ({ ...mutation })),
     createdAt: new Date().toISOString()
   });

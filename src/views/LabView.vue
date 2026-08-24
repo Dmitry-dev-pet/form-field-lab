@@ -525,7 +525,7 @@ onBeforeUnmount(() => {
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? barePaused ? "pause / raw" : "raw / p5.js" : spaPaused ? "pause" : "live" }}</span>
           <span v-if="isBareMode">{{ bareCodeLength }} chars · {{ isTopologyGenome ? "result" : isImprintBare ? "SPA imprint" : "canonical" }} · isolated</span>
-          <span v-else>{{ selectedForm.supportsStimulus ? "button / reaction · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
+          <span v-else>{{ selectedForm.supportsStimulus ? "button / reaction · drag / trackball" : "drag / trackball" }} · {{ pointStatus }}</span>
         </div>
         <p class="sr-only" aria-live="polite">{{ reactionMessage }}</p>
       </div>
@@ -744,7 +744,7 @@ onBeforeUnmount(() => {
             </button>
             <button class="button" type="button" @click="reset">Сбросить</button>
             <button class="button" type="button" @click="randomize">Случайный</button>
-            <button class="button" type="button" @click="frontView">Вид спереди</button>
+            <button class="button" type="button" title="Также: двойное касание холста или клавиша 0" @click="frontView">Вид спереди</button>
             <button
               class="button"
               type="button"

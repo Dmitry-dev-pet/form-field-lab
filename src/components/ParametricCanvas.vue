@@ -11,7 +11,15 @@ import {
 import {
   clampOrbitPitch,
   createOrbitRotation,
-  orbitPitchDelta,
+  identityQuaternion,
+  multiplyQuaternions,
+  normalizeQuaternion,
+  projectTrackballPoint,
+  quaternionBetweenVectors,
+  quaternionFromAxisAngle,
+  quaternionToAxisAngle,
+  quaternionToEuler,
+  quaternionToRotationMatrix,
   rotateSpatialPoint
 } from "../lib/spatialProjection.js";
 
@@ -34,22 +42,27 @@ let context;
 let frameId;
 let time = 0;
 let previousFrameTime = 0;
-let yaw = 0;
-let pitch = 0;
-let yawVelocity = 0;
-let pitchVelocity = 0;
+const orientation = identityQuaternion();
+const angularVelocity = { x: 0, y: 0, z: 0 };
 let activePointerId = null;
-let pointerX = 0;
-let pointerY = 0;
 let pointerTime = 0;
 let pointerStartX = 0;
 let pointerStartY = 0;
 let pointerMoved = false;
+let lastTapTime = 0;
+let lastTapX = 0;
+let lastTapY = 0;
 let clearNextFrame = true;
+const previousTrackballPoint = { x: 0, y: 0, z: 1 };
+const currentTrackballPoint = { x: 0, y: 0, z: 1 };
+const deltaRotation = identityQuaternion();
+const composedRotation = identityQuaternion();
+const rotationAxisAngle = { x: 1, y: 0, z: 0, angle: 0 };
+const eulerAngles = { yaw: 0, pitch: 0, roll: 0 };
+const viewRotationMatrix = {};
 const rotatedPoint = { x: 0, y: 0, z: 0 };
 const interaction = { strength: 0, age: 0, x: 0, y: 0, u: 0.5 };
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const orbitRadiansPerPixel = 0.008;
 const inertiaPerFrame = 0.9;
 const colorBuckets = Array.from({ length: 24 }, () => []);
 const edgeBuckets = Array.from({ length: 24 }, () => []);
@@ -69,7 +82,7 @@ const canvasAriaLabel = computed(() => {
     ? `топология ${resolveGridTopology(props.form.mesh, props.settings).label}, сеточная пространственная композиция в режиме ${readMeshRenderMode(props.settings.renderMode)}`
     : "пространственная анимированная композиция из точек";
   const coloring = props.color.mode === "formula" ? "формульно окрашенная" : "однотонная";
-  return `${props.form.title}: ${coloring} ${geometry}. Проведите пальцем или используйте стрелки, чтобы изменить только угол зрения. Инверсия Y ${props.invertY ? "включена" : "выключена"}.`;
+  return `${props.form.title}: ${coloring} ${geometry}. Свободный трекбол меняет только угол зрения: проведите пальцем, используйте стрелки и Q/E для вращения вокруг экрана; двойное касание возвращает вид спереди. Инверсия Y ${props.invertY ? "включена" : "выключена"}.`;
 });
 
 function pointColorBucket(index, point, pointCount, formulaColor) {
@@ -218,9 +231,20 @@ function render() {
   colorBuckets.forEach(bucket => { bucket.length = 0; });
   edgeBuckets.forEach(bucket => { bucket.length = 0; });
 
-  const orbitRotation = createOrbitRotation(yaw, pitch);
-  if (form.mesh) renderMesh(form, settings, layers, orbitRotation, palette, formulaColor);
-  else renderPointCloud(form, settings, layers, orbitRotation, palette, formulaColor);
+  quaternionToRotationMatrix(orientation, viewRotationMatrix);
+  if (form.mesh) renderMesh(form, settings, layers, viewRotationMatrix, palette, formulaColor);
+  else renderPointCloud(form, settings, layers, viewRotationMatrix, palette, formulaColor);
+}
+
+function stopViewInertia() {
+  angularVelocity.x = 0;
+  angularVelocity.y = 0;
+  angularVelocity.z = 0;
+}
+
+function applyViewRotation(rotation) {
+  multiplyQuaternions(rotation, orientation, composedRotation);
+  normalizeQuaternion(composedRotation, orientation);
 }
 
 function animate(timestamp) {
@@ -230,12 +254,24 @@ function animate(timestamp) {
   previousFrameTime = timestamp;
   let viewChanged = false;
 
-  if (!isOrbiting.value && (Math.abs(yawVelocity) > 0.00005 || Math.abs(pitchVelocity) > 0.00005)) {
-    yaw += yawVelocity * elapsedFrames;
-    pitch = clampOrbitPitch(pitch + pitchVelocity * elapsedFrames);
+  const angularSpeed = Math.hypot(
+    angularVelocity.x,
+    angularVelocity.y,
+    angularVelocity.z
+  );
+  if (!isOrbiting.value && angularSpeed > 0.00005) {
+    quaternionFromAxisAngle(
+      angularVelocity.x,
+      angularVelocity.y,
+      angularVelocity.z,
+      angularSpeed * elapsedFrames,
+      deltaRotation
+    );
+    applyViewRotation(deltaRotation);
     const damping = Math.pow(inertiaPerFrame, elapsedFrames);
-    yawVelocity *= damping;
-    pitchVelocity *= damping;
+    angularVelocity.x *= damping;
+    angularVelocity.y *= damping;
+    angularVelocity.z *= damping;
     viewChanged = true;
   }
 
@@ -267,21 +303,25 @@ function resetTime() {
 }
 
 function resetView() {
-  yaw = 0;
-  pitch = 0;
-  yawVelocity = 0;
-  pitchVelocity = 0;
+  identityQuaternion(orientation);
+  stopViewInertia();
   clearNextFrame = true;
   render();
 }
 
 function restoreState(state = null) {
   const next = state || {};
-  yaw = Number(next.yaw) || 0;
-  pitch = clampOrbitPitch(Number(next.pitch) || 0);
+  if (next.orientation && typeof next.orientation === "object") {
+    normalizeQuaternion(next.orientation, orientation);
+  } else {
+    normalizeQuaternion(createOrbitRotation(
+      Number(next.yaw) || 0,
+      clampOrbitPitch(Number(next.pitch) || 0),
+      Number(next.roll) || 0
+    ), orientation);
+  }
   time = Math.max(0, Number(next.time) || 0);
-  yawVelocity = 0;
-  pitchVelocity = 0;
+  stopViewInertia();
   interaction.strength = 0;
   interaction.age = 0;
   clearNextFrame = true;
@@ -289,7 +329,14 @@ function restoreState(state = null) {
 }
 
 function snapshot() {
-  return { yaw, pitch, time };
+  quaternionToEuler(orientation, eulerAngles);
+  return {
+    orientation: { ...orientation },
+    yaw: eulerAngles.yaw,
+    pitch: eulerAngles.pitch,
+    roll: eulerAngles.roll,
+    time
+  };
 }
 
 function provoke(x = 0, y = 0) {
@@ -305,14 +352,18 @@ function provoke(x = 0, y = 0) {
 function beginOrbit(event) {
   if (activePointerId !== null || (event.pointerType === "mouse" && event.button !== 0)) return;
   activePointerId = event.pointerId;
-  pointerX = event.clientX;
-  pointerY = event.clientY;
   pointerStartX = event.clientX;
   pointerStartY = event.clientY;
   pointerTime = event.timeStamp;
   pointerMoved = false;
-  yawVelocity = 0;
-  pitchVelocity = 0;
+  stopViewInertia();
+  projectTrackballPoint(
+    event.clientX,
+    event.clientY,
+    canvas.value?.getBoundingClientRect(),
+    props.invertY,
+    previousTrackballPoint
+  );
   isOrbiting.value = true;
   try {
     canvas.value?.setPointerCapture?.(event.pointerId);
@@ -335,19 +386,23 @@ function moveOrbit(event) {
     }
     pointerMoved = true;
   }
-  const deltaX = event.clientX - pointerX;
-  const deltaY = event.clientY - pointerY;
   const elapsed = Math.max(8, event.timeStamp - pointerTime);
-  const yawDelta = deltaX * orbitRadiansPerPixel;
-  const pitchDelta = orbitPitchDelta(deltaY, orbitRadiansPerPixel, props.invertY);
-  const previousPitch = pitch;
-
-  yaw += yawDelta;
-  pitch = clampOrbitPitch(pitch + pitchDelta);
-  yawVelocity = yawDelta / (elapsed / (1000 / 60));
-  pitchVelocity = (pitch - previousPitch) / (elapsed / (1000 / 60));
-  pointerX = event.clientX;
-  pointerY = event.clientY;
+  const elapsedFrames = elapsed / (1000 / 60);
+  projectTrackballPoint(
+    event.clientX,
+    event.clientY,
+    canvas.value?.getBoundingClientRect(),
+    props.invertY,
+    currentTrackballPoint
+  );
+  quaternionBetweenVectors(previousTrackballPoint, currentTrackballPoint, deltaRotation);
+  applyViewRotation(deltaRotation);
+  quaternionToAxisAngle(deltaRotation, rotationAxisAngle);
+  const angularStep = rotationAxisAngle.angle / elapsedFrames;
+  angularVelocity.x = rotationAxisAngle.x * angularStep;
+  angularVelocity.y = rotationAxisAngle.y * angularStep;
+  angularVelocity.z = rotationAxisAngle.z * angularStep;
+  Object.assign(previousTrackballPoint, currentTrackballPoint);
   pointerTime = event.timeStamp;
   render();
   event.preventDefault();
@@ -357,23 +412,41 @@ function finishOrbit(event, cancelled = false) {
   if (event.pointerId !== activePointerId) return;
   activePointerId = null;
   isOrbiting.value = false;
+  if (!cancelled && !pointerMoved && event.pointerType !== "mouse") {
+    const isDoubleTap = event.timeStamp - lastTapTime < 340
+      && Math.hypot(event.clientX - lastTapX, event.clientY - lastTapY) < 28;
+    if (isDoubleTap) {
+      lastTapTime = 0;
+      resetView();
+    } else {
+      lastTapTime = event.timeStamp;
+      lastTapX = event.clientX;
+      lastTapY = event.clientY;
+    }
+  }
   if (cancelled || prefersReducedMotion) {
-    yawVelocity = 0;
-    pitchVelocity = 0;
+    stopViewInertia();
   }
 }
 
 function handleOrbitKey(event) {
   const keyStep = Math.PI / 24;
-  if (event.key === "ArrowLeft") yaw -= keyStep;
-  else if (event.key === "ArrowRight") yaw += keyStep;
-  else if (event.key === "ArrowUp") pitch = clampOrbitPitch(pitch - keyStep);
-  else if (event.key === "ArrowDown") pitch = clampOrbitPitch(pitch + keyStep);
-  else if (event.key === "Home" || event.key === "0") resetView();
+  const key = event.key.toLowerCase();
+  if (event.key === "Home" || event.key === "0") {
+    resetView();
+    event.preventDefault();
+    return;
+  }
+  if (event.key === "ArrowLeft") quaternionFromAxisAngle(0, 1, 0, -keyStep, deltaRotation);
+  else if (event.key === "ArrowRight") quaternionFromAxisAngle(0, 1, 0, keyStep, deltaRotation);
+  else if (event.key === "ArrowUp") quaternionFromAxisAngle(1, 0, 0, -keyStep, deltaRotation);
+  else if (event.key === "ArrowDown") quaternionFromAxisAngle(1, 0, 0, keyStep, deltaRotation);
+  else if (key === "q") quaternionFromAxisAngle(0, 0, 1, -keyStep, deltaRotation);
+  else if (key === "e") quaternionFromAxisAngle(0, 0, 1, keyStep, deltaRotation);
   else return;
 
-  yawVelocity = 0;
-  pitchVelocity = 0;
+  applyViewRotation(deltaRotation);
+  stopViewInertia();
   render();
   event.preventDefault();
 }
@@ -421,6 +494,7 @@ defineExpose({ resetTime, resetView, restoreState, snapshot, render, provoke });
     @pointercancel="finishOrbit($event, true)"
     @lostpointercapture="finishOrbit($event, true)"
     @keydown="handleOrbitKey"
+    @dblclick="resetView"
     @contextmenu.prevent
   ></canvas>
 </template>

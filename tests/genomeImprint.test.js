@@ -42,14 +42,15 @@ test("Chronophore SPA state compiles into an autonomous, rotated p5 imprint", ()
   assert.equal(imprint.coreCharacters, 273);
   assert.match(imprint.code, /TAU\*5\*u/);
   assert.match(imprint.code, /r=101\+/);
-  assert.match(imprint.code, /X=x\*0\.76484\+z\*0\.64422/);
-  assert.match(imprint.code, /Y\*0\.95534-Z\*-0\.29552/);
+  assert.match(imprint.code, /X=x\*0\.76484\+Y\*0\+z\*0\.64422/);
+  assert.match(imprint.code, /V=x\*-0\.19038\+Y\*0\.95534\+z\*0\.22603/);
   assert.match(imprint.code, /smoothstep=/);
   assert.match(imprint.code, /stroke\(16\+128\*s,32\+176\*s,48\+207\*s/);
   assert.equal(imprint.viewState.find(item => item.key === "yaw").value, "40,1°");
   assert.equal(imprint.viewState.find(item => item.key === "pitch").value, "-17,2°");
   assert.ok(!imprint.mutations.some(mutation => mutation.key === "yaw"));
   assert.ok(!imprint.mutations.some(mutation => mutation.key === "pitch"));
+  assert.ok(!imprint.mutations.some(mutation => mutation.key === "roll"));
   assert.ok(imprint.mutations.some(mutation => mutation.key === "windingQ"));
   assert.ok(imprint.mutations.some(mutation => mutation.key === "color"));
   assert.equal(CHRONOPHORE_GENOME.length, 273);
@@ -64,8 +65,25 @@ test("a touch-driven camera pose changes RAW projection without creating a mutat
 
   assert.equal(imprint.hasGeneticMutation, false);
   assert.deepEqual(imprint.mutations, []);
-  assert.equal(imprint.viewState.length, 3);
-  assert.match(imprint.code, /X=x\*0\.4536\+z\*0\.89121/);
+  assert.equal(imprint.viewState.length, 4);
+  assert.match(imprint.code, /X=x\*0\.4536\+Y\*0\+z\*0\.89121/);
+});
+
+test("a quaternion trackball pose preserves roll without becoming genetic", () => {
+  const halfTurn = Math.SQRT1_2;
+  const imprint = makeImprint({
+    settings: chronophore.defaults,
+    color: DEFAULT_COLOR_STATE,
+    pose: {
+      orientation: { x: 0, y: 0, z: halfTurn, w: halfTurn },
+      time: 1
+    }
+  });
+
+  assert.equal(imprint.hasGeneticMutation, false);
+  assert.equal(imprint.viewState.find(item => item.key === "roll").value, "90°");
+  assert.match(imprint.code, /X=x\*0\+Y\*-1\+z\*0/);
+  assert.match(imprint.code, /V=x\*1\+Y\*0\+z\*0/);
 });
 
 test("disabled anatomical layers are compiled into the naked geometry", () => {

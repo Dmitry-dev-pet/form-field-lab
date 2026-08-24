@@ -58,9 +58,12 @@ const spatialLatexSource = String.raw`\begin{aligned}
 Y_i-200 \\
 \lambda\rho_i\sin c_i
 \end{bmatrix}, \\
-\mathbf p_i' &= R_x(\beta)R_y(\alpha)\mathbf p_i, \\
-(\Delta\beta)_{\mathrm{drag}} &= \sigma_y s\,\Delta y,
-\quad \sigma_y\in\{-1,+1\}, \\
+\mathbf u_n &= \Pi_{S^2}(x_n,y_n), \\
+\delta q_n &= \operatorname{norm}\!\left[
+\mathbf u_{n-1}\times\mathbf u_n,\ 1+\mathbf u_{n-1}\cdot\mathbf u_n
+\right], \\
+q_n &= \delta q_n\,q_{n-1},
+\qquad \mathbf p_i'=R(q_n)\mathbf p_i, \\
 (x_i',Y_i') &= (p_{i,x}'+200,\ p_{i,y}'+200).
 \end{aligned}`;
 
@@ -386,16 +389,22 @@ onMounted(async () => {
             \end{aligned}
             \]
           </div>
-          <p>Движение пальца задаёт углы \(\alpha\) и \(\beta\). Точки вращаются около исходного центра, после чего ортографически проецируются обратно на Canvas:</p>
+          <p>Положение пальца проецируется на виртуальную сферу \(S^2\). Между соседними точками жеста строится кватернион \(\delta q\), поэтому камера может свободно переворачивать форму и добавлять крен, а не упирается в два угла:</p>
           <div class="math-scroll">
             \[
-            \mathbf p_i'=R_x(\beta)R_y(\alpha)\mathbf p_i,
-            \qquad
-            (x_i',Y_i')=(p_{i,x}'+200,\ p_{i,y}'+200).
+            \begin{aligned}
+            \mathbf u_n &amp;= \Pi_{S^2}(x_n,y_n), \\
+            \delta q_n &amp;= \operatorname{norm}\!\left[
+            \mathbf u_{n-1}\times\mathbf u_n,\ 1+\mathbf u_{n-1}\cdot\mathbf u_n
+            \right], \\
+            q_n &amp;= \delta q_n q_{n-1},
+            \qquad \mathbf p_i'=R(q_n)\mathbf p_i, \\
+            (x_i',Y_i') &amp;= (p_{i,x}'+200,\ p_{i,y}'+200).
+            \end{aligned}
             \]
           </div>
-          <p>Переключатель «Инверсия Y» меняет знак вертикального жеста: \((\Delta\beta)_{\mathrm{drag}}=\sigma_y s\,\Delta y\), где \(\sigma_y=-1\) в инвертированном режиме.</p>
-          <p>При \(\alpha=\beta=0\) глубина не влияет на экранные координаты, поэтому фронтальный вид остаётся исходной работой автора.</p>
+          <p>«Инверсия Y» меняет знак вертикальной координаты виртуальной сферы. Скорость последнего поворота продолжается как затухающая угловая инерция; стрелки вращают по X/Y, клавиши Q/E — вокруг оси экрана.</p>
+          <p>При единичном кватернионе \(q=(0,0,0,1)\) глубина не влияет на экранные координаты, поэтому кнопка «Вид спереди», двойное касание и клавиша 0 точно возвращают исходную работу автора.</p>
         </div>
       </article>
 
