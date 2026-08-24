@@ -4,7 +4,8 @@ import { runnerDocument } from "../lib/runnerDocument.js";
 
 const props = defineProps({
   sketch: { type: Object, required: true },
-  label: { type: String, default: "Скетч @yuruyurau" }
+  label: { type: String, default: "Скетч @yuruyurau" },
+  paused: { type: Boolean, default: false }
 });
 
 const host = ref(null);
@@ -13,7 +14,10 @@ let observer;
 let visible = true;
 
 function syncMotion() {
-  frame.value?.contentWindow?.postMessage({ type: "sketch-motion", paused: !visible }, "*");
+  frame.value?.contentWindow?.postMessage({
+    type: "sketch-motion",
+    paused: props.paused || !visible
+  }, "*");
 }
 
 function reload() {
@@ -21,6 +25,7 @@ function reload() {
 }
 
 watch(() => props.sketch.id, reload);
+watch(() => props.paused, syncMotion);
 
 onMounted(() => {
   reload();
