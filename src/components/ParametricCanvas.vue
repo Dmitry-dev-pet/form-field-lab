@@ -9,6 +9,12 @@ import {
   resolveGridTopology
 } from "../lib/meshTopology.js";
 import {
+  createMemoryPopulation,
+  MEMORY_PARTICLE_STRIDE,
+  readMemoryParticle,
+  stepMemoryPopulation
+} from "../lib/memoryField.js";
+import {
   clampOrbitPitch,
   createOrbitRotation,
   identityQuaternion,
@@ -68,6 +74,10 @@ const colorBuckets = Array.from({ length: 24 }, () => []);
 const edgeBuckets = Array.from({ length: 24 }, () => []);
 let projectedMesh = new Float32Array(0);
 let meshColorBuckets = new Uint8Array(0);
+let memoryPopulation = new Float32Array(0);
+let memoryPointCount = 0;
+let memoryLastTime = 0;
+let memoryReset = true;
 const formPoint = {
   x: 0, y: 0, z: 0, parameter: 0, k: 0, e: 0, d: 0, c: 0,
   branch: 0, forms: 1
@@ -135,6 +145,42 @@ function renderPointCloud(form, settings, layers, orbitRotation, palette, formul
     colorBuckets[bucketIndex].push(rotatedPoint.x + 200, rotatedPoint.y + 200);
   }
   drawPointBuckets(palette);
+}
+
+function ensureMemoryPopulation(settings) {
+  const pointCount = Math.max(1, Math.round(Number(settings.pointCount) || 1));
+  if (memoryReset || memoryPointCount !== pointCount) {
+    memoryPopulation = createMemoryPopulation(pointCount, settings, time);
+    memoryPointCount = pointCount;
+    memoryLastTime = time;
+    memoryReset = false;
+  }
+  return pointCount;
+}
+
+function renderMemoryCloud(form, settings, layers, orbitRotation, palette, formulaColor) {
+  const pointCount = ensureMemoryPopulation(settings);
+  if (time !== memoryLastTime) {
+    const baseStep = Math.max(0.000001, form.timeStep * Math.max(0.01, Number(settings.speed) || 0.01));
+    const frameScale = Math.min(3, Math.abs(time - memoryLastTime) / baseStep);
+    stepMemoryPopulation(memoryPopulation, time, settings, layers, frameScale);
+    memoryLastTime = time;
+  }
+
+  for (let offset = memoryPopulation.length - MEMORY_PARTICLE_STRIDE; offset >= 0; offset -= MEMORY_PARTICLE_STRIDE) {
+    const index = offset / MEMORY_PARTICLE_STRIDE;
+    readMemoryParticle(memoryPopulation, index, settings, formPoint);
+    rotateSpatialPoint(
+      formPoint.x - 200,
+      formPoint.y - 200,
+      formPoint.z,
+      orbitRotation,
+      rotatedPoint
+    );
+    const bucketIndex = pointColorBucket(index, formPoint, pointCount, formulaColor);
+    colorBuckets[bucketIndex].push(rotatedPoint.x + 200, rotatedPoint.y + 200);
+  }
+  drawPointBuckets(palette, 1.2);
 }
 
 function ensureMeshBuffers(vertexCount) {
@@ -233,7 +279,9 @@ function render() {
 
   quaternionToRotationMatrix(orientation, viewRotationMatrix);
   if (form.mesh) renderMesh(form, settings, layers, viewRotationMatrix, palette, formulaColor);
-  else renderPointCloud(form, settings, layers, viewRotationMatrix, palette, formulaColor);
+  else if (form.memoryModel && settings.memoryMode === "stateful") {
+    renderMemoryCloud(form, settings, layers, viewRotationMatrix, palette, formulaColor);
+  } else renderPointCloud(form, settings, layers, viewRotationMatrix, palette, formulaColor);
 }
 
 function stopViewInertia() {
@@ -298,6 +346,7 @@ function resetTime() {
   time = 0;
   interaction.strength = 0;
   interaction.age = 0;
+  memoryReset = true;
   clearNextFrame = true;
   render();
 }
@@ -324,6 +373,7 @@ function restoreState(state = null) {
   stopViewInertia();
   interaction.strength = 0;
   interaction.age = 0;
+  memoryReset = true;
   clearNextFrame = true;
   render();
 }
@@ -452,14 +502,17 @@ function handleOrbitKey(event) {
 }
 
 watch(
-  [
-    () => props.form,
-    () => props.settings,
-    () => props.layers,
-    () => props.color,
-    () => props.colorEvaluator,
-    () => props.paused
-  ],
+  [() => props.form, () => props.settings, () => props.layers],
+  () => {
+    memoryReset = true;
+    clearNextFrame = true;
+    if (props.paused) render();
+  },
+  { deep: true }
+);
+
+watch(
+  [() => props.color, () => props.colorEvaluator, () => props.paused],
   () => {
     clearNextFrame = true;
     if (props.paused) render();

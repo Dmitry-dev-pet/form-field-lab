@@ -1,5 +1,6 @@
 function installSpatialViewBridge(viewModel) {
   document.documentElement.dataset.viewModel = viewModel;
+  const orbitEnabled = viewModel === "pelagion-orbit" || viewModel === "point-cloud-orbit";
   const state = {
     orientation: { x: 0, y: 0, z: 0, w: 1 },
     invertY: true
@@ -9,6 +10,7 @@ function installSpatialViewBridge(viewModel) {
     m10: 0, m11: 1, m12: 0
   };
   let sourcePoint = null;
+  let sourceLine = null;
   let pendingTime = null;
   let hasDrawn = false;
   let pointerId = null;
@@ -104,31 +106,62 @@ function installSpatialViewBridge(viewModel) {
     }
   }
 
-  function installPointProjector() {
-    if (viewModel !== "pelagion-orbit" || sourcePoint || typeof globalThis.point !== "function") return;
+  function projectX(screenX, screenY, depth) {
+    return rotationMatrix.m00 * (screenX - 200)
+      + rotationMatrix.m01 * (screenY - 200)
+      + rotationMatrix.m02 * depth + 200;
+  }
+
+  function projectY(screenX, screenY, depth) {
+    return rotationMatrix.m10 * (screenX - 200)
+      + rotationMatrix.m11 * (screenY - 200)
+      + rotationMatrix.m12 * depth + 200;
+  }
+
+  function pointDepth() {
+    if (viewModel === "point-cloud-orbit") return Number(globalThis.z);
+    const axial = Number(globalThis.x);
+    const depth = Number(globalThis.z);
+    const angle = Number(globalThis.a);
+    if (![axial, depth, angle].every(Number.isFinite)) return Number.NaN;
+    return -axial * Math.sin(angle) + depth * Math.cos(angle);
+  }
+
+  function installSpatialProjectors() {
+    if (!orbitEnabled || sourcePoint || typeof globalThis.point !== "function") return;
     sourcePoint = globalThis.point;
-    globalThis.point = function projectedPelagionPoint(screenX, screenY) {
-      const axial = Number(globalThis.x);
-      const depth = Number(globalThis.z);
-      const angle = Number(globalThis.a);
-      if (!Number.isFinite(screenX) || !Number.isFinite(screenY)
-        || !Number.isFinite(axial) || !Number.isFinite(depth) || !Number.isFinite(angle)) {
+    sourceLine = typeof globalThis.line === "function" ? globalThis.line : null;
+    globalThis.point = function projectedSpatialPoint(screenX, screenY) {
+      const depth = pointDepth();
+      if (![screenX, screenY, depth].every(Number.isFinite)) {
         return sourcePoint(screenX, screenY);
       }
-      const px = screenX - 200;
-      const py = screenY - 200;
-      const pz = -axial * Math.sin(angle) + depth * Math.cos(angle);
       return sourcePoint(
-        rotationMatrix.m00 * px + rotationMatrix.m01 * py + rotationMatrix.m02 * pz + 200,
-        rotationMatrix.m10 * px + rotationMatrix.m11 * py + rotationMatrix.m12 * pz + 200
+        projectX(screenX, screenY, depth),
+        projectY(screenX, screenY, depth)
       );
     };
+    if (viewModel === "point-cloud-orbit" && sourceLine) {
+      globalThis.line = function projectedSpatialLine(x1, y1, x2, y2) {
+        const z1 = Number(globalThis.z);
+        const z2 = Number(globalThis.Z);
+        if (![x1, y1, x2, y2, z1, z2].every(Number.isFinite)) {
+          return sourceLine(x1, y1, x2, y2);
+        }
+        return sourceLine(
+          projectX(x1, y1, z1),
+          projectY(x1, y1, z1),
+          projectX(x2, y2, z2),
+          projectY(x2, y2, z2)
+        );
+      };
+    }
   }
 
   function activate() {
-    installPointProjector();
+    installSpatialProjectors();
     const canvas = document.querySelector("canvas");
-    if (canvas?.width === 400 && (viewModel !== "pelagion-orbit" || sourcePoint)) {
+    if (canvas?.width === 400 && (!orbitEnabled || sourcePoint)) {
       if (canvas.tabIndex < 0) canvas.tabIndex = 0;
       hasDrawn = true;
       if (pendingTime !== null) globalThis.t = pendingTime;
@@ -149,7 +182,7 @@ function installSpatialViewBridge(viewModel) {
     if (event.data?.type === "sketch-view-snapshot") publish(event.data.requestId);
   });
 
-  if (viewModel !== "pelagion-orbit") return;
+  if (!orbitEnabled) return;
 
   setInterval(() => publish(), 1000);
 

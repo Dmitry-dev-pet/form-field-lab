@@ -13,6 +13,10 @@ import {
   PELAGION_LIVING_GENOME_CHARACTERS
 } from "../data/pelagionGenome.js";
 import {
+  MNEMOPHORE_CORE_GENOME,
+  MNEMOPHORE_RAW_VARIANTS
+} from "../data/mnemophoreGenome.js";
+import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -137,6 +141,24 @@ e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
 \right].
 \end{aligned}`;
 
+const mnemophoreLatexSource = String.raw`\begin{aligned}
+\mathbf p_i^{(0)}&=R_i
+\begin{bmatrix}
+\sin\phi_i\cos\theta_i\\
+\cos\phi_i\\
+\sin\phi_i\sin\theta_i
+\end{bmatrix},
+&\theta_i&=i\,\pi(3-\sqrt5),\\
+\mathbf v_i^{(n)}&=F(\mathbf p_i^{(n)},t_n)
++\kappa(R-\|\mathbf p_i^{(n)}\|)\hat{\mathbf p}_i^{(n)},\\
+\mathbf p_i^{(n+1)}&=\mathbf p_i^{(n)}+\eta\mathbf v_i^{(n)},
+&a_i^{(n+1)}&=a_i^{(n)}+L^{-1},\\
+a_i\ge1&\Rightarrow
+(\mathbf p_i,a_i,g_i)\gets
+(\mathbf p_i^{(0)}(g_i+1),0,g_i+1),\\
+u_i&=\operatorname{clamp}_{[0,1]}(0.08+0.78a_i+0.72\|\mathbf v_i\|).
+\end{aligned}`;
+
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
@@ -234,10 +256,12 @@ const defaultCopyLabels = {
   movement: "Копировать TeX",
   pelagion: "Копировать TeX",
   chronophore: "Копировать TeX",
+  mnemophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   livingSeed: "Копировать RAW гребка",
   chronophoreSeed: "Копировать 280",
+  mnemophoreSeed: "Копировать 280",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -690,6 +714,71 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Граница сущности.</strong> Конкретные точки не считаются её телом: они могут рассеяться и замениться. Хронофор остаётся собой, пока сохраняются переплетение <code>(p,q)</code> и причинная непрерывность фазовых волн.</p>
           <p><strong>Граница наблюдателя.</strong> Поворот пальцем меняет только матрицу проекции и стартовый ракурс RAW-отпечатка. Он не изменяет геном и не создаёт потомка; новое поколение возникает только после явного изменения формулы, параметров, слоёв или цвета и команды «Запечатлеть».</p>
+        </div>
+      </article>
+
+      <article id="mnemophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>09 / MEMORY ORGANISM</span><h2>Мнемофора: координаты с биографией</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('mnemophore', mnemophoreLatexSource)">{{ copyLabels.mnemophore }}</button>
+            <button class="button" type="button" @click="copy('mnemophoreSeed', MNEMOPHORE_CORE_GENOME)">{{ copyLabels.mnemophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>В режиме «Без памяти» индекс точки каждый кадр отображается на оболочку заново. В режиме «С памятью» холст хранит для каждой частицы координаты, возраст, номер поколения и скорость. Поэтому одинаковое текущее время уже недостаточно, чтобы восстановить форму: нужна вся предыдущая траектория.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \mathbf p_i^{(0)}&amp;=R_i
+              \begin{bmatrix}
+              \sin\phi_i\cos\theta_i\\
+              \cos\phi_i\\
+              \sin\phi_i\sin\theta_i
+              \end{bmatrix},
+              &amp;\theta_i&amp;=i\pi(3-\sqrt5),\\
+              \mathbf p_i^{(n+1)}&amp;=\mathbf p_i^{(n)}+\eta\mathbf v_i^{(n)},
+              &amp;\mathbf v_i^{(n)}&amp;=F(\mathbf p_i^{(n)},t_n)
+              +\kappa(R-\|\mathbf p_i^{(n)}\|)\hat{\mathbf p}_i^{(n)}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Поле (F) смешивает синусы трёх координат. Радиальная поправка не диктует готовую форму, а лишь слабо возвращает поток к области рождения. Возраст (a_i) растёт независимо; достигнув единицы, частица получает новую точку на оболочке и увеличивает номер поколения:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              a_i^{(n+1)}&amp;=a_i^{(n)}+L^{-1},\\
+              a_i\ge1&amp;\Rightarrow
+              (\mathbf p_i,a_i,g_i)\gets
+              (\mathbf p_i^{(0)}(g_i+1),0,g_i+1),\\
+              u_i&amp;=\operatorname{clamp}_{[0,1]}(0.08+0.78a_i+0.72\|\mathbf v_i\|).
+              \end{aligned}
+              \]
+            </div>
+            <p>Цвет поэтому сообщает не только положение, но и биографию: молодой медленный материал тяготеет к первому цвету, старый или быстро движущийся — ко второму.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Минимальное ядро памяти</span>
+              <strong>{{ MNEMOPHORE_CORE_GENOME.length }} / 280</strong>
+            </div>
+            <pre><code>{{ MNEMOPHORE_CORE_GENOME }}</code></pre>
+            <ul class="topology-genome-counts" aria-label="Уровни бюджета Мнемофоры">
+              <li v-for="variant in MNEMOPHORE_RAW_VARIANTS" :key="variant.id">
+                <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
+            <p>При 280 символах остаются память координат, обновление поколений и внешняя 3D-камера. Больший бюджет сначала возвращает формульный цвет, затем два процедурных семейства рёбер. SPA не выдаёт расширенный вариант за короткий: выбирается только реально помещающийся исполняемый код.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore' } }">Сравнить два режима времени →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'mnemophore', view: 'bare' } }">Открыть бюджет RAW →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Происхождение идеи.</strong> Мнемофора — самостоятельная реализация Form / Field, но принцип массива частиц, который обновляется и постепенно заменяется, сознательно развивает публичный <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">скетч @yuruyurau ↗</a>. Авторство исходной работы не переносится на нашу сущность.</p>
+          <p><strong>Граница наблюдателя.</strong> Кватернион камеры хранится отдельно. Касание вращает уже существующую историю и не вызывает перерождение, мутацию или новый случайный посев.</p>
         </div>
       </article>
     </div>

@@ -569,6 +569,143 @@ a:focus-visible {
 
 .imprint-mode-switch button:disabled { cursor: not-allowed; opacity: 0.45; }
 
+.raw-budget-panel {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid rgba(215,255,88,0.2);
+  border-radius: 15px;
+  background:
+    linear-gradient(135deg, rgba(215,255,88,0.055), transparent 58%),
+    rgba(5,8,7,0.48);
+}
+
+.raw-budget-panel > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.raw-budget-panel > header div { display: grid; gap: 3px; }
+
+.raw-budget-panel > header span {
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.raw-budget-panel > header small,
+.budget-number-field > span {
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.05em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.raw-budget-panel > header output {
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.raw-budget-panel > header output.invalid { color: var(--danger); }
+
+.raw-budget-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.raw-budget-presets button {
+  min-height: 44px;
+  padding: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.025);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.63rem;
+}
+
+.raw-budget-presets button[aria-pressed="true"] {
+  border-color: var(--acid);
+  color: var(--acid);
+  background: rgba(215,255,88,0.055);
+}
+
+.raw-budget-range { gap: 3px; }
+
+.budget-number-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  align-items: center;
+  gap: 12px;
+}
+
+.budget-number-field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--acid);
+  background: rgba(0,0,0,0.22);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.raw-budget-panel .genome-budget-track { border-radius: 999px; }
+.raw-budget-panel .genome-budget-track span.invalid { background: var(--danger); }
+
+.budget-variant-note {
+  margin: 0;
+  color: var(--quiet);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+.budget-variant-note strong { color: var(--cyan); }
+
+.budget-feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.budget-feature-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid rgba(88,255,231,0.15);
+  border-radius: 999px;
+  color: var(--muted);
+  background: rgba(88,255,231,0.035);
+  font-size: 0.56rem;
+}
+
+.budget-feature-list li span { color: var(--cyan); }
+
+.budget-feature-list li.omitted {
+  border-color: var(--line);
+  color: var(--quiet);
+  background: transparent;
+  text-decoration: line-through;
+  opacity: 0.68;
+}
+
+.budget-feature-list li.omitted span { color: var(--quiet); }
+
 .bare-mode-facts {
   display: grid;
   margin: 0;
@@ -899,8 +1036,9 @@ a:focus-visible {
 .live-genome-panel header strong {
   color: var(--acid);
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.74rem;
-  white-space: nowrap;
+  font-size: 0.66rem;
+  line-height: 1.6;
+  white-space: normal;
 }
 
 .genome-budget-track {
@@ -2155,6 +2293,8 @@ mjx-container[display="true"] {
     text-align: center;
   }
   .raw-paused-overlay .button { width: 100%; min-width: 0; }
+  .raw-budget-panel { padding: 14px; }
+  .budget-number-field { grid-template-columns: minmax(0, 1fr) 86px; }
   .canvas-meta { right: 27px; bottom: 23px; left: 27px; font-size: 0.58rem; }
   .formula-field textarea, .select-field select { font-size: 1rem; }
   .topology-switch { grid-template-columns: repeat(3, minmax(0, 1fr)); }

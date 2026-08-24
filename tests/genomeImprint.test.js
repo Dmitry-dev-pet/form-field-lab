@@ -107,7 +107,7 @@ test("a fixed imprint becomes a numbered, reloadable local entity", () => {
   };
   const imprint = makeImprint();
   const record = createSavedEntityRecord({
-    number: 3,
+    number: 4,
     parent: chronophore,
     imprint,
     settings: chronophore.defaults,
@@ -117,10 +117,10 @@ test("a fixed imprint becomes a numbered, reloadable local entity", () => {
     }
   });
 
-  assert.equal(record.displayNumber, "P3");
+  assert.equal(record.displayNumber, "P4");
   assert.equal(record.parentId, "chronophore");
   assert.equal(writeSavedEntities([record], storage), true);
   assert.ok(values.has(GENOME_ENTITY_STORAGE_KEY));
   assert.deepEqual(readSavedEntities(storage), [JSON.parse(JSON.stringify(record))]);
-  assert.equal(nextMutationNumber(readSavedEntities(storage)), 4);
+  assert.equal(nextMutationNumber(readSavedEntities(storage)), 5);
 });

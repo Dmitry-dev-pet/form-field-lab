@@ -13,7 +13,12 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
   const synthetic = spatialForms.filter(form => !form.sketch);
 
   assert.deepEqual(attributed.map(form => form.sketchNumber), [5, 1, 6]);
-  assert.deepEqual(synthetic.map(form => form.id), ["sphere-grid", "pelagion", "chronophore"]);
+  assert.deepEqual(synthetic.map(form => form.id), [
+    "sphere-grid",
+    "pelagion",
+    "chronophore",
+    "mnemophore"
+  ]);
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
 

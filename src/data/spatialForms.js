@@ -4,6 +4,10 @@ import {
   PELAGION_GENOME_SKETCH,
   PELAGION_RAW_VARIANTS
 } from "./pelagionGenome.js";
+import {
+  MNEMOPHORE_GENOME_SKETCH,
+  MNEMOPHORE_RAW_VARIANTS
+} from "./mnemophoreGenome.js";
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
 import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
@@ -15,6 +19,7 @@ import {
   PELAGION_MOTION_MODE,
   pelagionMotionState
 } from "../lib/motionChoreography.js";
+import { evaluateMemorySeed } from "../lib/memoryField.js";
 
 const control = (key, label, min, max, step, options = {}) => ({
   key, label, min, max, step, ...options
@@ -802,6 +807,78 @@ export const spatialForms = Object.freeze([
       alpha: [55, 135, 1]
     },
     evaluate: chronophorePoint
+  },
+  {
+    id: "mnemophore",
+    displayNumber: "P3",
+    sketchNumber: null,
+    shortLabel: "Мнемофора",
+    title: "Мнемофора",
+    association: "состояние · возраст · поле · обновление",
+    description: "Первая сущность лаборатории, чьи координаты переживают кадр. Частицы рождаются на оболочке, запоминают собственную траекторию, стареют и уступают место следующему поколению.",
+    origin: "form-field-synthesis",
+    genomeSketch: MNEMOPHORE_GENOME_SKETCH,
+    budgetVariants: MNEMOPHORE_RAW_VARIANTS,
+    memoryModel: true,
+    memoryModes: Object.freeze([
+      Object.freeze({
+        id: "parametric",
+        label: "Без памяти",
+        description: "Каждый кадр заново вычисляет ту же дышащую оболочку: прошлое положение точки не используется."
+      }),
+      Object.freeze({
+        id: "stateful",
+        label: "С памятью",
+        description: "Координаты сохраняются между кадрами; поле, возраст и обновление поколений постепенно меняют тело."
+      })
+    ]),
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "memory-age",
+      expression: "clamp(0.08 + 0.78 * e + 0.72 * k, 0, 1)",
+      colorA: "#8ea1ff",
+      colorB: "#d7ff58"
+    }),
+    trailLayer: "memory",
+    timeStep: 0.018,
+    defaults: {
+      speed: 1, memoryMode: "stateful",
+      radius: 82, depth: 1, seedThickness: 0.12,
+      flowStrength: 0.82, fieldFrequency: 6.2,
+      cohesion: 0.9, twist: 0.72, lifespan: 190,
+      memory: 0.86, pointCount: 9000, alpha: 92,
+      backgroundColor: "#070810"
+    },
+    primaryControls: [
+      speed,
+      control("radius", "Радиус рождения", 42, 125, 1),
+      depth,
+      control("flowStrength", "Сила поля", 0, 1.8, 0.02, { digits: 2 }),
+      control("fieldFrequency", "Сложность поля", 1, 12, 0.1, { digits: 1 }),
+      control("cohesion", "Сборка оболочки", 0, 2.2, 0.05, { digits: 2 }),
+      control("lifespan", "Время жизни", 60, 480, 5),
+      control("memory", "Память следа", 0, 0.97, 0.01, { format: "percent" }),
+      points(18000),
+      alpha
+    ],
+    advancedControls: [
+      control("twist", "Вихревое вращение", -2, 2, 0.05, { digits: 2 }),
+      control("seedThickness", "Толщина рождения", 0, 0.42, 0.01, { format: "percent" })
+    ],
+    layers: [
+      { key: "flow", label: "Рекуррентное поле", default: true },
+      { key: "cohesion", label: "Возврат к оболочке", default: true },
+      { key: "renewal", label: "Смена поколений", default: true },
+      { key: "memory", label: "Память света", default: true }
+    ],
+    randomRanges: {
+      speed: [0.45, 1.7, 0.05], radius: [58, 108, 1], depth: [0.55, 1.55, 0.05],
+      seedThickness: [0.04, 0.3, 0.01], flowStrength: [0.35, 1.45, 0.02],
+      fieldFrequency: [3.2, 10.5, 0.1], cohesion: [0.35, 1.8, 0.05],
+      twist: [-1.5, 1.5, 0.05], lifespan: [90, 360, 5],
+      memory: [0.62, 0.94, 0.01], pointCount: [6000, 15000, 1000], alpha: [55, 135, 1]
+    },
+    evaluate: evaluateMemorySeed
   }
 ]);
 

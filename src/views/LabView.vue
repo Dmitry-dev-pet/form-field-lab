@@ -12,6 +12,13 @@ import {
 } from "../data/topologyGenomes.js";
 import { DEFAULT_COLOR_STATE } from "../lib/colorFormula.js";
 import {
+  RAW_CODE_BUDGET_MAX,
+  RAW_CODE_BUDGET_MIN,
+  RAW_CODE_BUDGET_PRESETS,
+  readRawCodeBudget,
+  selectRawBudgetVariant
+} from "../lib/codeBudget.js";
+import {
   compileChronophoreImprint,
   createSavedEntityRecord,
   nextMutationNumber,
@@ -43,12 +50,16 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
+  const legacyNumber = record.displayNumber === "P3" ? "P3′" : record.displayNumber;
+  const legacyTitle = record.displayNumber === "P3"
+    ? record.title.replace(/P3\b/, "P3′")
+    : record.title;
   return {
     ...chronophoreForm,
     id: record.id,
-    displayNumber: record.displayNumber,
-    shortLabel: record.title.replace("Хронофор ", "Мутация "),
-    title: record.title,
+    displayNumber: legacyNumber,
+    shortLabel: legacyTitle.replace("Хронофор ", "Мутация "),
+    title: legacyTitle,
     association: `закреплённая мутация · потомок ${record.parentDisplayNumber}`,
     description: `Закреплённый отпечаток Хронофора сохраняет параметры, цвет и пространственную позу родителя ${record.parentDisplayNumber}. Его можно снова развернуть в SPA и использовать как родителя следующего поколения.`,
     origin: "local-mutation",
@@ -113,6 +124,7 @@ const reactionMessage = ref("");
 const mutationMessage = ref("");
 const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref(defaultBareVariant(initialForm));
+const rawBudget = ref(RAW_CODE_BUDGET_MIN);
 const spaSnapshot = ref(restoredViewFor(initialForm));
 const rawViewState = ref(spaSnapshot.value);
 const imprintSnapshot = ref(null);
@@ -160,22 +172,38 @@ const geneticImprintResult = computed(() => compileImprintSource(
   imprintSource.value,
   { yaw: 0, pitch: 0, time: 0 }
 ));
+const budgetSelection = computed(() => selectedForm.value.budgetVariants
+  ? selectRawBudgetVariant(selectedForm.value.budgetVariants, rawBudget.value)
+  : null);
 const isImprintBare = computed(() => supportsImprint.value
   && bareVariant.value === "imprint"
-  && Boolean(imprintResult.value));
-const selectedRawVariant = computed(() => selectedForm.value.rawVariants
-  ?.find(variant => variant.id === bareVariant.value)
+  && Boolean(imprintResult.value)
+  && imprintResult.value.characters <= rawBudget.value);
+const selectedRawVariant = computed(() => budgetSelection.value?.variant
+  || selectedForm.value.rawVariants?.find(variant => variant.id === bareVariant.value)
   || null);
 const bareSketch = computed(() => isImprintBare.value
   ? Object.freeze({ id: imprintResult.value.id, code: imprintResult.value.code })
   : selectedRawVariant.value?.sketch || canonicalSketch.value);
 const bareCodeLength = computed(() => bareSketch.value.code.length);
+const rawBudgetStatus = computed(() => budgetSelection.value || Object.freeze({
+  budget: rawBudget.value,
+  characters: bareCodeLength.value,
+  withinLimit: bareCodeLength.value <= rawBudget.value,
+  activeFeatures: Object.freeze([]),
+  omittedFeatures: Object.freeze([])
+}));
+const rawBudgetRangeStyle = computed(() => ({
+  "--fill": `${(rawBudget.value - RAW_CODE_BUDGET_MIN) / (RAW_CODE_BUDGET_MAX - RAW_CODE_BUDGET_MIN) * 100}%`
+}));
 const savedImprintRecord = computed(() => geneticImprintResult.value
   ? savedEntityRecords.value.find(record => record.code === geneticImprintResult.value.code)
   : null);
 const nextEntityLabel = computed(() => `P${nextMutationNumber(savedEntityRecords.value)}`);
 const bareRunnerLabel = computed(() => isTopologyGenome.value
   ? `${compiledTopologyGenome.value.preset.label}: итоговый ${compiledTopologyGenome.value.characters}-символьный RAW-геном`
+  : selectedForm.value.budgetVariants
+    ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} из ${rawBudget.value} символов`
   : selectedForm.value.sketch
     ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
   : isImprintBare.value
@@ -185,6 +213,8 @@ const bareRunnerLabel = computed(() => isTopologyGenome.value
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isTopologyGenome.value
   ? `Это итоговый исполняемый код выбранной формы: ${bareCodeLength.value} из 280 символов. SPA только расшифровывает и настраивает его константы.`
+  : selectedForm.value.budgetVariants
+    ? `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
     ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
   : isImprintBare.value
@@ -202,6 +232,10 @@ const selectedMotionMode = computed(() => selectedForm.value.motionModes
   ?.find(mode => mode.id === settings.motionMode)
   || selectedForm.value.motionModes?.[0]
   || null);
+const selectedMemoryMode = computed(() => selectedForm.value.memoryModes
+  ?.find(mode => mode.id === settings.memoryMode)
+  || selectedForm.value.memoryModes?.[0]
+  || null);
 const isTopologyMorph = computed(() => Boolean(selectedTopology.value?.morph));
 const meshMetrics = computed(() => selectedForm.value.mesh
   ? measureGridTopology(selectedForm.value.mesh, settings)
@@ -218,7 +252,8 @@ const pointStatus = computed(() => {
   if (form.mesh) {
     return `#${formNumber(form)} · ${selectedTopology.value.label} · RAW ${compiledTopologyGenome.value.characters}/280 · 400²`;
   }
-  return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`;
+  const memory = form.memoryModel ? ` · ${selectedMemoryMode.value.label.toLowerCase()}` : "";
+  return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts${memory} · 400²`;
 });
 
 function formNumber(form) {
@@ -258,6 +293,10 @@ function basePresetLabel(form) {
   if (form.motionModes) {
     return form.motionModes.find(mode => mode.id === form.defaults.motionMode)?.label
       || "Хореография";
+  }
+  if (form.memoryModes) {
+    return form.memoryModes.find(mode => mode.id === form.defaults.memoryMode)?.label
+      || "С памятью";
   }
   return form.sketch ? "Original" : "Синтез";
 }
@@ -304,6 +343,17 @@ function setMotionMode(modeId) {
   if (!mode) return;
   settings.motionMode = mode.id;
   preset.value = mode.label;
+}
+
+function setMemoryMode(modeId) {
+  const mode = selectedForm.value.memoryModes?.find(item => item.id === modeId);
+  if (!mode) return;
+  settings.memoryMode = mode.id;
+  preset.value = mode.label;
+}
+
+function normalizeRawBudget() {
+  rawBudget.value = readRawCodeBudget(rawBudget.value);
 }
 
 function setTopology(topologyId) {
@@ -666,12 +716,71 @@ onBeforeUnmount(() => {
             >{{ variant.label }}</button>
           </div>
 
+          <section class="raw-budget-panel" aria-label="Регулируемый лимит RAW-кода">
+            <header>
+              <div>
+                <span>Бюджет RAW</span>
+                <small>исполняемый результат всегда внутри лимита</small>
+              </div>
+              <output :class="{ invalid: !rawBudgetStatus.withinLimit }">{{ bareCodeLength }} / {{ rawBudget }}</output>
+            </header>
+            <div class="raw-budget-presets" role="group" aria-label="Предустановки лимита кода">
+              <button
+                v-for="budget in RAW_CODE_BUDGET_PRESETS"
+                :key="budget"
+                type="button"
+                :aria-pressed="rawBudget === budget"
+                @click="rawBudget = budget"
+              >{{ budget }}</button>
+            </div>
+            <label class="range-field raw-budget-range">
+              <span>Лимит <output>{{ rawBudget }} символов</output></span>
+              <input
+                v-model.number="rawBudget"
+                type="range"
+                :min="RAW_CODE_BUDGET_MIN"
+                :max="RAW_CODE_BUDGET_MAX"
+                step="1"
+                :style="rawBudgetRangeStyle"
+                aria-label="Лимит RAW-кода"
+              >
+            </label>
+            <label class="budget-number-field">
+              <span>Точное значение</span>
+              <input
+                v-model.number="rawBudget"
+                type="number"
+                :min="RAW_CODE_BUDGET_MIN"
+                :max="RAW_CODE_BUDGET_MAX"
+                inputmode="numeric"
+                @change="normalizeRawBudget"
+                @blur="normalizeRawBudget"
+              >
+            </label>
+            <div
+              class="genome-budget-track"
+              role="progressbar"
+              aria-label="Использование выбранного лимита RAW"
+              :aria-valuenow="bareCodeLength"
+              aria-valuemin="0"
+              :aria-valuemax="rawBudget"
+            ><span :class="{ invalid: !rawBudgetStatus.withinLimit }" :style="{ width: `${Math.min(100, bareCodeLength / rawBudget * 100)}%` }"></span></div>
+            <template v-if="selectedForm.budgetVariants">
+              <p class="budget-variant-note"><strong>{{ selectedRawVariant.title }}</strong> выбран автоматически по фактической длине кода.</p>
+              <ul class="budget-feature-list" aria-label="Признаки, вошедшие в RAW">
+                <li v-for="feature in rawBudgetStatus.activeFeatures" :key="feature"><span aria-hidden="true">+</span>{{ feature }}</li>
+                <li v-for="feature in rawBudgetStatus.omittedFeatures" :key="`off-${feature}`" class="omitted"><span aria-hidden="true">−</span>{{ feature }}</li>
+              </ul>
+            </template>
+            <p v-else class="budget-variant-note">Этот автономный геном уже укладывается в минимальный стандарт 280.</p>
+          </section>
+
           <dl class="bare-mode-facts">
             <div><dt>Исполнение</dt><dd>p5.js в изолированном iframe</dd></div>
-            <div><dt>Объём</dt><dd>{{ bareCodeLength }} символов</dd></div>
+            <div><dt>Объём</dt><dd>{{ bareCodeLength }} из {{ rawBudget }} символов</dd></div>
             <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>последний ракурс · вне генома · 0 символов</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
-            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие генетические параметры SPA" : isImprintBare ? "поза, параметры и цвет SPA" : selectedRawVariant?.id === 'living-stroke' ? "хореография SPA, сжатая в RAW" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие генетические параметры SPA" : selectedForm.budgetVariants ? "автоматическая деградация по бюджету" : isImprintBare ? "поза, параметры и цвет SPA" : selectedRawVariant?.id === 'living-stroke' ? "хореография SPA, сжатая в RAW" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
 
           <div v-if="selectedRawVariant" class="genome-comparison">
@@ -680,7 +789,7 @@ onBeforeUnmount(() => {
               <i aria-hidden="true">↔</i>
               <span><small>{{ selectedRawVariant.label }}</small>{{ bareCodeLength }}</span>
             </div>
-            <p class="comparison-label">Оба варианта автономны и не требуют SPA</p>
+            <p class="comparison-label">{{ selectedForm.budgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и не требуют SPA" }}</p>
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ bareSketch.code }}</code></pre>
@@ -748,6 +857,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не демонстрационная замена, а точный результат выбора в SPA. Любое изменение генетического ползунка пересобирает этот код; ракурс камеры в него не записывается.</p>
+          <p v-else-if="selectedForm.budgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> признаки снимаются только в указанном списке и только до запуска. Память координат, анимация и сохранённая камера входят даже в 280; вращение не изменяет частицы и не расходует символы.</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Связь SPA → RAW:</strong> хореография выбирает самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией. Исходный RAW остаётся рядом для сравнения.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>
@@ -841,6 +951,23 @@ onBeforeUnmount(() => {
               >{{ mode.label }}</button>
             </div>
             <p class="topology-description">{{ selectedMotionMode.description }}</p>
+          </div>
+
+          <div v-if="selectedForm.memoryModes" class="mesh-mode-field memory-mode-field">
+            <div class="mesh-mode-title">
+              <strong>История координат</strong>
+              <small>одна оболочка · два закона времени</small>
+            </div>
+            <div class="mesh-mode-switch" role="group" aria-label="Сравнение формы без памяти и с памятью">
+              <button
+                v-for="mode in selectedForm.memoryModes"
+                :key="mode.id"
+                type="button"
+                :aria-pressed="selectedMemoryMode.id === mode.id"
+                @click="setMemoryMode(mode.id)"
+              >{{ mode.label }}</button>
+            </div>
+            <p class="topology-description">{{ selectedMemoryMode.description }}</p>
           </div>
 
           <div class="control-list">

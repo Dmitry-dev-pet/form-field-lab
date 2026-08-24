@@ -39,10 +39,20 @@ test("the Pelagion runner adds a spatial camera bridge outside the RAW code", ()
   const html = runnerDocument(code, { viewModel: "pelagion-orbit" });
 
   assert.match(html, /pelagion-orbit/);
-  assert.match(html, /projectedPelagionPoint/);
+  assert.match(html, /projectedSpatialPoint/);
   assert.match(html, /sketch-view-state/);
   assert.match(html, /sketch-view-snapshot/);
   assert.match(html, /canvas\?\.width === 400/);
   assert.match(html, /touch-action:none/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
+});
+
+test("the memory runner projects points and generated edges with the same saved camera", () => {
+  const code = "t=0,draw=_=>{t++||createCanvas(400,400);z=Z=0;point(200,200);line(190,190,210,210)}";
+  const html = runnerDocument(code, { viewModel: "point-cloud-orbit" });
+
+  assert.match(html, /point-cloud-orbit/);
+  assert.match(html, /projectedSpatialPoint/);
+  assert.match(html, /projectedSpatialLine/);
+  assert.match(html, /globalThis\.Z/);
 });
