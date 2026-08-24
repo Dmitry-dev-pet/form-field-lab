@@ -23,6 +23,7 @@ const scope = {
   forms: 3,
   x: 200,
   Y: 200,
+  z: 40,
   u: 0.5,
   r: 0,
   angle: 0,
@@ -31,6 +32,7 @@ const scope = {
 
 test("color formulas expose geometry variables and clamp output", () => {
   assert.equal(compileColorFormula("0.5 + 0.5 * sin(c)")(scope), 1);
+  assert.ok(Math.abs(compileColorFormula("smoothstep(-100, 100, z)")(scope) - 0.784) < 1e-12);
   assert.equal(compileColorFormula("2")(scope), 1);
   assert.equal(compileColorFormula("-2")(scope), 0);
   assert.equal(compileColorFormula("sqrt(-1)")(scope), 0.5);

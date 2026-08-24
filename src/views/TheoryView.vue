@@ -14,13 +14,25 @@ Y_i &= H\sin\left(\frac{c_i}{3}\right)+200
 \end{aligned}`;
 
 const colorLatexSource = String.raw`\begin{aligned}
-u_i(t) &= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,t), \\
+u_i(t) &= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,z_i,t), \\
 \mathbf C_i(t) &= \left(1-u_i(t)\right)\mathbf C_A+u_i(t)\mathbf C_B, \\
 f_{\mathrm{phase}} &= \frac{1+\sin\left(c_i+0.35d_i+0.8t\right)}{2}.
 \end{aligned}`;
 
+const spatialLatexSource = String.raw`\begin{aligned}
+\rho_i &= R+k_i^2, \\
+\mathbf p_i(\lambda) &=
+\begin{bmatrix}
+\rho_i\cos c_i \\
+Y_i-200 \\
+\lambda\rho_i\sin c_i
+\end{bmatrix}, \\
+\mathbf p_i' &= R_x(\beta)R_y(\alpha)\mathbf p_i, \\
+(x_i',Y_i') &= (p_{i,x}'+200,\ p_{i,y}'+200).
+\end{aligned}`;
+
 const kernelSource = `const ORIGINAL = {
-  speed: 1, forms: 3, radius: 79, height: 99,
+  speed: 1, forms: 3, radius: 79, height: 99, depth: 1,
   waveFrequency: 31, pulse: 3, pointCount: 20000,
   alpha: 96, phaseStep: 8, radialDivisor: 99,
   distanceOffset: 6, featherDivisor: 13
@@ -35,15 +47,24 @@ for (let i = settings.pointCount; i--;) {
   const c = d / 2 - time / 2
     + (i % settings.forms) * settings.phaseStep;
 
-  const x = (settings.radius + k * k) * cos(c) + 200;
+  const radialSize = settings.radius + k * k;
+  const x = radialSize * cos(c) + 200;
   const pulse = d * d * (settings.pulse / 3) * sin(time * 3 - d);
   const ripple = 3 * sin(k * 2);
   const feather = y / settings.featherDivisor * k
     * (e + sin(e * 4 - d * 4));
   const screenY = settings.height * sin(c / 3)
     + 200 + pulse + ripple + feather;
+  const z = radialSize * sin(c) * settings.depth;
 
-  ctx.fillRect(x, screenY, 1, 1);
+  // Orthographic orbit around the original center (200, 200, 0).
+  const X = x - 200;
+  const Y = screenY - 200;
+  const yawX = X * cos(yaw) + z * sin(yaw);
+  const yawZ = -X * sin(yaw) + z * cos(yaw);
+  const rotatedY = Y * cos(pitch) - yawZ * sin(pitch);
+
+  ctx.fillRect(yawX + 200, rotatedY + 200, 1, 1);
 }`;
 
 const golfSource = `a=(y,d=mag(k=(4+cos(y*31+t))*cos(i/99),e=y/5-11)-6)=>point((79+k*k)*cos(c=d/2-t/2+i%3*8)+200,99*sin(c/3)+200+d*d*sin(t*3-d)+3*sin(k*2)+y/13*k*(e+sin(e*4-d*4)))
@@ -52,6 +73,7 @@ t=0,draw=$=>{t||createCanvas(w=400,w);background(9).stroke(w,96);for(t+=PI/60,i=
 const defaultCopyLabels = {
   latex: "Копировать TeX",
   color: "Копировать TeX",
+  spatial: "Копировать TeX",
   code: "Копировать JS"
 };
 const copyLabels = ref({ ...defaultCopyLabels });
@@ -102,7 +124,7 @@ onMounted(async () => {
         <p class="eyebrow">Theory / under the surface</p>
         <h1 class="display-title">Код и математика</h1>
       </div>
-      <p class="view-lead">Каждый кадр — параметрическое отображение индекса точки в координаты холста. Здесь code-golf развёрнут в читаемую модель.</p>
+      <p class="view-lead">Каждый кадр — параметрическое отображение индекса точки в координаты пространства и холста. Здесь code-golf развёрнут в читаемую модель.</p>
     </header>
 
     <div class="theory-grid">
@@ -172,7 +194,7 @@ onMounted(async () => {
           <div class="math-scroll">
             \[
             \begin{aligned}
-            u_i(t) &amp;= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,t), \\
+            u_i(t) &amp;= \operatorname{clamp}_{[0,1]} f(i,y_i,k_i,e_i,d_i,c_i,z_i,t), \\
             \mathbf C_i(t) &amp;= \left(1-u_i(t)\right)\mathbf C_A+u_i(t)\mathbf C_B.
             \end{aligned}
             \]
@@ -184,6 +206,38 @@ onMounted(async () => {
             \]
           </div>
           <p>Результат квантуется в 24 оттенка: формула остаётся плавной визуально, но Canvas меняет стиль только между цветовыми слоями, а не для каждой из 20&nbsp;000 точек.</p>
+        </div>
+      </article>
+
+      <article class="theory-card spatial-theory">
+        <header class="card-header">
+          <div><span>04 / SPATIAL LIFT</span><h2>Скрытая координата</h2></div>
+          <button class="button" type="button" @click="copy('spatial', spatialLatexSource)">{{ copyLabels.spatial }}</button>
+        </header>
+        <div class="theory-body">
+          <p>Косинус в исходной координате дополняется сопряжённым синусом. Коэффициент глубины \(\lambda\) непрерывно переводит плоскую работу в пространственную форму:</p>
+          <div class="math-scroll">
+            \[
+            \begin{aligned}
+            \rho_i &amp;= R+k_i^2, \\
+            \mathbf p_i(\lambda) &amp;=
+            \begin{bmatrix}
+            \rho_i\cos c_i \\
+            Y_i-200 \\
+            \lambda\rho_i\sin c_i
+            \end{bmatrix}.
+            \end{aligned}
+            \]
+          </div>
+          <p>Движение пальца задаёт углы \(\alpha\) и \(\beta\). Точки вращаются около исходного центра, после чего ортографически проецируются обратно на Canvas:</p>
+          <div class="math-scroll">
+            \[
+            \mathbf p_i'=R_x(\beta)R_y(\alpha)\mathbf p_i,
+            \qquad
+            (x_i',Y_i')=(p_{i,x}'+200,\ p_{i,y}'+200).
+            \]
+          </div>
+          <p>При \(\alpha=\beta=0\) глубина не влияет на экранные координаты, поэтому фронтальный вид остаётся исходной работой автора.</p>
         </div>
       </article>
     </div>

@@ -256,6 +256,19 @@ a:focus-visible {
   aspect-ratio: 1;
 }
 
+.orbit-canvas {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.orbit-canvas.is-orbiting { cursor: grabbing; }
+
+.orbit-canvas:focus-visible {
+  outline: 2px solid var(--acid);
+  outline-offset: 4px;
+}
+
 .canvas-meta {
   position: absolute;
   z-index: 2;
@@ -920,7 +933,8 @@ pre {
   gap: 16px;
 }
 
-.color-theory { grid-column: 1 / -1; }
+.color-theory,
+.spatial-theory { grid-column: 1 / -1; }
 
 .theory-body { padding: 18px 24px 24px; }
 

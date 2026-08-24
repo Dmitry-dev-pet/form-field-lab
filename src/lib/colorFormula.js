@@ -1,6 +1,6 @@
 export const COLOR_VARIABLES = Object.freeze([
   "i", "y", "k", "e", "d", "c", "t", "branch", "forms",
-  "x", "Y", "u", "r", "angle", "mix"
+  "x", "Y", "z", "u", "r", "angle", "mix"
 ]);
 
 export const COLOR_PRESETS = Object.freeze([

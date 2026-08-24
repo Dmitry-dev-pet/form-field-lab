@@ -75,7 +75,7 @@ function editExpression(event) {
 
       <p v-if="error" class="error-message" role="alert">{{ error }}</p>
       <p id="color-formula-help" class="formula-help">
-        Переменные: <code>i y k e d c t branch forms x Y u r angle mix</code>.<br>
+        Переменные: <code>i y k e d c t branch forms x Y z u r angle mix</code>.<br>
         Функции: <code>sin cos tan abs sqrt min max atan2 mag fract smoothstep clamp lerp</code>; константы: <code>PI TAU</code>.
         <template v-if="contextNote"><br>{{ contextNote }}</template>
       </p>

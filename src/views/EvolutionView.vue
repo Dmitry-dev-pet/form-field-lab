@@ -27,7 +27,7 @@ let colorTime = 0;
 const colorBuckets = Array.from({ length: 24 }, () => []);
 const colorScope = {
   i: 0, y: 0, k: 0, e: 0, d: 0, c: 0, t: 0, branch: 0, forms: 3,
-  x: 0, Y: 0, u: 0, r: 0, angle: 0, mix: 0
+  x: 0, Y: 0, z: 0, u: 0, r: 0, angle: 0, mix: 0
 };
 
 const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
@@ -114,6 +114,7 @@ function render() {
       colorScope.branch = index % 3;
       colorScope.x = x;
       colorScope.Y = screenY;
+      colorScope.z = 0;
       colorScope.u = sequence;
       colorScope.r = radius;
       colorScope.angle = angle;
@@ -261,7 +262,7 @@ watch(colorEvaluator, render);
             v-model:color-a="color.colorA"
             v-model:color-b="color.colorB"
             :error="colorFormulaError"
-            context-note="В Эволюции переменные вычисляются из промежуточного облака точек."
+            context-note="В Эволюции переменные вычисляются из промежуточного 2D-облака точек; z = 0."
           />
         </details>
 
