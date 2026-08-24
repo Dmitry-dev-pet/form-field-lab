@@ -103,6 +103,24 @@ export const TOPOLOGY_GENOME_PRESETS = Object.freeze([
     }
   }),
   preset({
+    id: "sphere-torus",
+    label: "Сфера↔тор",
+    shortLabel: "S²↔T²",
+    grid: Object.freeze({ columns: 32, rows: 16 }),
+    defaults: { genomeA: 50, genomeB: 30, genomeProjection: 48, genomeSpeed: 1, alpha: 96 },
+    controls: [
+      control("genomeA", "Радиус семейства", 30, 60),
+      control("genomeProjection", "Наклон глубины", 20, 79, 1, { format: "codeFraction" }),
+      control("genomeSpeed", "Темп перехода", 1, 9, 1, { format: "integerSpeed" }),
+      control("alpha", "Прозрачность", 30, 99)
+    ],
+    compile(parameters) {
+      const { a: radius, projection, speed, alpha } = parameters;
+      const time = movingTime(speed);
+      return `P=(u,v,a=${time}/99,q=${radius}*(1+sin(a)+cos(v)),U=u-a)=>[q*cos(U)+200,${radius}*sin(v)-q*sin(U)*${projection}+200]\nt=0,draw=_=>{t++||createCanvas(w=400,w);background(9).stroke(w,${alpha});for(i=512;i--;){u=i%32*(p=PI/16),v=(i>>5)*p*2,A=P(u,v),line(...A,...P(u+p,v)),line(...A,...P(u,v+p*2))}}//#つぶやきProcessing`;
+    }
+  }),
+  preset({
     id: "mobius",
     label: "Мёбиус",
     shortLabel: "M",

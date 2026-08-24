@@ -11,11 +11,6 @@ import {
   PELAGION_GENOME_LIMIT
 } from "../data/pelagionGenome.js";
 import {
-  SPHERE_GRID_GENOME,
-  SPHERE_GRID_GENOME_CHARACTERS,
-  SPHERE_GRID_GENOME_LIMIT
-} from "../data/sphereGridGenome.js";
-import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -35,6 +30,7 @@ const topologyGenomeRows = TOPOLOGY_GENOME_PRESETS.map(preset => {
     orientable: topology.orientable
   });
 });
+const sphereTorusGenome = compileTopologyGenome(topologyGenomeDefaults("sphere-torus"));
 
 const latexSource = String.raw`\begin{aligned}
 y_i &= \frac{i}{995}, \\
@@ -137,6 +133,18 @@ const sphereGridLatexSource = String.raw`\begin{aligned}
 G_\tau(\theta)&=\operatorname{compile}(\tau,\theta),
 &|G_\tau(\theta)|&\le 280,\\
 \operatorname{SPA}(\tau,\theta,t)&=\operatorname{decode}(G_\tau(\theta),t).&&
+\end{aligned}
+
+\begin{aligned}
+R(t)&=r(1+\sin \omega t),
+&q(v,t)&=R(t)+r\cos v,\\
+\mathbf P(u,v,t)&=
+\begin{bmatrix}
+q\cos u\\
+r\sin v\\
+q\sin u
+\end{bmatrix},
+&R=0&\Rightarrow S^2,\quad R=r\Rightarrow\text{сингулярность},\quad R>r\Rightarrow T^2.
 \end{aligned}
 
 \begin{aligned}
@@ -433,15 +441,15 @@ onMounted(async () => {
 
       <article id="sphere-grid" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>06 / FIVE RAW GENOMES</span><h2>Топология внутри 280 символов</h2></div>
+          <div><span>06 / SIX RAW GENOMES</span><h2>Топологический переход внутри 280 символов</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('sphereGrid', sphereGridLatexSource)">{{ copyLabels.sphereGrid }}</button>
-            <button class="button" type="button" @click="copy('sphereGridSeed', SPHERE_GRID_GENOME)">{{ copyLabels.sphereGridSeed }}</button>
+            <button class="button" type="button" @click="copy('sphereGridSeed', sphereTorusGenome.code)">{{ copyLabels.sphereGridSeed }}</button>
           </div>
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>M0 состоит из пяти самостоятельных исполняемых геномов. Выбор топологии <code>τ</code> и коротких целочисленных параметров <code>θ</code> сначала компилируется в p5.js-код <code>G</code>. Только после проверки лимита SPA расшифровывает этот же закон в управляемую пространственную модель.</p>
+            <p>M0 состоит из шести самостоятельных исполняемых геномов. Пять задают устойчивые поверхности, а шестой одной формулой автоматически проходит сферический образ, самопересечение, сингулярность и тор. Только после проверки лимита SPA расшифровывает тот же закон в управляемую пространственную модель.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
@@ -451,6 +459,19 @@ onMounted(async () => {
               G_\tau(\theta)&amp;=\operatorname{compile}(\tau,\theta),
               &amp;|G_\tau(\theta)|&amp;\le 280,\\
               \operatorname{SPA}(\tau,\theta,t)&amp;=\operatorname{decode}(G_\tau(\theta),t).
+              \end{aligned}
+              \]
+            </div>
+            <p>Переход использует тороидальный параметрический домен, но меняет его образ в пространстве. При \(R=0\) сетка дважды накрывает сферу, при \(0&lt;R&lt;r\) самопересекается, при \(R=r\) проходит сингулярность и только при \(R&gt;r\) становится обычным кольцевым тором:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              R(t)&amp;=r(1+\sin \omega t),
+              &amp;q(v,t)&amp;=R(t)+r\cos v,\\
+              \mathbf P(u,v,t)&amp;=
+              \begin{bmatrix}
+              q\cos u\\ r\sin v\\ q\sin u
+              \end{bmatrix}.
               \end{aligned}
               \]
             </div>
@@ -466,7 +487,7 @@ onMounted(async () => {
             </div>
             <div class="topology-table-wrap">
               <table class="topology-table">
-                <thead><tr><th>Поверхность</th><th>RAW</th><th>χ</th><th>Границы</th><th>Ориентация</th></tr></thead>
+                <thead><tr><th>Поверхность</th><th>RAW</th><th>χ домена</th><th>Границы</th><th>Ориентация</th></tr></thead>
                 <tbody>
                   <tr v-for="genome in topologyGenomeRows" :key="genome.id">
                     <td>{{ genome.label }}</td>
@@ -481,12 +502,12 @@ onMounted(async () => {
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
-              <span>Сфера · исполняемый RAW</span>
-              <strong>{{ SPHERE_GRID_GENOME_CHARACTERS }} / {{ SPHERE_GRID_GENOME_LIMIT }}</strong>
+              <span>Сфера↔тор · один исполняемый RAW</span>
+              <strong>{{ sphereTorusGenome.characters }} / {{ sphereTorusGenome.limit }}</strong>
             </div>
-            <pre><code>{{ SPHERE_GRID_GENOME }}</code></pre>
-            <p>Плоскость, цилиндр, тор и лента Мёбиуса больше не являются расширениями, существующими только в SPA. У каждого варианта есть собственная формула, сетка, анимация и ручная 3D-проекция; даже крайние положения всех генетических ползунков остаются внутри лимита.</p>
-            <ul class="topology-genome-counts" aria-label="Размеры пяти исходных геномов">
+            <pre><code>{{ sphereTorusGenome.code }}</code></pre>
+            <p>Это не переключатель между двумя заготовками. Радиус \(R(t)\) находится внутри самой короткой программы, поэтому голый скетч без SPA самостоятельно совершает полный цикл. Изменение топологии образа требует сингулярности — формула не скрывает этот момент.</p>
+            <ul class="topology-genome-counts" aria-label="Размеры шести исходных геномов">
               <li v-for="genome in topologyGenomeRows" :key="genome.id"><span>{{ genome.label }}</span><code>{{ genome.characters }}/280</code></li>
             </ul>
             <div class="pelagion-links">
@@ -496,7 +517,7 @@ onMounted(async () => {
           </div>
         </div>
         <div class="tiny-code-context">
-          <p><strong>Источник истины.</strong> Итогом является только строка <code>Gτ(θ)</code>. SPA не добавляет к сущности цвет, физику, дополнительные режимы рёбер или скрытое состояние: она показывает формулу, её точную длину и пространственную расшифровку.</p>
+          <p><strong>Источник истины.</strong> Итогом является только строка <code>Gτ(θ)</code>. В переходном геноме и сфера, и тор уже находятся в этой строке как разные фазы одного закона; SPA не подменяет их двумя отдельными моделями.</p>
           <p><strong>Граница управления.</strong> Перетаскивание пальцем меняет только матрицу камеры и потому не меняет ни одного символа RAW. Генетические ползунки, наоборот, немедленно пересобирают исполняемый код.</p>
         </div>
       </article>

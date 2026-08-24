@@ -45,7 +45,7 @@ test("the mesh baseline decodes the exact compact sphere genome", () => {
   }
 });
 
-test("all five topology embeddings are finite spatial surfaces", () => {
+test("all six topology embeddings are finite spatial surfaces", () => {
   const form = spatialForms.find(item => item.id === "sphere-grid");
   const layers = spatialLayerDefaults(form);
 
@@ -68,6 +68,40 @@ test("all five topology embeddings are finite spatial surfaces", () => {
     assert.ok(Math.max(...axes.y) - Math.min(...axes.y) > 10, `${topology.id}: y is flat`);
     assert.ok(Math.max(...axes.z) - Math.min(...axes.z) > 10, `${topology.id}: z is flat`);
   }
+});
+
+test("one compact genome passes sphere, horn and ring-torus images", () => {
+  const form = spatialForms.find(item => item.id === "sphere-grid");
+  const settings = {
+    ...form.defaults,
+    ...topologyGenomeDefaults("sphere-torus")
+  };
+  const layers = spatialLayerDefaults(form);
+  const dimensions = resolveGridDimensions(form.mesh, settings);
+  const target = {};
+  const radius = settings.genomeA;
+  const projection = settings.genomeProjection / 100;
+
+  let sphereError = 0;
+  for (let index = 0; index < dimensions.vertexCount; index++) {
+    form.evaluate(index, 99 * Math.PI * 1.5, settings, layers, target);
+    const pureY = target.y - 200 + target.z * projection;
+    sphereError = Math.max(sphereError, Math.abs(
+      Math.hypot(target.x - 200, pureY, target.z) - radius
+    ));
+  }
+  assert.ok(sphereError < 1e-9, `sphere image error ${sphereError}`);
+
+  const cylindricalRadii = [];
+  for (let index = 0; index < dimensions.vertexCount; index++) {
+    form.evaluate(index, 99 * Math.PI / 2, settings, layers, target);
+    cylindricalRadii.push(Math.hypot(target.x - 200, target.z));
+  }
+  assert.ok(Math.abs(Math.min(...cylindricalRadii) - radius) < 1e-9);
+  assert.ok(Math.abs(Math.max(...cylindricalRadii) - radius * 3) < 1e-9);
+
+  form.evaluate(8 * dimensions.columns, 0, settings, layers, target);
+  assert.ok(Math.hypot(target.x - 200, target.z) < 1e-9, "horn singularity is missing");
 });
 
 test("every front projection reproduces its original p5.js frame", () => {

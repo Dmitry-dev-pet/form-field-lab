@@ -18,10 +18,10 @@ const mesh = Object.freeze({
   topologies: GRID_TOPOLOGY_PRESETS
 });
 
-test("the topology atlas exposes five independent surface contracts", () => {
+test("the topology atlas exposes five surfaces and one singular transition", () => {
   assert.deepEqual(
     GRID_TOPOLOGY_PRESETS.map(topology => topology.id),
-    ["sphere", "plane", "cylinder", "torus", "mobius"]
+    ["sphere", "plane", "cylinder", "torus", "sphere-torus", "mobius"]
   );
   for (const topology of GRID_TOPOLOGY_PRESETS) {
     assert.equal(typeof topology.vertexCount, "function");
@@ -37,6 +37,7 @@ test("each preset has the expected V, E, F and Euler characteristic", () => {
     plane: { vertexCount: 12, edges: 17, faces: 6, eulerCharacteristic: 1, boundaries: 1, orientable: true },
     cylinder: { vertexCount: 12, edges: 20, faces: 8, eulerCharacteristic: 0, boundaries: 2, orientable: true },
     torus: { vertexCount: 12, edges: 24, faces: 12, eulerCharacteristic: 0, boundaries: 0, orientable: true },
+    "sphere-torus": { vertexCount: 12, edges: 24, faces: 12, eulerCharacteristic: 0, boundaries: 0, orientable: true },
     mobius: { vertexCount: 12, edges: 20, faces: 8, eulerCharacteristic: 0, boundaries: 1, orientable: false }
   };
 

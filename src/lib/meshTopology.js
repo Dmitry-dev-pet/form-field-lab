@@ -190,6 +190,16 @@ export const GRID_TOPOLOGY_PRESETS = Object.freeze([
     forEachFace: rectangleFaces({ wrapColumns: true, wrapRows: true })
   }),
   topology({
+    id: "sphere-torus",
+    label: "Сфера↔тор",
+    description: "Один тороидальный домен проходит сферический образ, самопересечение и сингулярность, прежде чем раскрыться в тор.",
+    orientable: true,
+    boundaries: 0,
+    morph: true,
+    forEachEdge: rectangleEdges({ wrapColumns: true, wrapRows: true }),
+    forEachFace: rectangleFaces({ wrapColumns: true, wrapRows: true })
+  }),
+  topology({
     id: "mobius",
     label: "Мёбиус",
     description: "Одна координата замкнута с переворотом поперечного ряда.",

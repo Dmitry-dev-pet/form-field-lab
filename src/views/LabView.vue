@@ -184,6 +184,7 @@ const advancedControls = computed(() => selectedForm.value.advancedControls);
 const selectedTopology = computed(() => selectedForm.value.mesh
   ? resolveGridTopology(selectedForm.value.mesh, settings)
   : null);
+const isTopologyMorph = computed(() => Boolean(selectedTopology.value?.morph));
 const meshMetrics = computed(() => selectedForm.value.mesh
   ? measureGridTopology(selectedForm.value.mesh, settings)
   : null);
@@ -644,7 +645,7 @@ onBeforeUnmount(() => {
           <div v-if="selectedForm.mesh" class="mesh-topology-field">
             <div class="mesh-mode-title">
               <strong>Топология</strong>
-              <small>отдельный закон связей</small>
+              <small>{{ isTopologyMorph ? "один закон · два образа" : "отдельный закон связей" }}</small>
             </div>
             <div class="topology-switch" role="group" aria-label="Топология сеточной формы">
               <button
@@ -662,7 +663,8 @@ onBeforeUnmount(() => {
               <div><dt>F</dt><dd>{{ meshMetrics.faces }}</dd></div>
               <div><dt>χ</dt><dd>{{ meshMetrics.eulerCharacteristic }}</dd></div>
             </dl>
-            <p class="topology-summary">{{ meshMetrics.orientable ? "ориентируемая" : "неориентируемая" }} · {{ boundaryLabel }}</p>
+            <p v-if="isTopologyMorph" class="topology-summary">домен T² · смена образа через сингулярность</p>
+            <p v-else class="topology-summary">{{ meshMetrics.orientable ? "ориентируемая" : "неориентируемая" }} · {{ boundaryLabel }}</p>
           </div>
 
           <section

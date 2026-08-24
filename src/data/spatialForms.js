@@ -154,6 +154,14 @@ function topologyGridPoint(index, time, settings, layers, target) {
     x = scale * Math.cos(angle);
     y = vertex.row * 18 - scale * Math.sin(angle) * projection - 130;
     z = scale * Math.sin(angle);
+  } else if (topology.id === "sphere-torus") {
+    const morphV = TAU * vertex.row / rows;
+    const phase = genomeTime / 99;
+    const radius = scale * (1 + Math.sin(phase) + Math.cos(morphV));
+    const angle = u - phase;
+    x = radius * Math.cos(angle);
+    y = scale * Math.sin(morphV) - radius * Math.sin(angle) * projection;
+    z = radius * Math.sin(angle);
   } else if (topology.id === "torus") {
     const torusV = TAU * vertex.row / rows;
     const radius = scale + secondary * Math.cos(torusV);
@@ -573,8 +581,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "RAW-топологии",
     title: "Атлас 280-геномов",
-    association: "5 исполняемых геномов · каждый ≤ 280",
-    description: "Сфера, плоскость, цилиндр, тор и лента Мёбиуса существуют как пять самостоятельных p5.js-геномов. SPA только выбирает формулу, меняет её короткие константы и расшифровывает результат.",
+    association: "6 исполняемых геномов · каждый ≤ 280",
+    description: "Пять устойчивых поверхностей и единый переход сфера↔тор существуют как самостоятельные p5.js-геномы. SPA только выбирает формулу, меняет её короткие константы и расшифровывает результат.",
     origin: "mesh-study",
     genomeSketch: SPHERE_GRID_GENOME_SKETCH,
     meshGenome: true,
