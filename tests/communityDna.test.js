@@ -61,28 +61,37 @@ test("Pelagion lineage keeps direct archive evidence", () => {
 
 test("the autonomous Pelagion genome stays inside the challenge limit", () => {
   assert.equal(PELAGION_GENOME_CHARACTERS, PELAGION_GENOME.length);
+  assert.equal(PELAGION_GENOME_CHARACTERS, 279);
   assert.ok(PELAGION_GENOME_CHARACTERS <= PELAGION_GENOME_LIMIT);
   assert.doesNotMatch(PELAGION_GENOME, /WEBGL/);
-  assert.match(PELAGION_GENOME, /z=r\*sin\(v\)/);
+  assert.match(PELAGION_GENOME, /q=i\/200\|0/);
+  assert.match(PELAGION_GENOME, /h=q>29/);
+  assert.match(PELAGION_GENOME, /x=h\?80\+5\*u:r\*cos\(v\)/);
+  assert.match(PELAGION_GENOME, /y=h\?u\*sin\(v\):\.6\*r\*sin\(v\)/);
+  assert.match(PELAGION_GENOME, /stroke\(160,u\*9,w\)/);
   assert.match(PELAGION_GENOME, /x\*cos\(a\)\+z\*sin\(a\)/);
   assert.doesNotThrow(() => new Function(PELAGION_GENOME));
+
+  const frames = executeGenomeFrames(PELAGION_GENOME);
+  assert.equal(frames.first.length, 10000);
+  assert.ok(frames.first.flat().every(Number.isFinite));
+  assert.notDeepEqual(frames.second, frames.first);
 });
 
 test("the living-stroke Pelagion is a second autonomous genome inside 280 characters", () => {
   assert.equal(PELAGION_LIVING_GENOME_CHARACTERS, PELAGION_LIVING_GENOME.length);
-  assert.equal(PELAGION_LIVING_GENOME_CHARACTERS, 274);
+  assert.equal(PELAGION_LIVING_GENOME_CHARACTERS, 280);
   assert.ok(PELAGION_LIVING_GENOME_CHARACTERS <= PELAGION_GENOME_LIMIT);
   assert.deepEqual(PELAGION_RAW_VARIANTS.map(variant => variant.id), [
     "canonical",
     "living-stroke"
   ]);
   assert.doesNotMatch(PELAGION_LIVING_GENOME, /WEBGL/);
-  assert.match(PELAGION_LIVING_GENOME, /s=sin\(t\*4-u\)\*\*3/);
-  assert.match(PELAGION_LIVING_GENOME, /r=60.*\(1\+s\/9\)/);
-  assert.match(PELAGION_LIVING_GENOME, /z=r\*sin\(v\)\*\(1\+s\/4\)/);
-  assert.match(PELAGION_LIVING_GENOME, /x=\(u-2\.5\)\*\(60-5\*s\)/);
-  assert.match(PELAGION_LIVING_GENOME, /stroke\(180\+70\*s/);
-  assert.match(PELAGION_LIVING_GENOME, /4\*u\*u\*s\+200/);
+  assert.match(PELAGION_LIVING_GENOME, /s=sin\(4\*t-u\/9\)/);
+  assert.match(PELAGION_LIVING_GENOME, /x=h\?80\+5\*u:r\*cos\(v\)/);
+  assert.match(PELAGION_LIVING_GENOME, /y=h\?u\*sin\(v\):\.6\*r\*sin\(v\)/);
+  assert.match(PELAGION_LIVING_GENOME, /z=h\?16\*s:18-u\/2\+9\*s\*sin\(v\)\*\*2/);
+  assert.match(PELAGION_LIVING_GENOME, /stroke\(160,u\*9,w\)/);
   assert.match(PELAGION_LIVING_GENOME, /x\*cos\(a\)\+z\*sin\(a\)/);
   assert.doesNotThrow(() => new Function(PELAGION_LIVING_GENOME));
 
@@ -92,5 +101,6 @@ test("the living-stroke Pelagion is a second autonomous genome inside 280 charac
   assert.ok(frames.first.flat().every(Number.isFinite));
   assert.ok(frames.second.flat().every(Number.isFinite));
   assert.notDeepEqual(frames.second, frames.first);
-  assert.notDeepEqual(frames.secondStrokes, frames.firstStrokes);
+  assert.deepEqual(frames.secondStrokes, frames.firstStrokes);
+  assert.notDeepEqual(frames.firstStrokes[0], frames.firstStrokes.at(-1));
 });

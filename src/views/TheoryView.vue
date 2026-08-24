@@ -92,30 +92,31 @@ R\sin c_i+k_ip_i\\R\sin(hc_i)+e_ip_i\\\lambda R\cos c_i
 \end{aligned}`;
 
 const pelagionLatexSource = String.raw`\begin{aligned}
-u_i &= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1},
-& \theta_i &= 2\pi\frac{i\bmod S}{S}+\tau u_i,\\
-\beta(u,t)&=\omega_s t-\ell u,
-&h(v)&=v^2(3-2v),\\
-s(u,t)&=h\!\left(\frac{1-\cos\beta}{2}\right),
-&\hat t(u,t)&=t+\frac{a}{\omega_s}\sin\beta,\\
-a_x(u,t)&=1-0.14a\,s\sin^{0.7}(\pi u),
-&a_r(u,t)&=a_x^{-1/2},\\
-\mathbf C(u,t) &=
+q_i&=\left\lfloor i/200\right\rfloor,
+&\theta_i&=(i\bmod200)/32,
+&h_i&=[q_i>29],\\
+u_i&=\begin{cases}q_i,&h_i=0,\\q_i-30,&h_i=1,\end{cases}
+&r_i&=15\sqrt{u_i},\\
+\mathbf P_i^{\rm body}(t)&=
 \begin{bmatrix}
-La_x(u-\tfrac12)\\
-A u^{1.65}(0.28+0.72s)\sin\!\left(2\pi(\nu u-\hat t)\right)+F(u,t)\\
-0.42A u^{1.65}(0.28+0.72s)\cos\!\left(2\pi(\nu u-\hat t)\right)
-\end{bmatrix},\\
-r(u,t) &= R\sin^{\gamma}(\pi u)
-\,a_r\left[1+P(2s-1)\right],\\
-\mathbf P(u,\theta,t) &= \mathbf C(u,t)+
+r_i\cos\theta_i\\
+0.6r_i\sin\theta_i\\
+18-u_i/2+b(t,u_i,\theta_i)
+\end{bmatrix},
+&q_i&\le29,\\
+\mathbf P_i^{\rm tail}(t)&=
 \begin{bmatrix}
-0.12r\sin(2\theta+2\pi u-t)\\
-0.72r\cos\theta\\
-\lambda r\sin\theta\,M(u,\theta,t)
-\end{bmatrix},\\
-M(u,\theta,t) &= 1+B\sin^{\gamma}(\pi u)|\sin\theta|^6(0.68+0.44s),\\
-Q(u) &= q\exp\!\left[-28(u-u_{touch})^2\right].
+80+5u_i\\
+u_i\sin\theta_i\\
+g(t,u_i)
+\end{bmatrix},
+&q_i&>29,\\
+s(t,u)&=\sin(4t-u/9),
+&b_{\rm stroke}&=9s\sin^2\theta,
+&g_{\rm stroke}&=16s,\\
+x_i'&=x_i\cos a+z_i\sin a+130,
+&y_i'&=y_i+200,
+&a(t)&=\sin(t)/5.
 \end{aligned}`;
 
 const chronophoreLatexSource = String.raw`\begin{aligned}
@@ -584,7 +585,7 @@ onMounted(async () => {
 
       <article id="pelagion" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>07 / SYNTHETIC ORGANISM</span><h2>Пелагион: геном и фенотип</h2></div>
+          <div><span>07 / SYNTHETIC ORGANISM</span><h2>Пелагион: одно тело, два гребка</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('pelagion', pelagionLatexSource)">{{ copyLabels.pelagion }}</button>
             <button class="button" type="button" @click="copy('seed', PELAGION_GENOME)">{{ copyLabels.seed }}</button>
@@ -593,55 +594,47 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Параметр <code>u</code> идёт вдоль позвоночника, а <code>θ</code> обходит поперечное сечение. Вместе они задают настоящую поверхность. Переключатель «Ровный поток / Живой гребок» позволяет непосредственно сравнить прежнюю механику с новой хореографией.</p>
+            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Индекс сразу делится на 50 пространственных сечений: первые 30 образуют овальное тело, последние 20 продолжают его в хвостовой плавник. Поэтому голова, корпус и хвост читаются при любой фазе, а оба RAW остаются одной сущностью.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
-              u_i &amp;= \frac{\lfloor i/S\rfloor}{\lceil N/S\rceil-1},
-              &amp;\theta_i &amp;= 2\pi\frac{i\bmod S}{S}+\tau u_i,\\
-              \beta(u,t)&amp;=\omega_s t-\ell u,
-              &amp;s(u,t)&amp;=h\!\left(\frac{1-\cos\beta}{2}\right),\\
-              \hat t(u,t)&amp;=t+\frac{a}{\omega_s}\sin\beta,
-              &amp;h(v)&amp;=v^2(3-2v),\\
-              \mathbf C(u,t) &amp;=
+              q_i&amp;=\left\lfloor i/200\right\rfloor,
+              &amp;\theta_i&amp;=(i\bmod200)/32,
+              &amp;h_i&amp;=[q_i&gt;29],\\
+              u_i&amp;=\begin{cases}q_i,&amp;h_i=0,\\q_i-30,&amp;h_i=1,\end{cases}
+              &amp;r_i&amp;=15\sqrt{u_i}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Тело строится концентрическими эллипсами, а хвост — поперечными сечениями, которые расширяются к плавнику. Координата <code>z</code> делает центр выпуклым и несёт движение:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \mathbf P_i^{\rm body}(t)&amp;=
               \begin{bmatrix}
-              La_x(u-\tfrac12)\\
-              A u^{1.65}(0.28+0.72s)\sin(2\pi(\nu u-\hat t))+F(u,t)\\
-              0.42A u^{1.65}(0.28+0.72s)\cos(2\pi(\nu u-\hat t))
+              r_i\cos\theta_i\\0.6r_i\sin\theta_i\\18-u_i/2+b(t,u_i,\theta_i)
+              \end{bmatrix},\\
+              \mathbf P_i^{\rm tail}(t)&amp;=
+              \begin{bmatrix}
+              80+5u_i\\u_i\sin\theta_i\\g(t,u_i)
               \end{bmatrix}.
               \end{aligned}
               \]
             </div>
-            <p>Гребок имеет плавные вход и выход, а запаздывание \(\ell u\) переносит усилие к хвосту. Во время силовой фазы продольный масштаб \(a_x\) уменьшается, поперечный \(a_r=a_x^{-1/2}\) растёт, поэтому часть деформации squash/stretch удовлетворяет \(a_xa_r^2=1\). Отдельный параметр дыхания всё ещё может менять объём. Та же величина \(s\) управляет мембраной, нитями и формульным цветом.</p>
-            <div class="math-scroll">
-              \[
-              \begin{aligned}
-              a_x&amp;=1-0.14a\,s\sin^{0.7}(\pi u),
-              &amp;a_r&amp;=a_x^{-1/2},\\
-              r(u,t)&amp;=R\sin^{\gamma}(\pi u)a_r\left[1+P(2s-1)\right],\\
-              \mathbf P&amp;=\mathbf C+
-              \begin{bmatrix}
-              0.12r\sin(2\theta+2\pi u-t)\\
-              0.72r\cos\theta\\
-              \lambda r\sin\theta\left(1+B\sin^{\gamma}(\pi u)|\sin\theta|^6(0.68+0.44s)\right)
-              \end{bmatrix}.
-              \end{aligned}
-              \]
-            </div>
-            <p>Касание создаёт локальный импульс (Q(u)=q\exp[-28(u-u_{touch})^2]): ближайший участок сжимается, меняет изгиб и раскрывает мембрану. Хвостовые нити реагируют сильнее корпуса.</p>
+            <p>В плавном RAW \(b=9\sin t\sin^2\theta\), а хвост запаздывает по координате \(u\). В силовом RAW одна фаза \(s=\sin(4t-u/9)\) задаёт \(b=9s\sin^2\theta\) и \(g=16s\). Формульный RGB-цвет \((160,9u,255)\) проявляет центр, край и плавник.</p>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
-              <span>Автономный эмбрион</span>
+              <span>Тело и хвост</span>
               <strong>{{ PELAGION_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_GENOME }}</code></pre>
             <div class="genome-meter">
-              <span>RAW живого гребка</span>
+              <span>RAW силового гребка</span>
               <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
-            <p>Первый RAW сохраняет минимальное непрерывное движение. Во втором одна величина <code>s=sin(4t-u)³</code> одновременно сжимает корпус, расширяет поперечное сечение и глубину, ведёт хвост и цвет. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома; не закодированные отклик и след лаборатория больше не дорисовывает.</p>
+            <p>В обоих RAW совпадают разбиение точек, тело, плавник и цвет; меняется только закон глубинной волны. Оба используют ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Последний quaternion камеры и фаза сохраняются просмотрщиком отдельно и не расходуют лимит генома.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>
