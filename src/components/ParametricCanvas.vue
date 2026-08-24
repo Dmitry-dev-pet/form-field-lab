@@ -16,6 +16,7 @@ const props = defineProps({
   layers: { type: Object, required: true },
   color: { type: Object, required: true },
   colorEvaluator: { type: Function, required: true },
+  initialState: { type: Object, default: null },
   invertY: { type: Boolean, default: true },
   paused: { type: Boolean, default: false }
 });
@@ -185,6 +186,23 @@ function resetView() {
   render();
 }
 
+function restoreState(state = null) {
+  const next = state || {};
+  yaw = Number(next.yaw) || 0;
+  pitch = clampOrbitPitch(Number(next.pitch) || 0);
+  time = Math.max(0, Number(next.time) || 0);
+  yawVelocity = 0;
+  pitchVelocity = 0;
+  interaction.strength = 0;
+  interaction.age = 0;
+  clearNextFrame = true;
+  render();
+}
+
+function snapshot() {
+  return { yaw, pitch, time };
+}
+
 function provoke(x = 0, y = 0) {
   interaction.x = Math.max(-1, Math.min(1, x));
   interaction.y = Math.max(-1, Math.min(1, y));
@@ -193,14 +211,6 @@ function provoke(x = 0, y = 0) {
   interaction.age = 0;
   emit("stimulate");
   render();
-}
-
-function provokeAtPointer(event) {
-  const bounds = canvas.value?.getBoundingClientRect();
-  if (!bounds?.width || !bounds?.height) return provoke();
-  const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-  const y = ((event.clientY - bounds.top) / bounds.height) * 2 - 1;
-  provoke(x, y);
 }
 
 function beginOrbit(event) {
@@ -256,14 +266,12 @@ function moveOrbit(event) {
 
 function finishOrbit(event, cancelled = false) {
   if (event.pointerId !== activePointerId) return;
-  const shouldProvoke = !cancelled && !pointerMoved && props.form.supportsStimulus;
   activePointerId = null;
   isOrbiting.value = false;
   if (cancelled || prefersReducedMotion) {
     yawVelocity = 0;
     pitchVelocity = 0;
   }
-  if (shouldProvoke) provokeAtPointer(event);
 }
 
 function handleOrbitKey(event) {
@@ -273,9 +281,6 @@ function handleOrbitKey(event) {
   else if (event.key === "ArrowUp") pitch = clampOrbitPitch(pitch - keyStep);
   else if (event.key === "ArrowDown") pitch = clampOrbitPitch(pitch + keyStep);
   else if (event.key === "Home" || event.key === "0") resetView();
-  else if ((event.key === "Enter" || event.key === " ") && props.form.supportsStimulus) {
-    provoke();
-  }
   else return;
 
   yawVelocity = 0;
@@ -302,13 +307,13 @@ watch(
 
 onMounted(() => {
   context = canvas.value.getContext("2d", { alpha: false });
-  render();
+  restoreState(props.initialState);
   frameId = requestAnimationFrame(animate);
 });
 
 onBeforeUnmount(() => cancelAnimationFrame(frameId));
 
-defineExpose({ resetTime, resetView, render, provoke });
+defineExpose({ resetTime, resetView, restoreState, snapshot, render, provoke });
 </script>
 
 <template>
@@ -320,7 +325,7 @@ defineExpose({ resetTime, resetView, render, provoke });
     height="400"
     tabindex="0"
     role="img"
-    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы вращать форму вокруг центра.${form.supportsStimulus ? ' Коротко коснитесь формы или нажмите Enter, чтобы вызвать реакцию.' : ''} Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
+    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы изменить только угол зрения. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
     @pointerdown="beginOrbit"
     @pointermove="moveOrbit"
     @pointerup="finishOrbit"

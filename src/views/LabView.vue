@@ -6,6 +6,14 @@ import ParametricCanvas from "../components/ParametricCanvas.vue";
 import SketchRunner from "../components/SketchRunner.vue";
 import { useColorFormula } from "../composables/useColorFormula.js";
 import { spatialForms, spatialFormById, spatialLayerDefaults } from "../data/spatialForms.js";
+import { DEFAULT_COLOR_STATE } from "../lib/colorFormula.js";
+import {
+  compileChronophoreImprint,
+  createSavedEntityRecord,
+  nextMutationNumber,
+  readSavedEntities,
+  writeSavedEntities
+} from "../lib/genomeImprint.js";
 import {
   LAB_VIEW_MODE,
   mergeLabViewModeQuery,
@@ -16,34 +24,65 @@ const route = useRoute();
 const router = useRouter();
 const { color, evaluator: colorEvaluator, error: colorFormulaError, resetColor } = useColorFormula(route, router);
 
+const savedEntityRecords = ref(readSavedEntities());
+const chronophoreForm = spatialFormById("chronophore");
+
+function hydrateSavedForm(record) {
+  return {
+    ...chronophoreForm,
+    id: record.id,
+    displayNumber: record.displayNumber,
+    shortLabel: record.title.replace("Хронофор ", "Мутация "),
+    title: record.title,
+    association: `закреплённая мутация · потомок ${record.parentDisplayNumber}`,
+    description: `Закреплённый отпечаток Хронофора сохраняет параметры, цвет и пространственную позу родителя ${record.parentDisplayNumber}. Его можно снова развернуть в SPA и использовать как родителя следующего поколения.`,
+    origin: "local-mutation",
+    genomeSketch: Object.freeze({ id: `${record.id}-genome`, code: record.code }),
+    defaults: Object.freeze({ ...chronophoreForm.defaults, ...record.settings }),
+    savedLayers: Object.freeze({ ...record.layers }),
+    savedColor: Object.freeze({ ...record.color }),
+    savedPose: Object.freeze({ ...record.pose }),
+    savedRecord: record
+  };
+}
+
+const savedMutationForms = computed(() => savedEntityRecords.value.map(hydrateSavedForm));
+const availableForms = computed(() => [...spatialForms, ...savedMutationForms.value]);
+
+function formById(formId) {
+  return availableForms.value.find(form => form.id === formId) || spatialForms[0];
+}
+
 const requestedFormId = Array.isArray(route.query.form) ? route.query.form[0] : route.query.form;
-const initialForm = spatialFormById(requestedFormId);
+const initialForm = formById(requestedFormId);
 const selectedFormId = ref(initialForm.id);
-const selectedForm = computed(() => spatialFormById(selectedFormId.value));
-const formGroups = Object.freeze([
-  {
-    id: "attributed",
-    label: "Архетипы автора",
-    forms: spatialForms.filter(form => form.sketch)
-  },
-  {
-    id: "synthetic",
-    label: "Синтетические сущности",
-    forms: spatialForms.filter(form => !form.sketch)
+const selectedForm = computed(() => formById(selectedFormId.value));
+const formGroups = computed(() => {
+  const groups = [
+    {
+      id: "attributed",
+      label: "Архетипы автора",
+      forms: spatialForms.filter(form => form.sketch)
+    },
+    {
+      id: "synthetic",
+      label: "Синтетические сущности",
+      forms: spatialForms.filter(form => !form.sketch)
+    }
+  ];
+  if (savedMutationForms.value.length) {
+    groups.push({
+      id: "mutations",
+      label: "Закреплённые мутации",
+      forms: savedMutationForms.value
+    });
   }
-]);
+  return groups;
+});
 const viewMode = ref(readLabViewMode(route.query.view));
 const isBareMode = computed(() => viewMode.value === LAB_VIEW_MODE.bare);
-const bareSketch = computed(() => selectedForm.value.sketch || selectedForm.value.genomeSketch);
-const bareCodeLength = computed(() => bareSketch.value.code.length);
-const bareRunnerLabel = computed(() => selectedForm.value.sketch
-  ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
-  : `${selectedForm.value.title}: автономный p5.js-геном, ${bareCodeLength.value} символов`);
-const bareLead = computed(() => selectedForm.value.sketch
-  ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
-  : `Автономный ${bareCodeLength.value}-символьный геном выполняется без расширенной анатомии, следа и реакции SPA.`);
 const settings = reactive({ ...initialForm.defaults });
-const layers = reactive(spatialLayerDefaults(initialForm));
+const layers = reactive(initialForm.savedLayers || spatialLayerDefaults(initialForm));
 const canvas = ref(null);
 const bareRunner = ref(null);
 const spaPaused = ref(false);
@@ -51,7 +90,66 @@ const barePaused = ref(false);
 const invertOrbitY = ref(true);
 const preset = ref(basePresetLabel(initialForm));
 const reactionMessage = ref("");
+const mutationMessage = ref("");
+const bareVariant = ref("canonical");
+const spaSnapshot = ref(initialForm.savedPose || null);
+const imprintSnapshot = ref(null);
 let reactionTimer;
+let mutationTimer;
+
+if (initialForm.savedColor) Object.assign(color, initialForm.savedColor);
+
+const supportsImprint = computed(() => selectedForm.value.imprintKind === "chronophore");
+const canonicalSketch = computed(() => selectedForm.value.sketch || selectedForm.value.genomeSketch);
+const imprintSource = computed(() => imprintSnapshot.value || {
+  settings: { ...settings },
+  layers: { ...layers },
+  color: { ...color },
+  pose: spaSnapshot.value || selectedForm.value.savedPose || { yaw: 0, pitch: 0, time: 0 }
+});
+
+function compileImprintSource(source, pose = source.pose) {
+  if (!supportsImprint.value || colorFormulaError.value) return null;
+  try {
+    return compileChronophoreImprint({
+      ...source,
+      pose,
+      originalCode: canonicalSketch.value.code,
+      originalDefaults: selectedForm.value.defaults,
+      originalLayers: selectedForm.value.savedLayers || spatialLayerDefaults(selectedForm.value),
+      originalColor: selectedForm.value.savedColor || DEFAULT_COLOR_STATE
+    });
+  } catch {
+    return null;
+  }
+}
+
+const imprintResult = computed(() => compileImprintSource(imprintSource.value));
+const geneticImprintResult = computed(() => compileImprintSource(
+  imprintSource.value,
+  { yaw: 0, pitch: 0, time: 0 }
+));
+const isImprintBare = computed(() => supportsImprint.value
+  && bareVariant.value === "imprint"
+  && Boolean(imprintResult.value));
+const bareSketch = computed(() => isImprintBare.value
+  ? Object.freeze({ id: imprintResult.value.id, code: imprintResult.value.code })
+  : canonicalSketch.value);
+const bareCodeLength = computed(() => bareSketch.value.code.length);
+const savedImprintRecord = computed(() => geneticImprintResult.value
+  ? savedEntityRecords.value.find(record => record.code === geneticImprintResult.value.code)
+  : null);
+const nextEntityLabel = computed(() => `P${nextMutationNumber(savedEntityRecords.value)}`);
+const bareRunnerLabel = computed(() => selectedForm.value.sketch
+  ? `${selectedForm.value.title}: исходный p5.js-скетч без преобразований`
+  : isImprintBare.value
+    ? `${selectedForm.value.title}: исполняемый отпечаток текущего состояния SPA`
+    : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
+const bareLead = computed(() => selectedForm.value.sketch
+  ? "Исходный p5.js-код выполняется изолированно и без глубины, формульного цвета или управления лаборатории."
+  : isImprintBare.value
+    ? "Исполняемый отпечаток переносит в автономный p5.js-код текущую фазу, пространственную позу, параметры и формульный цвет SPA."
+    : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
 const primaryControls = computed(() => selectedForm.value.primaryControls);
 const advancedControls = computed(() => selectedForm.value.advancedControls);
 const pointStatus = computed(() => `#${formNumber(selectedForm.value)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`);
@@ -62,7 +160,13 @@ function formNumber(form) {
 }
 
 function basePresetLabel(form) {
+  if (form.savedRecord) return "Мутация";
   return form.sketch ? "Original" : "Синтез";
+}
+
+function theoryTarget(form) {
+  if (form.savedRecord) return "/theory#chronophore";
+  return form.sketch ? "/theory" : `/theory#${form.id}`;
 }
 
 function formatValue(control, value) {
@@ -95,13 +199,16 @@ function replaceReactive(target, source) {
 function reset() {
   const form = selectedForm.value;
   replaceReactive(settings, form.defaults);
-  replaceReactive(layers, spatialLayerDefaults(form));
-  resetColor();
+  replaceReactive(layers, form.savedLayers || spatialLayerDefaults(form));
+  if (form.savedColor) Object.assign(color, form.savedColor);
+  else resetColor();
   spaPaused.value = false;
   invertOrbitY.value = true;
   preset.value = basePresetLabel(form);
-  canvas.value?.resetTime();
-  canvas.value?.resetView();
+  spaSnapshot.value = form.savedPose || null;
+  imprintSnapshot.value = null;
+  bareVariant.value = "canonical";
+  canvas.value?.restoreState(spaSnapshot.value);
 }
 
 function frontView() {
@@ -131,6 +238,12 @@ function announceStimulus() {
   reactionTimer = window.setTimeout(() => { reactionMessage.value = ""; }, 1800);
 }
 
+function announceMutation(message) {
+  mutationMessage.value = message;
+  window.clearTimeout(mutationTimer);
+  mutationTimer = window.setTimeout(() => { mutationMessage.value = ""; }, 3200);
+}
+
 function randomStep(min, max, step) {
   const steps = Math.round((max - min) / step);
   return min + Math.floor(Math.random() * (steps + 1)) * step;
@@ -143,9 +256,55 @@ function randomize() {
   preset.value = "Случайный";
 }
 
+function captureImprint() {
+  if (!supportsImprint.value) return;
+  const pose = canvas.value?.snapshot() || spaSnapshot.value || { yaw: 0, pitch: 0, time: 0 };
+  spaSnapshot.value = { ...pose };
+  imprintSnapshot.value = {
+    settings: { ...settings },
+    layers: { ...layers },
+    color: { ...color },
+    pose: { ...pose }
+  };
+  bareVariant.value = "imprint";
+}
+
+function setBareVariant(variant) {
+  if (variant === "imprint" && supportsImprint.value) {
+    if (!imprintSnapshot.value) captureImprint();
+    bareVariant.value = imprintResult.value ? "imprint" : "canonical";
+  } else {
+    bareVariant.value = "canonical";
+  }
+  barePaused.value = false;
+}
+
+function saveImprint() {
+  const imprint = geneticImprintResult.value;
+  if (!imprint?.hasGeneticMutation || savedImprintRecord.value) return;
+  const source = imprintSource.value;
+  const record = createSavedEntityRecord({
+    number: nextMutationNumber(savedEntityRecords.value),
+    parent: selectedForm.value,
+    imprint,
+    pose: source.pose,
+    settings: source.settings,
+    layers: source.layers,
+    color: source.color
+  });
+  const nextRecords = [...savedEntityRecords.value, record];
+  if (!writeSavedEntities(nextRecords)) {
+    announceMutation("Не удалось сохранить мутацию в этом браузере.");
+    return;
+  }
+  savedEntityRecords.value = nextRecords;
+  announceMutation(`${record.title} закреплён и добавлен в список мутаций.`);
+}
+
 function setViewMode(mode, updateRoute = true) {
   const nextMode = readLabViewMode(mode);
   if (nextMode === viewMode.value) return;
+  if (nextMode === LAB_VIEW_MODE.bare) captureImprint();
   viewMode.value = nextMode;
 
   if (updateRoute) {
@@ -155,16 +314,19 @@ function setViewMode(mode, updateRoute = true) {
 }
 
 async function selectForm(formId, updateRoute = true) {
-  const form = spatialFormById(formId);
+  const form = formById(formId);
   if (form.id === selectedFormId.value) return;
 
   selectedFormId.value = form.id;
   replaceReactive(settings, form.defaults);
-  replaceReactive(layers, spatialLayerDefaults(form));
+  replaceReactive(layers, form.savedLayers || spatialLayerDefaults(form));
+  if (form.savedColor) Object.assign(color, form.savedColor);
+  spaSnapshot.value = form.savedPose || null;
+  imprintSnapshot.value = null;
+  bareVariant.value = "canonical";
   preset.value = basePresetLabel(form);
   await nextTick();
-  canvas.value?.resetTime();
-  canvas.value?.resetView();
+  canvas.value?.restoreState(spaSnapshot.value);
 
   if (updateRoute) {
     const query = { ...route.query };
@@ -178,7 +340,7 @@ watch(
   () => route.query.form,
   value => {
     const formId = Array.isArray(value) ? value[0] : value;
-    const form = spatialFormById(formId);
+    const form = formById(formId);
     if (form.id !== selectedFormId.value) selectForm(form.id, false);
   }
 );
@@ -191,7 +353,10 @@ watch(
   }
 );
 
-onBeforeUnmount(() => window.clearTimeout(reactionTimer));
+onBeforeUnmount(() => {
+  window.clearTimeout(reactionTimer);
+  window.clearTimeout(mutationTimer);
+});
 </script>
 
 <template>
@@ -231,6 +396,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
           :layers="layers"
           :color="color"
           :color-evaluator="colorEvaluator"
+          :initial-state="spaSnapshot"
           :invert-y="invertOrbitY"
           :paused="spaPaused"
           @stimulate="announceStimulus"
@@ -259,13 +425,13 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
         </div>
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot" :class="{ raw: isBareMode }"></span>{{ isBareMode ? barePaused ? "pause / raw" : "raw / p5.js" : spaPaused ? "pause" : "live" }}</span>
-          <span v-if="isBareMode">{{ bareCodeLength }} chars · isolated · no SPA</span>
-          <span v-else>{{ selectedForm.supportsStimulus ? "tap / provoke · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
+          <span v-if="isBareMode">{{ bareCodeLength }} chars · {{ isImprintBare ? "SPA imprint" : "canonical" }} · isolated</span>
+          <span v-else>{{ selectedForm.supportsStimulus ? "button / reaction · drag / orbit" : "drag / orbit" }} · {{ pointStatus }}</span>
         </div>
         <p class="sr-only" aria-live="polite">{{ reactionMessage }}</p>
       </div>
 
-      <aside class="control-panel" :aria-label="isBareMode ? 'Сведения о голом скетче' : 'Параметры визуализации'">
+      <aside :key="`${selectedForm.id}-${viewMode}`" class="control-panel" :aria-label="isBareMode ? 'Сведения о голом скетче' : 'Параметры визуализации'">
         <div class="form-picker">
           <p class="panel-kicker">Форма / синтез</p>
           <div class="form-choice-groups">
@@ -292,40 +458,82 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
               v-if="selectedForm.sketch"
               :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }"
             >оригинал и код →</RouterLink>
-            <RouterLink v-else :to="`/theory#${selectedForm.id}`">модель и геном →</RouterLink>
+            <RouterLink v-else :to="theoryTarget(selectedForm)">модель и геном →</RouterLink>
           </p>
         </div>
 
         <div v-if="isBareMode" class="bare-mode-panel">
           <div>
-            <p class="panel-kicker">RAW / ISOLATED P5.JS</p>
-            <h2>Код без лаборатории</h2>
+            <p class="panel-kicker">RAW / GENOTYPE FEEDBACK</p>
+            <h2>{{ isImprintBare ? "Отпечаток SPA" : "Код без лаборатории" }}</h2>
             <p>{{ bareLead }}</p>
+          </div>
+
+          <div v-if="supportsImprint" class="imprint-mode-switch" role="group" aria-label="Версия голого генома">
+            <button type="button" :aria-pressed="!isImprintBare" @click="setBareVariant('canonical')">Исходный геном</button>
+            <button type="button" :aria-pressed="isImprintBare" :disabled="!imprintResult" @click="setBareVariant('imprint')">Отпечаток SPA</button>
           </div>
 
           <dl class="bare-mode-facts">
             <div><dt>Исполнение</dt><dd>p5.js в изолированном iframe</dd></div>
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} символов</dd></div>
-            <div><dt>Визуальные надстройки</dt><dd>отсутствуют</dd></div>
+            <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isImprintBare ? "поза, параметры и цвет SPA" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
+
+          <div v-if="isImprintBare" class="genome-comparison">
+            <div class="genome-lineage" aria-label="Переход от исходного генома к отпечатку">
+              <span><small>Ядро</small>{{ canonicalSketch.code.length }}</span>
+              <i aria-hidden="true">→</i>
+              <span><small>Отпечаток</small>{{ imprintResult.characters }}</span>
+            </div>
+            <p class="comparison-label">Проекция · не наследуется как мутация</p>
+            <ul class="mutation-list view-state-list" aria-label="Состояние точки зрения">
+              <li v-for="item in imprintResult.viewState" :key="item.key">
+                <span>{{ item.label }}</span>
+                <code>{{ item.value }}</code>
+              </li>
+            </ul>
+            <p class="comparison-label">Генетические изменения</p>
+            <ul v-if="imprintResult.mutations.length" class="mutation-list" aria-label="Изменения генома">
+              <li v-for="mutation in imprintResult.mutations" :key="mutation.key">
+                <span>{{ mutation.label }}</span>
+                <code>{{ mutation.before }} → {{ mutation.after }}</code>
+              </li>
+            </ul>
+            <p v-else class="no-mutation-note">Ракурс и фаза перенесены в RAW, но геном не изменён.</p>
+            <details class="imprint-code-details">
+              <summary>Итоговый исполняемый код</summary>
+              <pre><code>{{ imprintResult.code }}</code></pre>
+            </details>
+          </div>
 
           <div class="bare-mode-actions">
             <div class="bare-transport">
               <button class="button primary" type="button" @click="restartBareSketch">Перезапустить</button>
               <button class="button" type="button" :aria-pressed="barePaused" @click="toggleBareMotion">{{ barePaused ? "Продолжить" : "Приостановить" }}</button>
             </div>
+            <button
+              v-if="isImprintBare"
+              class="button imprint-save"
+              :class="{ primary: geneticImprintResult?.hasGeneticMutation && !savedImprintRecord }"
+              type="button"
+              :disabled="Boolean(savedImprintRecord) || !geneticImprintResult?.hasGeneticMutation"
+              @click="saveImprint"
+            >{{ savedImprintRecord ? `Уже сохранён как ${savedImprintRecord.displayNumber}` : geneticImprintResult?.hasGeneticMutation ? `Запечатлеть как ${nextEntityLabel}` : "Нет генетических изменений" }}</button>
+            <p v-if="mutationMessage" class="mutation-message" role="status">{{ mutationMessage }}</p>
             <RouterLink
               v-if="selectedForm.sketch"
               class="text-link"
               :to="{ name: 'sketch', params: { id: selectedForm.sketch.id } }"
             >Открыть оригинал и код →</RouterLink>
             <template v-else>
-              <RouterLink class="text-link" :to="`/theory#${selectedForm.id}`">Открыть геном и LaTeX →</RouterLink>
+              <RouterLink class="text-link" :to="theoryTarget(selectedForm)">Открыть геном и LaTeX →</RouterLink>
               <RouterLink v-if="selectedForm.id === 'pelagion'" class="text-link" to="/community#pelagion">Карта происхождения →</RouterLink>
             </template>
           </div>
 
-          <p class="bare-mode-note"><strong>Важно:</strong> переключение не сравнивает «плохую» и «улучшенную» версии. Оно разделяет исходное кодовое высказывание и его исследовательское разворачивание в SPA.</p>
+          <p class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>
 
         <template v-else>
@@ -424,7 +632,7 @@ onBeforeUnmount(() => window.clearTimeout(reactionTimer));
             </div>
           </details>
 
-          <RouterLink class="text-link" :to="selectedForm.sketch ? '/theory' : `/theory#${selectedForm.id}`">Открыть код и математическую модель →</RouterLink>
+          <RouterLink class="text-link" :to="theoryTarget(selectedForm)">Открыть код и математическую модель →</RouterLink>
         </template>
       </aside>
     </div>

@@ -106,6 +106,10 @@ function normalizeExpression(expression) {
   return { normalized: tokens.join(" "), variables, names };
 }
 
+export function normalizeFormulaExpression(expression) {
+  return normalizeExpression(expression);
+}
+
 export function clampUnit(value) {
   if (!Number.isFinite(value)) return 0.5;
   return Math.min(1, Math.max(0, value));

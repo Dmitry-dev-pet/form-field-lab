@@ -544,6 +544,31 @@ a:focus-visible {
   line-height: 1.65;
 }
 
+.imprint-mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.imprint-mode-switch button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.025);
+  font-size: 0.67rem;
+  font-weight: 650;
+}
+
+.imprint-mode-switch button[aria-pressed="true"] {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  background: rgba(88,255,231,0.055);
+}
+
+.imprint-mode-switch button:disabled { cursor: not-allowed; opacity: 0.45; }
+
 .bare-mode-facts {
   display: grid;
   margin: 0;
@@ -576,6 +601,115 @@ a:focus-visible {
 .bare-mode-actions { display: grid; gap: 3px; }
 .bare-transport { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 7px; }
 .bare-mode-actions .text-link { margin-top: 0; }
+.imprint-save { width: 100%; margin-bottom: 8px; }
+
+.mutation-message {
+  margin: 1px 0 8px;
+  color: var(--acid);
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.genome-comparison {
+  display: grid;
+  gap: 14px;
+}
+
+.genome-lineage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.genome-lineage span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--cyan);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.73rem;
+}
+
+.genome-lineage small {
+  color: var(--quiet);
+  font-size: 0.51rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.genome-lineage i { color: var(--quiet); font-style: normal; }
+
+.comparison-label {
+  margin: 2px 0 -7px;
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mutation-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.mutation-list li {
+  display: grid;
+  grid-template-columns: minmax(92px, 0.7fr) minmax(0, 1.3fr);
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--quiet);
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.mutation-list code {
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  text-align: right;
+}
+
+.view-state-list code { color: var(--cyan); }
+
+.no-mutation-note {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--quiet);
+  font-size: 0.64rem;
+  line-height: 1.5;
+}
+
+.imprint-code-details {
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+.imprint-code-details pre {
+  max-height: 220px;
+  margin: 0;
+  padding: 13px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  color: var(--cyan);
+  background: #090b09;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.58rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 .bare-mode-note {
   margin: 0;
