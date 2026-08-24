@@ -1,6 +1,8 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import { PELAGION_GENOME_SKETCH } from "./pelagionGenome.js";
+import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
+import { MESH_RENDER_MODES } from "../lib/meshTopology.js";
 
 const control = (key, label, min, max, step, options = {}) => ({
   key, label, min, max, step, ...options
@@ -111,6 +113,37 @@ function pulsatorPoint(index, time, settings, layers, target) {
 }
 
 const TAU = Math.PI * 2;
+
+function sphereGridPoint(index, time, settings, layers, target) {
+  const columns = Math.max(3, Math.round(settings.columns));
+  const rows = Math.max(2, Math.round(settings.rows));
+  const row = Math.floor(index / columns);
+  const column = index % columns;
+  const u = TAU * column / columns
+    + (layers.rotation ? time * settings.rotation : 0);
+  const v = Math.PI * row / (rows - 1);
+  const wave = layers.wave
+    ? settings.wave * Math.sin(
+      settings.waveFrequency * u
+      + settings.waveVertical * v
+      - time * settings.waveSpeed
+    )
+    : 0;
+  const radius = settings.radius + wave;
+  const ringRadius = radius * Math.sin(v);
+
+  target.x = ringRadius * Math.cos(u) + 200;
+  target.y = radius * Math.cos(v) + 200;
+  target.z = ringRadius * Math.sin(u) * settings.depth;
+  target.parameter = v / Math.PI;
+  target.k = Math.sin(v);
+  target.e = Math.cos(v);
+  target.d = target.z;
+  target.c = u;
+  target.branch = column;
+  target.forms = columns;
+  return target;
+}
 
 function pelagionSpine(parameter, time, settings, layers, interaction, target) {
   const u = Math.max(0, Math.min(1, parameter));
@@ -488,6 +521,58 @@ export const spatialForms = Object.freeze([
       eFrequencyB: [1, 4, 0.25]
     },
     evaluate: pulsatorPoint
+  },
+  {
+    id: "sphere-grid",
+    displayNumber: "M0",
+    sketchNumber: null,
+    shortLabel: "Сетчатый шар",
+    title: "Сетчатый шар",
+    association: "опыт · UV-сетка · рёбра без физики",
+    description: "Эталонная сфера показывает, как те же вычисляемые вершины превращаются в связную поверхность. Рёбра задаются соседством индексов, а движение остаётся чистой формулой.",
+    origin: "mesh-study",
+    genomeSketch: SPHERE_GRID_GENOME_SKETCH,
+    mesh: Object.freeze({
+      columnsKey: "columns",
+      rowsKey: "rows",
+      wrapColumns: true
+    }),
+    renderModes: MESH_RENDER_MODES,
+    timeStep: 0.012,
+    defaults: {
+      speed: 1, radius: 118, depth: 1,
+      columns: 32, rows: 16, rotation: 0.8,
+      wave: 0, waveFrequency: 3, waveVertical: 2, waveSpeed: 1.4,
+      lineWidth: 0.72, renderMode: "hybrid", alpha: 106,
+      backgroundColor: "#05090c"
+    },
+    primaryControls: [
+      speed,
+      control("radius", "Радиус", 55, 155, 1),
+      depth,
+      control("columns", "Меридианы", 12, 64, 1),
+      control("rows", "Параллели", 8, 40, 1),
+      control("rotation", "Вращение формулы", 0, 2.5, 0.05, { digits: 2 }),
+      control("wave", "Отклонение от шара", 0, 28, 0.5, { digits: 1 }),
+      alpha
+    ],
+    advancedControls: [
+      control("waveFrequency", "Волн по долготе", 1, 12, 1),
+      control("waveVertical", "Волн по широте", 0, 8, 1),
+      control("waveSpeed", "Скорость волны", 0, 4, 0.1, { digits: 1 }),
+      control("lineWidth", "Толщина рёбер", 0.25, 2, 0.05, { digits: 2 })
+    ],
+    layers: [
+      { key: "rotation", label: "Вращение формулы", default: true },
+      { key: "wave", label: "Фазовая волна", default: true }
+    ],
+    randomRanges: {
+      speed: [0.4, 1.8, 0.05], radius: [82, 138, 1], depth: [0.6, 1.5, 0.05],
+      columns: [18, 52, 1], rows: [10, 30, 1], rotation: [0.25, 1.7, 0.05],
+      wave: [0, 18, 0.5], waveFrequency: [2, 9, 1], waveVertical: [0, 6, 1],
+      waveSpeed: [0.4, 3, 0.1], lineWidth: [0.4, 1.35, 0.05], alpha: [65, 165, 1]
+    },
+    evaluate: sphereGridPoint
   },
   {
     id: "pelagion",

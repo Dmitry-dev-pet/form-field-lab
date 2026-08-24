@@ -10,6 +10,11 @@ import {
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT
 } from "../data/pelagionGenome.js";
+import {
+  SPHERE_GRID_GENOME,
+  SPHERE_GRID_GENOME_CHARACTERS,
+  SPHERE_GRID_GENOME_LIMIT
+} from "../data/sphereGridGenome.js";
 
 const latexSource = String.raw`\begin{aligned}
 y_i &= \frac{i}{995}, \\
@@ -105,6 +110,19 @@ e^{-\kappa\Delta(u,u_0+v_e\tau)^2}
 \right].
 \end{aligned}`;
 
+const sphereGridLatexSource = String.raw`\begin{aligned}
+u_c &= 2\pi\frac{c}{C}+\omega t,
+& v_r &= \pi\frac{r}{R-1},\\
+\rho(u,v,t) &= \rho_0+A\sin(mu+nv-\nu t),\\
+\mathbf P_{r,c}(t) &=
+\begin{bmatrix}
+\rho\sin v_r\cos u_c\\
+\rho\cos v_r\\
+\lambda\rho\sin v_r\sin u_c
+\end{bmatrix},\\
+\mathcal E &= \{(r,c)\leftrightarrow(r,c+1),\ (r,c)\leftrightarrow(r+1,c)\}.
+\end{aligned}`;
+
 const kernelSource = `const ORIGINAL = {
   speed: 1, forms: 3, radius: 79, height: 99, depth: 1,
   waveFrequency: 31, pulse: 3, pointCount: 20000,
@@ -153,8 +171,10 @@ const defaultCopyLabels = {
   movement: "Копировать TeX",
   pelagion: "Копировать TeX",
   chronophore: "Копировать TeX",
+  sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   chronophoreSeed: "Копировать 280",
+  sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
 const copyLabels = ref({ ...defaultCopyLabels });
@@ -377,9 +397,55 @@ onMounted(async () => {
         </div>
       </article>
 
+      <article id="sphere-grid" class="theory-card pelagion-theory">
+        <header class="card-header">
+          <div><span>06 / MESH BASELINE</span><h2>Сетчатый шар: вершины и связи</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('sphereGrid', sphereGridLatexSource)">{{ copyLabels.sphereGrid }}</button>
+            <button class="button" type="button" @click="copy('sphereGridSeed', SPHERE_GRID_GENOME)">{{ copyLabels.sphereGridSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Это контрольный опыт, а не новая биологическая сущность. Индексы <code>r</code> и <code>c</code> образуют регулярную UV-сетку: первый выбирает широту, второй — долготу. Координаты каждой вершины по-прежнему вычисляются заново из формулы на каждом кадре.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_c &amp;=2\pi\frac{c}{C}+\omega t,
+              &amp;v_r &amp;=\pi\frac{r}{R-1},\\
+              \rho &amp;=\rho_0+A\sin(mu_c+nv_r-\nu t),\\
+              \mathbf P_{r,c} &amp;=
+              \begin{bmatrix}
+              \rho\sin v_r\cos u_c\\
+              \rho\cos v_r\\
+              \lambda\rho\sin v_r\sin u_c
+              \end{bmatrix}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Сетка не добавляет сил, масс или пружин. Она лишь соединяет индекс <code>(r,c)</code> с <code>(r,c+1)</code> и <code>(r+1,c)</code>; долгота замыкается по модулю <code>C</code>. Поэтому режимы «Точки», «Сетка» и «Вместе» показывают одну и ту же геометрию.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Автономная сеточная формула</span>
+              <strong>{{ SPHERE_GRID_GENOME_CHARACTERS }} / {{ SPHERE_GRID_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ SPHERE_GRID_GENOME }}</code></pre>
+            <p>RAW-версия укладывает сферу, соседние рёбра, автоматический поворот и ручную 3D-проекцию в один пост. SPA использует ту же параметризацию, добавляя только управление камерой, режим отображения и формульный цвет.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid' } }">Открыть сетчатый шар →</RouterLink>
+              <RouterLink :to="{ name: 'lab', query: { form: 'sphere-grid', view: 'bare' } }">Запустить RAW-формулу →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Что проверяет опыт.</strong> Рёбра можно добавить к формульным точкам без отдельной физики и без долговременного массива состояния. Изменение формулы поверхности автоматически перестраивает и вершины, и всю сетку.</p>
+        </div>
+      </article>
+
       <article id="pelagion" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>06 / SYNTHETIC ORGANISM</span><h2>Пелагион: геном и фенотип</h2></div>
+          <div><span>07 / SYNTHETIC ORGANISM</span><h2>Пелагион: геном и фенотип</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('pelagion', pelagionLatexSource)">{{ copyLabels.pelagion }}</button>
             <button class="button" type="button" @click="copy('seed', PELAGION_GENOME)">{{ copyLabels.seed }}</button>
@@ -438,7 +504,7 @@ onMounted(async () => {
 
       <article id="chronophore" class="theory-card pelagion-theory chronophore-theory">
         <header class="card-header">
-          <div><span>07 / PHASE ORGANISM</span><h2>Хронофор: живой узел времени</h2></div>
+          <div><span>08 / PHASE ORGANISM</span><h2>Хронофор: живой узел времени</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('chronophore', chronophoreLatexSource)">{{ copyLabels.chronophore }}</button>
             <button class="button" type="button" @click="copy('chronophoreSeed', CHRONOPHORE_GENOME)">{{ copyLabels.chronophoreSeed }}</button>

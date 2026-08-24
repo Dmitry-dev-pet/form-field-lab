@@ -8,7 +8,7 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
   const synthetic = spatialForms.filter(form => !form.sketch);
 
   assert.deepEqual(attributed.map(form => form.sketchNumber), [5, 1, 6]);
-  assert.deepEqual(synthetic.map(form => form.id), ["pelagion", "chronophore"]);
+  assert.deepEqual(synthetic.map(form => form.id), ["sphere-grid", "pelagion", "chronophore"]);
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
 
@@ -19,6 +19,27 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     assert.ok(form.primaryControls.some(control => control.key === "depth"));
     assert.ok(form.layers.every(layer => Object.hasOwn(spatialLayerDefaults(form), layer.key)));
     assert.ok(form.sketch || form.genomeSketch, `${form.id}: RAW source is missing`);
+  }
+});
+
+test("the mesh baseline stays an exact sphere before deformation", () => {
+  const form = spatialForms.find(item => item.id === "sphere-grid");
+  const layers = spatialLayerDefaults(form);
+  const target = {};
+  const vertexCount = form.defaults.columns * form.defaults.rows;
+
+  assert.equal(form.defaults.wave, 0);
+  assert.equal(form.defaults.renderMode, "hybrid");
+  assert.equal(vertexCount, 512);
+
+  for (let index = 0; index < vertexCount; index += 17) {
+    form.evaluate(index, 0.7, form.defaults, layers, target);
+    const radius = Math.hypot(
+      target.x - 200,
+      target.y - 200,
+      target.z / form.defaults.depth
+    );
+    assert.ok(Math.abs(radius - form.defaults.radius) < 1e-9);
   }
 });
 

@@ -19,6 +19,7 @@ import {
   mergeLabViewModeQuery,
   readLabViewMode
 } from "../lib/labViewMode.js";
+import { readMeshRenderMode, resolveGridDimensions } from "../lib/meshTopology.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -67,9 +68,14 @@ const formGroups = computed(() => {
     {
       id: "synthetic",
       label: "Синтетические сущности",
-      forms: spatialForms.filter(form => !form.sketch)
+      forms: spatialForms.filter(form => !form.sketch && form.origin !== "mesh-study")
+    },
+    {
+      id: "mesh-studies",
+      label: "Сеточные опыты",
+      forms: spatialForms.filter(form => form.origin === "mesh-study")
     }
-  ];
+  ].filter(group => group.forms.length);
   if (savedMutationForms.value.length) {
     groups.push({
       id: "mutations",
@@ -152,7 +158,14 @@ const bareLead = computed(() => selectedForm.value.sketch
     : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
 const primaryControls = computed(() => selectedForm.value.primaryControls);
 const advancedControls = computed(() => selectedForm.value.advancedControls);
-const pointStatus = computed(() => `#${formNumber(selectedForm.value)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`);
+const pointStatus = computed(() => {
+  const form = selectedForm.value;
+  if (form.mesh) {
+    const { vertexCount } = resolveGridDimensions(form.mesh, settings);
+    return `#${formNumber(form)} · ${vertexCount.toLocaleString("ru-RU")} узлов · 400²`;
+  }
+  return `#${formNumber(form)} · ${settings.pointCount.toLocaleString("ru-RU")} pts · 400²`;
+});
 
 function formNumber(form) {
   if (form.displayNumber) return form.displayNumber;
@@ -189,6 +202,11 @@ function changed() {
 function toggleLayer(key) {
   layers[key] = !layers[key];
   preset.value = "Анатомия";
+}
+
+function setRenderMode(mode) {
+  settings.renderMode = readMeshRenderMode(mode);
+  changed();
 }
 
 function replaceReactive(target, source) {
@@ -540,6 +558,22 @@ onBeforeUnmount(() => {
           <div class="panel-title-row">
             <h2>Параметры</h2>
             <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
+          </div>
+
+          <div v-if="selectedForm.renderModes" class="mesh-mode-field">
+            <div class="mesh-mode-title">
+              <strong>Отображение</strong>
+              <small>те же вершины, разные связи</small>
+            </div>
+            <div class="mesh-mode-switch" role="group" aria-label="Отображение сеточной формы">
+              <button
+                v-for="mode in selectedForm.renderModes"
+                :key="mode.id"
+                type="button"
+                :aria-pressed="settings.renderMode === mode.id"
+                @click="setRenderMode(mode.id)"
+              >{{ mode.label }}</button>
+            </div>
           </div>
 
           <div class="control-list">

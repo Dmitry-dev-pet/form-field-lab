@@ -758,6 +758,62 @@ a:focus-visible {
   color: var(--muted);
 }
 
+.mesh-mode-field {
+  display: grid;
+  gap: 9px;
+  margin: -3px 0 20px;
+}
+
+.mesh-mode-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.77rem;
+}
+
+.mesh-mode-title small {
+  color: var(--quiet);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.53rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mesh-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(0,0,0,0.16);
+}
+
+.mesh-mode-switch button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 5px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--quiet);
+  background: transparent;
+  font-size: 0.64rem;
+  font-weight: 650;
+}
+
+.mesh-mode-switch button[aria-pressed="true"] {
+  border-color: rgba(215,255,88,0.32);
+  color: var(--acid);
+  background: rgba(215,255,88,0.07);
+}
+
+.mesh-mode-switch button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
 .control-list,
 .advanced-controls { display: grid; gap: 16px; }
 

@@ -1,6 +1,12 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { buildColorPalette } from "../lib/colorFormula.js";
+import {
+  forEachGridEdge,
+  MESH_RENDER_MODE,
+  readMeshRenderMode,
+  resolveGridDimensions
+} from "../lib/meshTopology.js";
 import {
   clampOrbitPitch,
   createOrbitRotation,
@@ -45,6 +51,9 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const orbitRadiansPerPixel = 0.008;
 const inertiaPerFrame = 0.9;
 const colorBuckets = Array.from({ length: 24 }, () => []);
+const edgeBuckets = Array.from({ length: 24 }, () => []);
+let projectedMesh = new Float32Array(0);
+let meshColorBuckets = new Uint8Array(0);
 const formPoint = {
   x: 0, y: 0, z: 0, parameter: 0, k: 0, e: 0, d: 0, c: 0,
   branch: 0, forms: 1
@@ -53,6 +62,138 @@ const colorScope = {
   i: 0, y: 0, k: 0, e: 0, d: 0, c: 0, t: 0, branch: 0, forms: 0,
   x: 0, Y: 0, z: 0, u: 0, r: 0, angle: 0, mix: 0
 };
+
+const canvasAriaLabel = computed(() => {
+  const geometry = props.form.mesh
+    ? `сеточная пространственная композиция в режиме ${readMeshRenderMode(props.settings.renderMode)}`
+    : "пространственная анимированная композиция из точек";
+  const coloring = props.color.mode === "formula" ? "формульно окрашенная" : "однотонная";
+  return `${props.form.title}: ${coloring} ${geometry}. Проведите пальцем или используйте стрелки, чтобы изменить только угол зрения. Инверсия Y ${props.invertY ? "включена" : "выключена"}.`;
+});
+
+function pointColorBucket(index, point, pointCount, formulaColor) {
+  if (!formulaColor) return 0;
+  colorScope.i = index;
+  colorScope.y = point.parameter;
+  colorScope.k = point.k;
+  colorScope.e = point.e;
+  colorScope.d = point.d;
+  colorScope.c = point.c;
+  colorScope.t = time;
+  colorScope.branch = point.branch;
+  colorScope.forms = point.forms;
+  colorScope.x = point.x;
+  colorScope.Y = point.y;
+  colorScope.z = point.z;
+  colorScope.u = index / Math.max(1, pointCount - 1);
+  colorScope.r = Math.hypot(point.x - 200, point.y - 200);
+  colorScope.angle = Math.atan2(point.y - 200, point.x - 200);
+  colorScope.mix = 0;
+  return Math.round(props.colorEvaluator(colorScope) * (colorBuckets.length - 1));
+}
+
+function drawPointBuckets(palette, size = 1) {
+  colorBuckets.forEach((bucket, bucketIndex) => {
+    if (!bucket.length) return;
+    context.fillStyle = palette[bucketIndex];
+    for (let offset = 0; offset < bucket.length; offset += 2) {
+      context.fillRect(bucket[offset], bucket[offset + 1], size, size);
+    }
+  });
+}
+
+function renderPointCloud(form, settings, layers, orbitRotation, palette, formulaColor) {
+  const pointCount = settings.pointCount;
+  for (let index = pointCount; index--;) {
+    form.evaluate(index, time, settings, layers, formPoint, interaction);
+    if (!Number.isFinite(formPoint.x)
+      || !Number.isFinite(formPoint.y)
+      || !Number.isFinite(formPoint.z)) continue;
+
+    rotateSpatialPoint(
+      formPoint.x - 200,
+      formPoint.y - 200,
+      formPoint.z,
+      orbitRotation,
+      rotatedPoint
+    );
+    const bucketIndex = pointColorBucket(index, formPoint, pointCount, formulaColor);
+    colorBuckets[bucketIndex].push(rotatedPoint.x + 200, rotatedPoint.y + 200);
+  }
+  drawPointBuckets(palette);
+}
+
+function ensureMeshBuffers(vertexCount) {
+  if (projectedMesh.length !== vertexCount * 2) {
+    projectedMesh = new Float32Array(vertexCount * 2);
+    meshColorBuckets = new Uint8Array(vertexCount);
+  }
+}
+
+function drawEdgeBuckets(palette, lineWidth) {
+  context.lineWidth = lineWidth;
+  edgeBuckets.forEach((bucket, bucketIndex) => {
+    if (!bucket.length) return;
+    context.beginPath();
+    for (let offset = 0; offset < bucket.length; offset += 4) {
+      context.moveTo(bucket[offset], bucket[offset + 1]);
+      context.lineTo(bucket[offset + 2], bucket[offset + 3]);
+    }
+    context.strokeStyle = palette[bucketIndex];
+    context.stroke();
+  });
+}
+
+function renderMesh(form, settings, layers, orbitRotation, palette, formulaColor) {
+  const dimensions = resolveGridDimensions(form.mesh, settings);
+  const { vertexCount } = dimensions;
+  const renderMode = readMeshRenderMode(settings.renderMode);
+  const showPoints = renderMode !== MESH_RENDER_MODE.wireframe;
+  const showEdges = renderMode !== MESH_RENDER_MODE.points;
+  ensureMeshBuffers(vertexCount);
+
+  for (let index = 0; index < vertexCount; index++) {
+    form.evaluate(index, time, settings, layers, formPoint, interaction);
+    const offset = index * 2;
+    if (!Number.isFinite(formPoint.x)
+      || !Number.isFinite(formPoint.y)
+      || !Number.isFinite(formPoint.z)) {
+      projectedMesh[offset] = Number.NaN;
+      projectedMesh[offset + 1] = Number.NaN;
+      continue;
+    }
+
+    rotateSpatialPoint(
+      formPoint.x - 200,
+      formPoint.y - 200,
+      formPoint.z,
+      orbitRotation,
+      rotatedPoint
+    );
+    projectedMesh[offset] = rotatedPoint.x + 200;
+    projectedMesh[offset + 1] = rotatedPoint.y + 200;
+    const bucketIndex = pointColorBucket(index, formPoint, vertexCount, formulaColor);
+    meshColorBuckets[index] = bucketIndex;
+    if (showPoints) {
+      colorBuckets[bucketIndex].push(projectedMesh[offset], projectedMesh[offset + 1]);
+    }
+  }
+
+  if (showEdges) {
+    forEachGridEdge(form.mesh, dimensions, (first, second) => {
+      const firstOffset = first * 2;
+      const secondOffset = second * 2;
+      const firstX = projectedMesh[firstOffset];
+      const firstY = projectedMesh[firstOffset + 1];
+      const secondX = projectedMesh[secondOffset];
+      const secondY = projectedMesh[secondOffset + 1];
+      if (![firstX, firstY, secondX, secondY].every(Number.isFinite)) return;
+      edgeBuckets[meshColorBuckets[first]].push(firstX, firstY, secondX, secondY);
+    });
+    drawEdgeBuckets(palette, Number(settings.lineWidth) || 0.72);
+  }
+  if (showPoints) drawPointBuckets(palette, renderMode === MESH_RENDER_MODE.points ? 1.5 : 1.2);
+}
 
 function render() {
   if (!context) return;
@@ -67,7 +208,6 @@ function render() {
   clearNextFrame = false;
 
   const formulaColor = props.color.mode === "formula";
-  const formulaVariables = props.colorEvaluator.variables || new Set();
   const palette = buildColorPalette(
     props.color.colorA,
     formulaColor ? props.color.colorB : props.color.colorA,
@@ -75,63 +215,11 @@ function render() {
     colorBuckets.length
   );
   colorBuckets.forEach(bucket => { bucket.length = 0; });
-  if (!formulaColor) context.fillStyle = palette[0];
+  edgeBuckets.forEach(bucket => { bucket.length = 0; });
 
   const orbitRotation = createOrbitRotation(yaw, pitch);
-
-  for (let index = settings.pointCount; index--;) {
-    form.evaluate(index, time, settings, layers, formPoint, interaction);
-    if (!Number.isFinite(formPoint.x)
-      || !Number.isFinite(formPoint.y)
-      || !Number.isFinite(formPoint.z)) continue;
-
-    rotateSpatialPoint(
-      formPoint.x - 200,
-      formPoint.y - 200,
-      formPoint.z,
-      orbitRotation,
-      rotatedPoint
-    );
-    const projectedX = rotatedPoint.x + 200;
-    const projectedY = rotatedPoint.y + 200;
-
-    if (formulaColor) {
-      colorScope.i = index;
-      colorScope.y = formPoint.parameter;
-      colorScope.k = formPoint.k;
-      colorScope.e = formPoint.e;
-      colorScope.d = formPoint.d;
-      colorScope.c = formPoint.c;
-      colorScope.t = time;
-      colorScope.branch = formPoint.branch;
-      colorScope.forms = formPoint.forms;
-      colorScope.x = formPoint.x;
-      colorScope.Y = formPoint.y;
-      colorScope.z = formPoint.z;
-      if (formulaVariables.has("u")) colorScope.u = index / Math.max(1, settings.pointCount - 1);
-      if (formulaVariables.has("r")) {
-        colorScope.r = Math.hypot(formPoint.x - 200, formPoint.y - 200);
-      }
-      if (formulaVariables.has("angle")) {
-        colorScope.angle = Math.atan2(formPoint.y - 200, formPoint.x - 200);
-      }
-      colorScope.mix = 0;
-      const bucketIndex = Math.round(props.colorEvaluator(colorScope) * (colorBuckets.length - 1));
-      colorBuckets[bucketIndex].push(projectedX, projectedY);
-    } else {
-      context.fillRect(projectedX, projectedY, 1, 1);
-    }
-  }
-
-  if (formulaColor) {
-    colorBuckets.forEach((bucket, bucketIndex) => {
-      if (!bucket.length) return;
-      context.fillStyle = palette[bucketIndex];
-      for (let offset = 0; offset < bucket.length; offset += 2) {
-        context.fillRect(bucket[offset], bucket[offset + 1], 1, 1);
-      }
-    });
-  }
+  if (form.mesh) renderMesh(form, settings, layers, orbitRotation, palette, formulaColor);
+  else renderPointCloud(form, settings, layers, orbitRotation, palette, formulaColor);
 }
 
 function animate(timestamp) {
@@ -325,7 +413,7 @@ defineExpose({ resetTime, resetView, restoreState, snapshot, render, provoke });
     height="400"
     tabindex="0"
     role="img"
-    :aria-label="`${form.title}: пространственная анимированная композиция из ${color.mode === 'formula' ? 'формульно окрашенных' : 'однотонных'} точек. Проведите пальцем или используйте стрелки, чтобы изменить только угол зрения. Инверсия Y ${invertY ? 'включена' : 'выключена'}.`"
+    :aria-label="canvasAriaLabel"
     @pointerdown="beginOrbit"
     @pointermove="moveOrbit"
     @pointerup="finishOrbit"
