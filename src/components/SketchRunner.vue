@@ -48,7 +48,8 @@ function syncViewControls() {
 function reload() {
   if (frame.value) {
     frame.value.srcdoc = runnerDocument(props.sketch.code, {
-      viewModel: props.sketch.viewModel
+      viewModel: props.sketch.viewModel,
+      initialViewState: props.viewState
     });
   }
 }

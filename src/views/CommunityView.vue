@@ -9,14 +9,14 @@ import {
   PELAGION_LINEAGE
 } from "../data/communityDna.js";
 import {
-  PELAGION_GENOME,
-  PELAGION_GENOME_CHARACTERS,
+  PELAGION_LIVING_GENOME,
+  PELAGION_LIVING_GENOME_CHARACTERS,
+  PELAGION_LIVING_GENOME_SKETCH,
   PELAGION_GENOME_LIMIT,
-  PELAGION_GENOME_SKETCH
 } from "../data/pelagionGenome.js";
 
 const copyLabel = ref("Копировать геном");
-const remainingCharacters = PELAGION_GENOME_LIMIT - PELAGION_GENOME_CHARACTERS;
+const remainingCharacters = PELAGION_GENOME_LIMIT - PELAGION_LIVING_GENOME_CHARACTERS;
 const coverage = computed(() => new Set(
   COMMUNITY_GENES.flatMap(gene => gene.authors)
 ).size);
@@ -31,7 +31,7 @@ function signalStyle(value) {
 
 async function copyGenome() {
   try {
-    await navigator.clipboard.writeText(PELAGION_GENOME);
+    await navigator.clipboard.writeText(PELAGION_LIVING_GENOME);
     copyLabel.value = "Скопировано ✓";
   } catch {
     copyLabel.value = "Не удалось скопировать";
@@ -75,22 +75,22 @@ async function copyGenome() {
 
       <div class="seed-lab">
         <div class="seed-stage">
-          <SketchRunner :sketch="PELAGION_GENOME_SKETCH" label="Пелагион 280 — автономный p5.js-геном" />
-          <div class="seed-counter"><strong>{{ PELAGION_GENOME_CHARACTERS }}</strong> / {{ PELAGION_GENOME_LIMIT }} · запас {{ remainingCharacters }}</div>
+          <SketchRunner :sketch="PELAGION_LIVING_GENOME_SKETCH" label="Пелагион 280 — неизменное основание линии" />
+          <div class="seed-counter"><strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }}</strong> / {{ PELAGION_GENOME_LIMIT }} · запас {{ remainingCharacters }}</div>
         </div>
         <div class="seed-copy">
           <div>
             <p class="panel-kicker">Pelagion / embryo</p>
             <h2>Геном помещается в твит</h2>
-            <p>Автономный скетч уже содержит читаемое тело, хвостовой плавник, формульный цвет, движение и настоящую координату <code>z</code>. Лаборатория исполняет его напрямую: закон движения выбирается отдельно, а бюджеты 512 и 768 добавляют ядро и кольца мембраны в сам RAW.</p>
+            <p>Это удачный Пелагион с силовым гребком: читаемое тело, хвостовой плавник, формульный цвет, движение и настоящая координата <code>z</code>. Лаборатория всегда начинает именно с него; бюджеты 512 и 768 только дописывают ядро и редкие связи, не меняя исходный слой.</p>
           </div>
           <div class="seed-actions">
             <RouterLink class="button primary" :to="{ name: 'lab', query: { form: 'pelagion' } }">Разбудить сущность</RouterLink>
             <button class="button" type="button" @click="copyGenome">{{ copyLabel }}</button>
           </div>
           <details class="source-details seed-source">
-            <summary>Показать {{ PELAGION_GENOME_CHARACTERS }} символов</summary>
-            <pre><code>{{ PELAGION_GENOME }}</code></pre>
+            <summary>Показать {{ PELAGION_LIVING_GENOME_CHARACTERS }} символов</summary>
+            <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
           </details>
         </div>
       </div>

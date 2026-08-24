@@ -6,7 +6,7 @@ import {
   CHRONOPHORE_GENOME_LIMIT
 } from "../data/chronophoreGenome.js";
 import {
-  PELAGION_BUDGET_VARIANTS_BY_MODE,
+  PELAGION_EVOLUTION_VARIANTS,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT,
@@ -115,8 +115,10 @@ g(t,u_i)
 s(t,u)&=\sin(4t-u/9),
 &b_{\rm stroke}&=9s\sin^2\theta,
 &g_{\rm stroke}&=16s,\\
-\mathbf P_i^{\rm core}&=0.42\mathbf P_i^{\rm body},
-&E_{\rm ring}&=\left(\mathbf P(q,\theta),\mathbf P(q,\theta-1/32)\right),\\
+I_{\rm core}&=\{i:\neg h_i\land i\bmod8=0\},
+&\mathbf P_i^{\rm core}&=0.42\mathbf P_i,\\
+I_{\rm edge}&=\{i:u_i>0\land i\bmod25=0\},
+&E_i&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-1,\theta_i)\right),\\
 x_i'&=x_i\cos a+z_i\sin a+130,
 &y_i'&=y_i+200,
 &a(t)&=\sin(t)/5.
@@ -588,7 +590,7 @@ onMounted(async () => {
 
       <article id="pelagion" class="theory-card pelagion-theory">
         <header class="card-header">
-          <div><span>07 / SYNTHETIC ORGANISM</span><h2>Пелагион: одно тело, два гребка</h2></div>
+          <div><span>07 / SYNTHETIC ORGANISM</span><h2>Пелагион: одно тело, вложенная анатомия</h2></div>
           <div class="card-actions">
             <button class="button" type="button" @click="copy('pelagion', pelagionLatexSource)">{{ copyLabels.pelagion }}</button>
             <button class="button" type="button" @click="copy('seed', PELAGION_GENOME)">{{ copyLabels.seed }}</button>
@@ -597,7 +599,7 @@ onMounted(async () => {
         </header>
         <div class="theory-body pelagion-theory-grid">
           <div>
-            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Индекс сразу делится на 50 пространственных сечений: первые 30 образуют овальное тело, последние 20 продолжают его в хвостовой плавник. Поэтому голова, корпус и хвост читаются при любой фазе, а оба RAW остаются одной сущностью.</p>
+            <p>Это первая форма лаборатории, у которой глубина не реконструирована из двумерного оригинала. Индекс сразу делится на 50 пространственных сечений: первые 30 образуют овальное тело, последние 20 продолжают его в хвостовой плавник. Удачный 280-символьный силовой гребок теперь служит неизменным основанием всей линии.</p>
             <div class="math-scroll">
               \[
               \begin{aligned}
@@ -624,30 +626,25 @@ onMounted(async () => {
               \end{aligned}
               \]
             </div>
-            <p>В плавном RAW \(b=9\sin t\sin^2\theta\), а хвост запаздывает по координате \(u\). В силовом RAW одна фаза \(s=\sin(4t-u/9)\) задаёт \(b=9s\sin^2\theta\) и \(g=16s\). Формульный RGB-цвет \((160,9u,255)\) проявляет центр, край и плавник.</p>
+            <p>Архивный предок использует \(b=9\sin t\sin^2\theta\). В основном RAW одна фаза \(s=\sin(4t-u/9)\) задаёт \(b=9s\sin^2\theta\) и \(g=16s\). Формульный RGB-цвет \((160,9u,255)\) проявляет центр, край и плавник и больше не ослабляется на старших уровнях.</p>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
-              <span>Тело и хвост</span>
+              <span>Архивный предок</span>
               <strong>{{ PELAGION_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_GENOME }}</code></pre>
             <div class="genome-meter">
-              <span>RAW силового гребка</span>
+              <span>Пелагион · неизменное основание</span>
               <strong>{{ PELAGION_LIVING_GENOME_CHARACTERS }} / {{ PELAGION_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
-            <ul class="topology-genome-counts" aria-label="Бюджеты плавного Пелагиона">
-              <li v-for="(variant, index) in PELAGION_BUDGET_VARIANTS_BY_MODE.canonical" :key="variant.id">
+            <ul class="topology-genome-counts" aria-label="Вложенные бюджеты Пелагиона">
+              <li v-for="(variant, index) in PELAGION_EVOLUTION_VARIANTS" :key="variant.id">
                 <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <ul class="topology-genome-counts" aria-label="Бюджеты силового гребка Пелагиона">
-              <li v-for="(variant, index) in PELAGION_BUDGET_VARIANTS_BY_MODE['living-stroke']" :key="variant.id">
-                <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
-              </li>
-            </ul>
-            <p>В обоих режимах совпадают разбиение точек, тело, плавник и цвет; переключатель меняет закон глубинной волны. Бюджет 280 сохраняет базовый организм, 512 добавляет светящееся ядро и ось хвоста, 768 соединяет соседние углы в кольца мембраны. Каждый уровень выбирает другой исполняемый RAW и сохраняет ручную 2D-проекцию <code>x′ = x cos(a) + z sin(a)</code>. Камера и фаза хранятся просмотрщиком отдельно и не расходуют лимит.</p>
+            <p>Бюджет 280 исполняет прежнего Пелагиона без изменений. Уровень 512 приписывает к тому же циклу только редкие точки ядра и ось хвоста; 768 сохраняет всё предыдущее и добавляет 384 полупрозрачные продольные связи. Каждый следующий RAW начинается с буквального цикла 280-версии. Ручная 2D-проекция <code>x′ = x cos(a) + z sin(a)</code>, камера и текущая фаза переходят между уровнями вне лимита.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>

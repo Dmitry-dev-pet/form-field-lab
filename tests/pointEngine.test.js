@@ -36,7 +36,13 @@ test("sandbox runner includes the original source and motion bridge", () => {
 
 test("the Pelagion runner adds a spatial camera bridge outside the RAW code", () => {
   const code = "t=0,draw=_=>{t++||createCanvas(400,400);x=z=a=X=Z=0;point(200,200);line(190,190,210,210)}";
-  const html = runnerDocument(code, { viewModel: "pelagion-orbit" });
+  const html = runnerDocument(code, {
+    viewModel: "pelagion-orbit",
+    initialViewState: {
+      orientation: { x: 0, y: 0.25, z: 0, w: 0.9682458 },
+      time: 7
+    }
+  });
 
   assert.match(html, /pelagion-orbit/);
   assert.match(html, /projectedSpatialPoint/);
@@ -44,6 +50,11 @@ test("the Pelagion runner adds a spatial camera bridge outside the RAW code", ()
   assert.match(html, /globalThis\.X/);
   assert.match(html, /sketch-view-state/);
   assert.match(html, /sketch-view-snapshot/);
+  assert.match(html, /applyState\(initialViewState\)/);
+  assert.match(html, /next \|\|= \{\}/);
+  assert.match(html, /"time":7/);
+  assert.match(html, /pendingTime - firstStep/);
+  assert.match(html, /globalThis\.redraw\(\)/);
   assert.match(html, /canvas\?\.width === 400/);
   assert.match(html, /touch-action:none/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);

@@ -121,6 +121,7 @@ const rawBudget = ref(RAW_CODE_BUDGET_MIN);
 const spaSnapshot = ref(restoredViewFor(initialForm));
 const rawViewState = ref(spaSnapshot.value);
 let mutationTimer;
+let budgetRequest = 0;
 
 if (initialForm.savedColor) Object.assign(color, initialForm.savedColor);
 
@@ -208,7 +209,9 @@ const bareRunnerLabel = computed(() => isTopologyGenome.value
 const bareLead = computed(() => isTopologyGenome.value
   ? `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : hasBudgetVariants.value
-    ? `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
+    ? selectedForm.value.id === "pelagion"
+      ? `Прежний Пелагион 280 исполняется целиком; лимит ${rawBudget.value} только дописывает к нему помещающийся слой: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
+      : `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
     ? "На холсте без преобразований выполняется исходный p5.js-код автора."
   : isImprintBare.value
@@ -329,8 +332,25 @@ function toggleLayer(key) {
   preset.value = "Анатомия";
 }
 
-function normalizeRawBudget() {
-  rawBudget.value = readRawCodeBudget(rawBudget.value);
+async function setRawBudget(value) {
+  const nextBudget = readRawCodeBudget(value);
+  const request = ++budgetRequest;
+  const currentVariantId = budgetSelection.value?.variant?.id;
+  const nextVariantId = budgetVariantSet.value
+    ? selectRawBudgetVariant(budgetVariantSet.value, nextBudget).variant?.id
+    : null;
+
+  if (nextBudget === rawBudget.value) return;
+  if (currentVariantId && nextVariantId !== currentVariantId && bareSketch.value.viewModel) {
+    const snapshot = await bareRunner.value?.snapshot();
+    if (request !== budgetRequest) return;
+    if (snapshot) rememberViewState(snapshot);
+  }
+  if (request === budgetRequest) rawBudget.value = nextBudget;
+}
+
+function normalizeRawBudget(event) {
+  setRawBudget(event?.target?.value ?? rawBudget.value);
 }
 
 function setTopology(topologyId) {
@@ -626,25 +646,26 @@ onBeforeUnmount(() => {
                 :key="budget"
                 type="button"
                 :aria-pressed="rawBudget === budget"
-                @click="rawBudget = budget"
+                @click="setRawBudget(budget)"
               >{{ budget }}</button>
             </div>
             <label class="range-field raw-budget-range">
               <span>Лимит <output>{{ rawBudget }} символов</output></span>
               <input
-                v-model.number="rawBudget"
+                :value="rawBudget"
                 type="range"
                 :min="RAW_CODE_BUDGET_MIN"
                 :max="RAW_CODE_BUDGET_MAX"
                 step="1"
                 :style="rawBudgetRangeStyle"
                 aria-label="Лимит RAW-кода"
+                @input="setRawBudget($event.target.value)"
               >
             </label>
             <label class="budget-number-field">
               <span>Точное значение</span>
               <input
-                v-model.number="rawBudget"
+                :value="rawBudget"
                 type="number"
                 :min="RAW_CODE_BUDGET_MIN"
                 :max="RAW_CODE_BUDGET_MAX"
@@ -685,7 +706,7 @@ onBeforeUnmount(() => {
               <i aria-hidden="true">↔</i>
               <span><small>{{ selectedRawVariant.label }}</small>{{ bareCodeLength }}</span>
             </div>
-            <p class="comparison-label">{{ hasBudgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
+            <p class="comparison-label">{{ selectedForm.id === 'pelagion' ? "Цикл Пелагион 280 сохранён буквально; следующий код только добавляет слой" : hasBudgetVariants ? "Выбранный бюджетом автономный результат" : "Оба варианта автономны и исполняются напрямую" }}</p>
             <details class="imprint-code-details">
               <summary>Итоговый исполняемый код</summary>
               <pre><code>{{ bareSketch.code }}</code></pre>
@@ -761,7 +782,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
-          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.</p>
+          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "уровни не заменяют организм: 512 начинается с точного цикла 280, а 768 — с тех же 280 и ядра. Камера и фаза переходят без перезапуска." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>

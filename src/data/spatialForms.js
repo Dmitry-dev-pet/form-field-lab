@@ -1,9 +1,8 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import {
-  PELAGION_BUDGET_VARIANTS_BY_MODE,
-  PELAGION_GENOME_SKETCH,
-  PELAGION_RAW_VARIANTS
+  PELAGION_EVOLUTION_VARIANTS,
+  PELAGION_LIVING_GENOME_SKETCH
 } from "./pelagionGenome.js";
 import {
   MNEMOPHORE_GENOME_SKETCH,
@@ -639,9 +638,8 @@ export const spatialForms = Object.freeze([
     association: "тело · плавник · хвост · гребок",
     description: "Пелагический организм с читаемым овальным телом и хвостовым плавником. Глубинная волна проходит от центра к хвосту, а движение пальца вращает всё пространство.",
     origin: "community-synthesis",
-    genomeSketch: PELAGION_GENOME_SKETCH,
-    rawVariants: PELAGION_RAW_VARIANTS,
-    budgetVariantsByMode: PELAGION_BUDGET_VARIANTS_BY_MODE,
+    genomeSketch: PELAGION_LIVING_GENOME_SKETCH,
+    budgetVariants: PELAGION_EVOLUTION_VARIANTS,
     motionModes: Object.freeze([
       Object.freeze({
         id: PELAGION_MOTION_MODE.continuous,

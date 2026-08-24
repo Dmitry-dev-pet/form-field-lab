@@ -1,4 +1,4 @@
-function installSpatialViewBridge(viewModel) {
+function installSpatialViewBridge(viewModel, initialViewState) {
   document.documentElement.dataset.viewModel = viewModel;
   const orbitEnabled = viewModel === "pelagion-orbit" || viewModel === "point-cloud-orbit";
   const state = {
@@ -95,6 +95,7 @@ function installSpatialViewBridge(viewModel) {
   }
 
   function applyState(next = {}) {
+    next ||= {};
     if (next.orientation) {
       state.orientation = normalize(next.orientation);
       updateMatrix();
@@ -167,13 +168,21 @@ function installSpatialViewBridge(viewModel) {
     }
   }
 
+  applyState(initialViewState);
+
   function activate() {
     installSpatialProjectors();
     const canvas = document.querySelector("canvas");
     if (canvas?.width === 400 && (!orbitEnabled || sourcePoint)) {
       if (canvas.tabIndex < 0) canvas.tabIndex = 0;
       hasDrawn = true;
-      if (pendingTime !== null) globalThis.t = pendingTime;
+      const firstStep = Math.max(0, Number(globalThis.t) || 0);
+      if (pendingTime > firstStep && typeof globalThis.redraw === "function") {
+        globalThis.t = pendingTime - firstStep;
+        globalThis.redraw();
+      } else if (pendingTime !== null) {
+        globalThis.t = pendingTime;
+      }
       return;
     }
     requestAnimationFrame(activate);
@@ -259,7 +268,7 @@ export function runnerDocument(code, options = {}) {
   const closeScript = "<" + "/script>";
   const motionBridge = `window.addEventListener("message",event=>{if(event.data?.type!=="sketch-motion")return;if(event.data.paused&&typeof noLoop==="function")noLoop();if(!event.data.paused&&typeof loop==="function")loop()});`;
   const spatialBridge = options.viewModel
-    ? `;(${installSpatialViewBridge.toString()})(${JSON.stringify(options.viewModel)});`
+    ? `;(${installSpatialViewBridge.toString()})(${JSON.stringify(options.viewModel)},${JSON.stringify(options.initialViewState || null)});`
     : "";
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#090909}body{display:grid;place-items:center}canvas{display:block!important;width:min(100vw,100vh)!important;height:min(100vw,100vh)!important;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style><script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js">${closeScript}<script>${safeCode}\n${motionBridge}\n${spatialBridge}\n${closeScript}</head><body></body></html>`;
 }

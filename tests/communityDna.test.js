@@ -8,36 +8,43 @@ import {
   PELAGION_LINEAGE
 } from "../src/data/communityDna.js";
 import {
-  PELAGION_BUDGET_VARIANTS_BY_MODE,
+  PELAGION_EVOLUTION_VARIANTS,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
   PELAGION_GENOME_LIMIT,
   PELAGION_LIVING_GENOME,
+  PELAGION_LIVING_CORE_GENOME,
   PELAGION_LIVING_GENOME_CHARACTERS,
+  PELAGION_LIVING_STRUCTURE_GENOME,
   PELAGION_RAW_VARIANTS
 } from "../src/data/pelagionGenome.js";
 import { selectRawBudgetVariant } from "../src/lib/codeBudget.js";
 
 function executeGenomeFrames(code) {
   let points = [];
+  let lines = [];
   let strokes = [];
   const sandbox = {
     PI: Math.PI,
     sin: Math.sin,
     cos: Math.cos,
     createCanvas() {},
-    background() { points = []; strokes = []; },
+    background() { points = []; lines = []; strokes = []; },
     stroke(...channels) { strokes.push(channels); },
-    point(...coordinates) { points.push(coordinates); }
+    point(...coordinates) { points.push(coordinates); },
+    line(...coordinates) { lines.push(coordinates); }
   };
   vm.runInNewContext(code, sandbox);
   sandbox.draw();
   const first = points.map(point => [...point]);
+  const firstLines = lines.map(line => [...line]);
   const firstStrokes = strokes.map(stroke => [...stroke]);
   sandbox.draw();
   return {
     first,
+    firstLines,
     second: points.map(point => [...point]),
+    secondLines: lines.map(line => [...line]),
     firstStrokes,
     secondStrokes: strokes.map(stroke => [...stroke])
   };
@@ -107,21 +114,33 @@ test("the living-stroke Pelagion is a second autonomous genome inside 280 charac
   assert.notDeepEqual(frames.firstStrokes[0], frames.firstStrokes.at(-1));
 });
 
-test("Pelagion budgets select real anatomy in both motion modes", () => {
-  const expectations = {
-    canonical: [279, 408, 551],
-    "living-stroke": [280, 409, 552]
-  };
-  for (const [mode, variants] of Object.entries(PELAGION_BUDGET_VARIANTS_BY_MODE)) {
-    assert.deepEqual(variants.map(variant => variant.sketch.code.length), expectations[mode]);
-    for (const [budget, rank] of [[280, 0], [512, 1], [768, 2]]) {
-      const selected = selectRawBudgetVariant(variants, budget);
-      assert.equal(selected.variant.rank, rank);
-      assert.ok(selected.characters <= budget);
-      assert.doesNotThrow(() => new Function(selected.variant.sketch.code));
-    }
-    assert.doesNotMatch(variants[0].sketch.code, /line\(/);
-    assert.match(variants[1].sketch.code, /stroke\(w,110,70\)/);
-    assert.match(variants[2].sketch.code, /line\(/);
+test("Pelagion budgets preserve one exact organism and only append anatomy", () => {
+  assert.deepEqual(
+    PELAGION_EVOLUTION_VARIANTS.map(variant => variant.sketch.code.length),
+    [280, 433, 635]
+  );
+  for (const [budget, rank] of [[280, 0], [512, 1], [768, 2]]) {
+    const selected = selectRawBudgetVariant(PELAGION_EVOLUTION_VARIANTS, budget);
+    assert.equal(selected.variant.rank, rank);
+    assert.ok(selected.characters <= budget);
+    assert.doesNotThrow(() => new Function(selected.variant.sketch.code));
   }
+
+  const unchangedLoop = PELAGION_LIVING_GENOME.slice(0, -2);
+  assert.ok(PELAGION_LIVING_CORE_GENOME.startsWith(`${unchangedLoop};`));
+  assert.ok(PELAGION_LIVING_STRUCTURE_GENOME.startsWith(`${unchangedLoop};`));
+  assert.match(PELAGION_LIVING_CORE_GENOME, /stroke\(160,u\*9,w\);point/);
+  assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /stroke\(160,u\*9,w\);point/);
+  assert.doesNotMatch(PELAGION_LIVING_CORE_GENOME, /line\(/);
+  assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /line\(/);
+
+  const baseFrame = executeGenomeFrames(PELAGION_LIVING_GENOME);
+  const coreFrame = executeGenomeFrames(PELAGION_LIVING_CORE_GENOME);
+  const structureFrame = executeGenomeFrames(PELAGION_LIVING_STRUCTURE_GENOME);
+  assert.equal(baseFrame.first.length, 10000);
+  assert.equal(coreFrame.first.length, 10910);
+  assert.equal(structureFrame.first.length, coreFrame.first.length);
+  assert.equal(baseFrame.firstLines.length, 0);
+  assert.equal(coreFrame.firstLines.length, 0);
+  assert.equal(structureFrame.firstLines.length, 384);
 });
