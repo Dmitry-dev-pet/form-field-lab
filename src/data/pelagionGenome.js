@@ -11,11 +11,12 @@ const extendLivingGenome = addition => `${PELAGION_LIVING_SOURCE};${addition}}}$
 const PELAGION_CORE_ADDITION = `A=x*cos(a)+z*sin(a)+200,B=r*cos(v)+4*u*u*s+200;i%40||(stroke(255,220,80,220),point(A,4*u*u*s+200));i%4||(stroke(255,55,170,210),point(x*cos(a)+.45*z*sin(a)+200,.45*r*cos(v)+4*u*u*s+200))`;
 const PELAGION_CROSS_RIBS_ADDITION = `i%200<40&&(V=v+1/6,stroke(80,255,210,115),line(A,B,x*cos(a)+r*sin(V)*(1+s/4)*sin(a)+200,r*cos(V)+4*u*u*s+200))`;
 const PELAGION_LONG_RIBS_ADDITION = `i%10||(U=u-.08,S=sin(t*4-U)**3,R=60*sin(PI*U/5)**.6*(1+S/9),X=(U-2.5)*(60-5*S),Z=R*sin(v)*(1+S/4),stroke(80,255,210,80),line(A,B,X*cos(a)+Z*sin(a)+200,R*cos(v)+4*U*U*S+200))`;
+const PELAGION_NERVE_ADDITION = `n=sin(7*t-u)**8;stroke(w,220,80,w*n);C=4*u*u*s+200;i%40||line(A,C,A,B+n*r*cos(v)/8);i%10||point(A+n*z*sin(a)/8,B+n*r*cos(v)/8)`;
+const PELAGION_STRUCTURE_ADDITION = `${PELAGION_CORE_ADDITION};${PELAGION_CROSS_RIBS_ADDITION};${PELAGION_LONG_RIBS_ADDITION}`;
 
 export const PELAGION_LIVING_CORE_GENOME = extendLivingGenome(PELAGION_CORE_ADDITION);
-export const PELAGION_LIVING_STRUCTURE_GENOME = extendLivingGenome(
-  `${PELAGION_CORE_ADDITION};${PELAGION_CROSS_RIBS_ADDITION};${PELAGION_LONG_RIBS_ADDITION}`
-);
+export const PELAGION_LIVING_STRUCTURE_GENOME = extendLivingGenome(PELAGION_STRUCTURE_ADDITION);
+export const PELAGION_LIVING_NERVOUS_GENOME = extendLivingGenome(`${PELAGION_STRUCTURE_ADDITION};${PELAGION_NERVE_ADDITION}`);
 
 export const PELAGION_GENOME_CHARACTERS = PELAGION_GENOME.length;
 export const PELAGION_LIVING_GENOME_CHARACTERS = PELAGION_LIVING_GENOME.length;
@@ -28,6 +29,7 @@ export const PELAGION_LIVING_GENOME_SKETCH = sketch("pelagion-living-280", PELAG
 const sharedFeatures = Object.freeze(["цельная непрерывная оболочка", "живой гребок", "формульный цвет", "3D-камера"]);
 const coreFeatures = Object.freeze([...sharedFeatures, "светящийся внутренний орган", "золотая ось"]);
 const structureFeatures = Object.freeze([...coreFeatures, "поперечные кольца", "продольные связи", "двухнаправленная сетка"]);
+const nervousFeatures = Object.freeze([...structureFeatures, "автономный пейсмейкер", "бегущий нервный импульс", "локальное сокращение ткани"]);
 
 const budgetVariant = (id, rank, label, title, description, features, code) => Object.freeze({
   id,
@@ -42,7 +44,8 @@ const budgetVariant = (id, rank, label, title, description, features, code) => O
 export const PELAGION_EVOLUTION_VARIANTS = Object.freeze([
   budgetVariant("pelagion-body", 0, "Пелагион", "Цельный Пелагион", "Точный 274-символьный живой гребок из версии 34fe67e без изменений.", sharedFeatures, PELAGION_LIVING_GENOME),
   budgetVariant("pelagion-core", 1, "+ орган", "Пелагион + орган", "Цельная оболочка остаётся буквально прежней; внутри появляется яркий пульсирующий орган с золотой осью.", coreFeatures, PELAGION_LIVING_CORE_GENOME),
-  budgetVariant("pelagion-structure", 2, "+ сетка", "Пелагион + сетка", "К прежней оболочке и органу добавляется контрастная сетка поперечных колец и продольных связей.", structureFeatures, PELAGION_LIVING_STRUCTURE_GENOME)
+  budgetVariant("pelagion-structure", 2, "+ сетка", "Пелагион + сетка", "К прежней оболочке и органу добавляется контрастная сетка поперечных колец и продольных связей.", structureFeatures, PELAGION_LIVING_STRUCTURE_GENOME),
+  budgetVariant("pelagion-nervous", 3, "+ импульс", "Пелагион + нервная система", "Пейсмейкер создаёт собственную фазу: золотой импульс проходит вдоль сетки и локально расширяет ткань.", nervousFeatures, PELAGION_LIVING_NERVOUS_GENOME)
 ]);
 
 export const PELAGION_RAW_VARIANTS = Object.freeze([

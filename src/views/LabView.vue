@@ -118,6 +118,9 @@ const mutationMessage = ref("");
 const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref(defaultBareVariant(initialForm));
 const rawBudget = ref(RAW_CODE_BUDGET_MIN);
+const rawBudgetPresets = computed(() => selectedForm.value.id === "pelagion"
+  ? [...RAW_CODE_BUDGET_PRESETS, RAW_CODE_BUDGET_MAX]
+  : RAW_CODE_BUDGET_PRESETS);
 const spaSnapshot = ref(restoredViewFor(initialForm));
 const rawViewState = ref(spaSnapshot.value);
 let mutationTimer;
@@ -642,7 +645,7 @@ onBeforeUnmount(() => {
             </header>
             <div class="raw-budget-presets" role="group" aria-label="Предустановки лимита кода">
               <button
-                v-for="budget in RAW_CODE_BUDGET_PRESETS"
+                v-for="budget in rawBudgetPresets"
                 :key="budget"
                 type="button"
                 :aria-pressed="rawBudget === budget"
@@ -782,7 +785,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
-          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "уровни не заменяют организм: 512 добавляет к точному циклу 274 яркий внутренний орган, а 768 — поперечные кольца и продольные связи. Камера и фаза переходят без перезапуска." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
+          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "уровни не заменяют организм: 512 добавляет к точному циклу 274 орган, 768 — двухнаправленную сетку, а 900 — автономный импульс и локальное сокращение ткани. Камера и фаза переходят без перезапуска; касание остаётся только камерой." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>

@@ -108,6 +108,11 @@ I_{\rm cross}&=\{i:i\bmod200<40\},
 &E_i^{\rm cross}&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i,\theta_i+1/6)\right),\\
 I_{\rm long}&=\{i:i\bmod10=0\},
 &E_i^{\rm long}&=\left(\mathbf P(u_i,\theta_i),\mathbf P(u_i-0.08,\theta_i)\right),\\
+n_i(t)&=\sin^8(7t-u_i),
+&I_{\rm nerve}&=\{i:i\bmod10=0\},\\
+\mathbf P_i^{\rm nerve}&=[x_i,4u_i^2s_i+(1+n_i/8)r_i\cos\theta_i,(1+n_i/8)z_i]^{\mathsf T},\\
+I_{\rm ray}&=\{i:i\bmod40=0\},
+&E_i^{\rm ray}&=\left([x_i,4u_i^2s_i,0],\mathbf P_i^{\rm nerve}\right),\\
 x_i'&=x_i\cos a+z_i\sin a+200,
 &y_i'&=y_i+200,
 &a(t)&=t/3.
@@ -610,6 +615,16 @@ onMounted(async () => {
               \]
             </div>
             <p>Формульный RGB-цвет \((180+70s_i,220,255)\) идёт по той же фазе, поэтому гребок читается одновременно в геометрии и свете. Ручная проекция сохраняет настоящую координату <code>z</code> и свободную камеру.</p>
+            <p>У нервного уровня есть собственная фаза-пейсмейкер. Её восьмая степень сужает свет до локального фронта, а масштаб поперечного сечения передаёт импульс ткани:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              n_i(t)&amp;=\sin^8(7t-u_i),\\
+              \mathbf P_i^{\rm nerve}&amp;=
+              \left[x_i,\;4u_i^2s_i+\left(1+\frac{n_i}{8}\right)r_i\cos\theta_i,\;\left(1+\frac{n_i}{8}\right)z_i\right]^{\mathsf T}.
+              \end{aligned}
+              \]
+            </div>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
@@ -624,10 +639,10 @@ onMounted(async () => {
             <pre><code>{{ PELAGION_LIVING_GENOME }}</code></pre>
             <ul class="topology-genome-counts" aria-label="Вложенные бюджеты Пелагиона">
               <li v-for="(variant, index) in PELAGION_EVOLUTION_VARIANTS" :key="variant.id">
-                <span>{{ [280, 512, 768][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+                <span>{{ [280, 512, 768, 900][index] }} · {{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
               </li>
             </ul>
-            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает к его точному циклу 2500 ярких точек внутреннего органа и 250 точек золотой оси. Уровень 768 сохраняет оба слоя и добавляет 2000 поперечных и 1000 продольных связей — поэтому оболочка превращается в явно читаемую двухнаправленную сетку. Каждый следующий RAW начинается с буквального цикла исторической версии. Камера и текущая фаза переходят между уровнями вне лимита.</p>
+            <p>Бюджет 280 исполняет исторический 274-символьный RAW без изменений. Уровень 512 приписывает 2500 точек внутреннего органа и 250 точек золотой оси. Уровень 768 сохраняет оба слоя и добавляет 2000 поперечных и 1000 продольных связей. Уровень 900 вводит независимую фазу <code>n_i</code>: 1000 золотых точек проводят узкий импульс вдоль сетки, 250 радиальных связей передают его от оси, а множитель <code>1 + n_i / 8</code> локально расширяет активную ткань. Исходные 10 000 точек не меняются. Камера и текущая фаза переходят между уровнями вне лимита; касание не входит в геном.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'pelagion' } }">Открыть живую форму →</RouterLink>
               <RouterLink to="/community#pelagion">Карта происхождения →</RouterLink>

@@ -15,6 +15,7 @@ import {
   PELAGION_LIVING_GENOME,
   PELAGION_LIVING_CORE_GENOME,
   PELAGION_LIVING_GENOME_CHARACTERS,
+  PELAGION_LIVING_NERVOUS_GENOME,
   PELAGION_LIVING_STRUCTURE_GENOME,
   PELAGION_RAW_VARIANTS
 } from "../src/data/pelagionGenome.js";
@@ -118,9 +119,9 @@ test("the living-stroke Pelagion is a second autonomous genome inside 280 charac
 test("Pelagion budgets preserve one exact organism and only append anatomy", () => {
   assert.deepEqual(
     PELAGION_EVOLUTION_VARIANTS.map(variant => variant.sketch.code.length),
-    [274, 461, 746]
+    [274, 461, 746, 873]
   );
-  for (const [budget, rank] of [[280, 0], [512, 1], [768, 2]]) {
+  for (const [budget, rank] of [[280, 0], [512, 1], [768, 2], [900, 3]]) {
     const selected = selectRawBudgetVariant(PELAGION_EVOLUTION_VARIANTS, budget);
     assert.equal(selected.variant.rank, rank);
     assert.ok(selected.characters <= budget);
@@ -128,23 +129,30 @@ test("Pelagion budgets preserve one exact organism and only append anatomy", () 
   }
 
   const unchangedLoop = PELAGION_LIVING_GENOME.slice(0, PELAGION_LIVING_GENOME.indexOf("}}//#"));
+  const structureLoop = PELAGION_LIVING_STRUCTURE_GENOME.slice(0, PELAGION_LIVING_STRUCTURE_GENOME.indexOf("}}//#"));
   assert.ok(PELAGION_LIVING_CORE_GENOME.startsWith(`${unchangedLoop};`));
   assert.ok(PELAGION_LIVING_STRUCTURE_GENOME.startsWith(`${unchangedLoop};`));
+  assert.ok(PELAGION_LIVING_NERVOUS_GENOME.startsWith(`${structureLoop};`));
   assert.match(PELAGION_LIVING_CORE_GENOME, /stroke\(180\+70\*s,220,255\);point/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /stroke\(180\+70\*s,220,255\);point/);
   assert.match(PELAGION_LIVING_CORE_GENOME, /stroke\(255,55,170,210\)/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /i%200<40/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /i%10\|\|/);
+  assert.match(PELAGION_LIVING_NERVOUS_GENOME, /n=sin\(7\*t-u\)\*\*8/);
+  assert.match(PELAGION_LIVING_NERVOUS_GENOME, /stroke\(w,220,80,w\*n\)/);
   assert.doesNotMatch(PELAGION_LIVING_CORE_GENOME, /line\(/);
   assert.match(PELAGION_LIVING_STRUCTURE_GENOME, /line\(/);
 
   const baseFrame = executeGenomeFrames(PELAGION_LIVING_GENOME);
   const coreFrame = executeGenomeFrames(PELAGION_LIVING_CORE_GENOME);
   const structureFrame = executeGenomeFrames(PELAGION_LIVING_STRUCTURE_GENOME);
+  const nervousFrame = executeGenomeFrames(PELAGION_LIVING_NERVOUS_GENOME);
   assert.equal(baseFrame.first.length, 10000);
   assert.equal(coreFrame.first.length, 12750);
   assert.equal(structureFrame.first.length, coreFrame.first.length);
+  assert.equal(nervousFrame.first.length, 13750);
   assert.equal(baseFrame.firstLines.length, 0);
   assert.equal(coreFrame.firstLines.length, 0);
   assert.equal(structureFrame.firstLines.length, 3000);
+  assert.equal(nervousFrame.firstLines.length, 3250);
 });
