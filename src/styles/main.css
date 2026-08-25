@@ -1892,130 +1892,226 @@ pre {
 
 .sketch36-controls .panel-title-row > div { display: grid; gap: 5px; }
 
-.sketch36-stage-switch {
+.sketch36-panel-head { margin-bottom: 13px; }
+
+.sketch36-budget {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
-.sketch36-stage-switch button {
+.sketch36-budget > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--quiet);
+  font-size: 0.62rem;
+}
+
+.sketch36-budget b,
+.sketch36-gene-section header > b,
+.range-field > span > b {
+  display: inline-grid;
+  min-width: 20px;
+  min-height: 20px;
+  place-items: center;
+  border: 1px solid rgba(215,255,88,0.35);
+  border-radius: 50%;
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.56rem;
+}
+
+.sketch36-budget b { margin-right: 4px; }
+.sketch36-budget b.mutation,
+.sketch36-gene-section b.mutation,
+.range-field > span > b.mutation { border-color: rgba(88,255,231,0.38); color: var(--cyan); }
+
+.sketch36-budget output {
+  margin-left: auto;
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.sketch36-budget > i {
+  height: 3px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.09);
+}
+
+.sketch36-budget > i span { display: block; height: 100%; background: linear-gradient(90deg, var(--acid), var(--cyan)); }
+
+.sketch36-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: rgba(0,0,0,0.18);
+}
+
+.sketch36-tabs button {
   display: grid;
   min-width: 0;
-  min-height: 74px;
-  align-content: space-between;
-  padding: 9px 8px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
+  min-height: 50px;
+  align-content: center;
+  gap: 3px;
+  padding: 7px 5px;
+  border: 1px solid transparent;
+  border-radius: 9px;
   color: var(--quiet);
-  background: rgba(255,255,255,0.018);
+  background: transparent;
   text-align: left;
 }
 
-.sketch36-stage-switch button:hover { border-color: var(--line-strong); color: var(--ink); }
-
-.sketch36-stage-switch button[aria-pressed="true"] {
-  border-color: var(--acid);
-  color: var(--acid-ink);
-  background: var(--acid);
+.sketch36-tabs button[aria-selected="true"] {
+  border-color: rgba(215,255,88,0.34);
+  color: var(--acid);
+  background: rgba(215,255,88,0.07);
 }
 
-.sketch36-stage-switch small,
-.sketch36-stage-switch span {
-  overflow: hidden;
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.49rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+.sketch36-tabs small { font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.56rem; }
+.sketch36-tabs strong { overflow: hidden; font-size: 0.64rem; text-overflow: ellipsis; white-space: nowrap; }
 
-.sketch36-stage-switch strong { font-size: 0.61rem; }
-
-.sketch36-stage-note {
-  min-height: 48px;
-  margin: 0 0 18px;
-  color: var(--quiet);
-  font-size: 0.64rem;
-  line-height: 1.55;
-}
-
-.sketch36-primary-axes {
+.sketch36-tab-panel {
   display: grid;
-  gap: 16px;
-  padding: 17px;
-  border: 1px solid rgba(215,255,88,0.2);
-  border-radius: 15px;
-  background:
-    linear-gradient(135deg, rgba(215,255,88,0.055), transparent 58%),
-    rgba(5,8,7,0.44);
+  gap: 17px;
+  min-height: 390px;
+  padding: 18px 0 4px;
 }
 
-.sketch36-axis { display: grid; gap: 4px; }
+.sketch36-gene-section {
+  display: grid;
+  gap: 9px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
 
-.sketch36-axis > span,
-.sketch36-axis > small {
+.sketch36-gene-section.compact { padding-bottom: 13px; }
+
+.sketch36-gene-section > header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.sketch36-axis strong { color: var(--ink); font-size: 0.7rem; }
+.sketch36-gene-section > header > div { display: grid; gap: 3px; }
+.sketch36-gene-section > header span { color: var(--ink); font-size: 0.72rem; font-weight: 700; }
+.sketch36-gene-section > header small { color: var(--quiet); font-size: 0.59rem; line-height: 1.4; }
+.sketch36-gene-section > header code { max-width: 48%; color: var(--cyan); font-size: 0.58rem; text-align: right; overflow-wrap: anywhere; }
 
-.sketch36-axis output {
-  color: var(--acid);
-  font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 0.62rem;
-}
-
-.sketch36-axis small b {
+.sketch36-gene-section > p {
+  margin: 0;
   color: var(--quiet);
-  font-size: 0.5rem;
-  font-weight: 500;
+  font-size: 0.63rem;
+  line-height: 1.5;
 }
 
-.sketch36-detail-controls { margin-top: 10px; border-bottom: 1px solid var(--line); }
-.sketch36-detail-controls summary { color: var(--cyan); }
-.sketch36-detail-controls .control-list { padding: 4px 0 18px; }
-
-.sketch36-color-field {
-  display: grid;
-  gap: 9px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.sketch36-color-field > span { color: var(--ink); font-size: 0.72rem; font-weight: 700; }
-
-.sketch36-color-grid {
+.sketch36-gene-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 7px;
+  gap: 6px;
 }
 
-.sketch36-color-grid button {
+.sketch36-gene-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.sketch36-gene-grid.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+.sketch36-gene-grid button {
   display: grid;
   min-width: 0;
-  min-height: 55px;
-  align-content: center;
+  min-height: 62px;
+  align-content: space-between;
   gap: 5px;
-  padding: 8px 10px;
-  border: 1px solid var(--line-strong);
+  padding: 8px 9px;
+  border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--muted);
   background: rgba(255,255,255,0.018);
   text-align: left;
 }
 
-.sketch36-color-grid button[aria-pressed="true"] {
+.sketch36-gene-grid button:hover { border-color: var(--line-strong); color: var(--ink); }
+
+.sketch36-gene-grid button[aria-pressed="true"] {
   border-color: var(--cyan);
   color: var(--cyan);
   background: rgba(88,255,231,0.055);
 }
 
-.sketch36-color-grid strong { font-size: 0.62rem; }
-.sketch36-color-grid code { overflow: hidden; color: var(--quiet); font-size: 0.51rem; text-overflow: ellipsis; white-space: nowrap; }
-.sketch36-color-grid button[aria-pressed="true"] code { color: inherit; }
+.sketch36-gene-grid button[aria-disabled="true"] {
+  border-style: dashed;
+  color: var(--quiet);
+  opacity: 0.48;
+}
+
+.sketch36-gene-grid button > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  font-size: 0.61rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sketch36-gene-grid button > span b {
+  flex: 0 0 auto;
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.52rem;
+}
+
+.sketch36-gene-grid button > span b.mutation { color: var(--cyan); }
+.sketch36-gene-grid button code { overflow: hidden; color: var(--quiet); font-size: 0.54rem; text-overflow: ellipsis; white-space: nowrap; }
+.sketch36-gene-grid button > small { color: var(--quiet); font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.52rem; }
+.sketch36-gene-grid button[aria-pressed="true"] code,
+.sketch36-gene-grid button[aria-pressed="true"] > small { color: inherit; }
+
+.sketch36-gene-grid.five button { min-height: 72px; padding: 8px 6px; }
+.sketch36-gene-grid.five button > span { display: grid; gap: 2px; white-space: normal; }
+
+.sketch36-range-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px 16px;
+}
+
+.sketch36-range-grid.single { grid-template-columns: 1fr; }
+.sketch36-range-grid .wide { grid-column: 1 / -1; }
+.sketch36-range-grid .range-field { min-width: 0; gap: 3px; }
+.sketch36-range-grid .range-field > span { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 7px; font-size: 0.66rem; }
+.sketch36-range-grid .range-field output { font-size: 0.58rem; }
+.sketch36-range-grid .range-field > small { display: flex; justify-content: space-between; color: var(--quiet); font-size: 0.55rem; }
+.sketch36-range-grid .range-field.inactive { opacity: 0.42; }
+
+.sketch36-metabolism {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border-left: 2px solid var(--acid);
+  color: var(--quiet);
+  background: rgba(215,255,88,0.025);
+  font-size: 0.61rem;
+  line-height: 1.45;
+}
+
+.sketch36-metabolism strong { color: var(--acid); font-family: "SFMono-Regular", Consolas, monospace; font-size: 0.6rem; }
+
+.sketch36-budget-message {
+  margin: 0 0 12px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255,179,179,0.4);
+  border-radius: 10px;
+  color: var(--danger);
+  background: rgba(120,20,20,0.14);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
 
 .sketch36-equation-readout {
   display: grid;
@@ -2025,7 +2121,7 @@ pre {
   border-left: 2px solid var(--cyan);
   color: var(--quiet);
   background: rgba(88,255,231,0.025);
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   line-height: 1.5;
 }
 
@@ -2839,11 +2935,16 @@ mjx-container[display="true"] {
   .sketch36-stage { padding: 12px; }
   .sketch36-stage::after { inset: 8px; border-radius: 16px; }
   .sketch36-seal { top: 25px; }
-  .sketch36-stage-caption { right: 25px; bottom: 22px; left: 25px; font-size: 0.51rem; }
+  .sketch36-stage-caption { right: 25px; bottom: 22px; left: 25px; align-items: flex-start; flex-direction: column; gap: 4px; font-size: 0.58rem; }
   .sketch36-controls { padding: 20px 18px; }
-  .sketch36-stage-switch { grid-template-columns: 1fr 1fr; }
-  .sketch36-stage-switch button { min-height: 66px; }
-  .sketch36-primary-axes { padding: 15px; }
+  .sketch36-tabs { grid-template-columns: 1fr 1fr; }
+  .sketch36-tab-panel { min-height: 0; }
+  .sketch36-gene-grid.five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sketch36-gene-grid.three { grid-template-columns: 1fr; }
+  .sketch36-range-grid { grid-template-columns: 1fr; }
+  .sketch36-range-grid .wide { grid-column: auto; }
+  .sketch36-gene-section > header { align-items: flex-start; flex-direction: column; }
+  .sketch36-gene-section > header code { max-width: 100%; text-align: left; }
   .sketch36-original-source pre { padding: 15px; }
   .raw-runtime-seal { top: 25px; }
   .raw-paused-overlay {
