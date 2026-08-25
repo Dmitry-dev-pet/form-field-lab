@@ -25,6 +25,11 @@ import {
   MNEMOPHORE_RAW_VARIANTS
 } from "../data/mnemophoreGenome.js";
 import {
+  KRYLOFOR_GENOME,
+  KRYLOFOR_GENOME_CHARACTERS,
+  KRYLOFOR_GENOME_LIMIT
+} from "../data/kryloforGenome.js";
+import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -182,6 +187,18 @@ b((2k+1)\pi)&=1,
 \Longrightarrow r(3.2,(2k+1)\pi)=0.
 \end{aligned}`;
 
+const kryloforLatexSource = String.raw`\begin{aligned}
+u_i&=5i/N,
+&v_i&=\left((i\bmod99)/49-1\right)^3,\\
+p_i&=\sin(u_i/1.6),
+&s_i(t)&=\sin(\omega_wt-k_wu_i),\\
+x_i&=L(u_i-2),\\
+y_i&=v_ip_i(B+Wp_i)\left(1+s_i/D\right)+u_i^2s_i,\\
+z_i&=p_i\left[15\lambda\sin(3v_i)+F\lambda s_i(1-v_i^2)\right],\\
+n_i(t)&=\sin^{12}(\omega_nt-k_nu_i),\\
+\mathbf C_i(t)&=(80+175n_i,160,255,\alpha).
+\end{aligned}`;
+
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
@@ -281,12 +298,14 @@ const defaultCopyLabels = {
   chronophore: "Копировать TeX",
   mnemophore: "Копировать TeX",
   blastophore: "Копировать TeX",
+  krylofor: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   livingSeed: "Копировать RAW гребка",
   chronophoreSeed: "Копировать 280",
   mnemophoreSeed: "Копировать 280",
   blastophoreSeed: "Копировать RAW 279",
+  kryloforSeed: "Копировать RAW 278",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -888,6 +907,57 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Граница рождения.</strong> Сейчас это воспроизводимый цикл почкования: дочерняя доля возвращается в общее тело. Самостоятельный потомок появится только в будущей явной операции закрепления, а не от движения камеры или автоматического кадра.</p>
           <p><strong>Анимационный принцип.</strong> Функция \(\sin^2(t/2)\) даёт естественные slow-in/slow-out в начале роста и перед обратной сборкой. Камера остаётся полностью пользовательской и не расходует символы RAW.</p>
+        </div>
+      </article>
+
+      <article id="krylofor" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>11 / MEMBRANE ORGANISM</span><h2>Крылофор: волна становится крылом</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('krylofor', kryloforLatexSource)">{{ copyLabels.krylofor }}</button>
+            <button class="button" type="button" @click="copy('kryloforSeed', KRYLOFOR_GENOME)">{{ copyLabels.kryloforSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Крылофор использует одну непрерывную мембрану, а не отдельные модели тела, крыльев и хвоста. Параметр <code>u</code> идёт от головы к хвосту; поперечная координата <code>v³</code> сгущает точки у центрального шва, но сохраняет оба края поверхности.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i&amp;=5i/N,
+              &amp;v_i&amp;=\left((i\bmod99)/49-1\right)^3,\\
+              p_i&amp;=\sin(u_i/1.6),
+              &amp;s_i(t)&amp;=\sin(\omega_wt-k_wu_i).
+              \end{aligned}
+              \]
+            </div>
+            <p>Константа <code>1.6 ≈ 5/π</code>, поэтому профиль <code>pᵢ</code> почти сводит мембрану в точки на обоих концах: один конец читается как голова, второй — как длинный хвост. Волна <code>sᵢ</code> одновременно меняет размах, изгибает глубину и сильнее отклоняет хвост, поэтому движение проходит через ткань, а не переносит готовую фигуру.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              x_i&amp;=L(u_i-2),\\
+              y_i&amp;=v_ip_i(B+Wp_i)(1+s_i/D)+u_i^2s_i,\\
+              z_i&amp;=p_i\left[15\lambda\sin(3v_i)+F\lambda s_i(1-v_i^2)\right].
+              \end{aligned}
+              \]
+            </div>
+            <p>Независимая фаза <code>nᵢ = sin¹²(ωₙt − kₙuᵢ)</code> образует узкий световой импульс. Цвет показывает положение фронта раньше, чем геометрический изгиб достигает этой части мембраны: это визуальная модель сигнала, а не физическая нервная система.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Мембрана, хвост, объём и импульс</span>
+              <strong>{{ KRYLOFOR_GENOME_CHARACTERS }} / {{ KRYLOFOR_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ KRYLOFOR_GENOME }}</code></pre>
+            <p>Все ползунки Крылофора компилируют новые числовые константы прямо в эту строку. Разрешённые диапазоны сохраняют итог внутри 280 символов; камера и её последний кватернион хранятся отдельно.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'krylofor' } }">Открыть Крылофор →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Что здесь новое.</strong> В отличие от трёх фазовых ветвей #05, две стороны Крылофора являются половинами одной поверхности и встречаются в общем шве. Цветовая волна имеет собственную фазу и поэтому раскрывает причинную последовательность движения.</p>
+          <p><strong>Граница модели.</strong> Это компактная процедурная кинематика. Она создаёт убедительный образ живой мембраны, но не рассчитывает мышцы, жидкость или сопротивление среды.</p>
         </div>
       </article>
     </div>

@@ -15,6 +15,11 @@ import {
   MNEMOPHORE_RAW_VARIANTS
 } from "./mnemophoreGenome.js";
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
+import {
+  compileKryloforGenome,
+  KRYLOFOR_DEFAULTS,
+  KRYLOFOR_GENOME_SKETCH
+} from "./kryloforGenome.js";
 import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
   decodeGridVertex,
@@ -478,6 +483,32 @@ function blastophorePoint(index, time, settings, layers, target) {
   target.mix = budding;
 }
 
+function kryloforPoint(index, time, settings, layers, target) {
+  const pointCount = Math.max(5000, Math.round(settings.pointCount / 5000) * 5000);
+  const u = index / (pointCount / 5);
+  const v = (index % 99 / 49 - 1) ** 3;
+  const profile = Math.sin(u / 1.6);
+  const wave = Math.sin(settings.waveSpeed * time - u * settings.waveCount);
+  const signalPhase = settings.signalSpeed * time - u * settings.signalCount;
+  const signal = Math.sin(signalPhase) ** 12;
+
+  target.x = (u - 2) * settings.length + 200;
+  target.y = v * profile * (settings.bodyWidth + settings.wingWidth * profile)
+    * (1 + wave / settings.pulseDivisor) + u * u * wave + 200;
+  target.z = profile * settings.depth * (
+    15 * Math.sin(3 * v) + settings.fold * wave * (1 - v * v)
+  );
+  target.parameter = u;
+  target.k = wave;
+  target.e = v;
+  target.d = profile;
+  target.c = signalPhase;
+  target.branch = v < 0 ? 0 : 1;
+  target.forms = 2;
+  target.mix = signal;
+  return target;
+}
+
 export const spatialForms = Object.freeze([
   {
     id: "brancher",
@@ -499,7 +530,7 @@ export const spatialForms = Object.freeze([
       control("forms", "Формы", 1, 8, 1),
       control("radius", "Размер", 30, 140, 1),
       control("height", "Высота", 30, 170, 1),
-      depth,
+      control("depth", "Глубина", 0.5, 1.6, 0.1, { format: "percent" }),
       control("waveFrequency", "Волны", 5, 60, 1),
       control("pulse", "Пульсация", 0, 8, 0.1, { digits: 1 }),
       points(),
@@ -973,6 +1004,53 @@ export const spatialForms = Object.freeze([
       neckClosure: [0.65, 1, 0.02], pointCount: [8000, 16000, 1000], alpha: [65, 130, 1]
     },
     evaluate: blastophorePoint
+  },
+  {
+    id: "krylofor",
+    displayNumber: "P5",
+    sketchNumber: null,
+    shortLabel: "Крылофор",
+    title: "Крылофор",
+    association: "мембрана · два крыла · хвост · импульс",
+    description: "Единая точечная мембрана сгущается в центральный шов, раскрывается двумя крыльями и сходит в хвост. Геометрическая волна и узкий цветовой импульс бегут вдоль одного параметра.",
+    origin: "form-field-synthesis",
+    genomeSketch: KRYLOFOR_GENOME_SKETCH,
+    compileGenome: compileKryloforGenome,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "custom",
+      expression: "sin(7 * t - 3 * y) ^ 12",
+      colorA: "#50a0ff",
+      colorB: "#ff50ff"
+    }),
+    timeStep: 0.02,
+    defaults: KRYLOFOR_DEFAULTS,
+    primaryControls: [
+      control("genomeSpeed", "Темп", 1, 5, 1, { format: "integerSpeed" }),
+      control("length", "Длина тела", 35, 65, 1),
+      control("bodyWidth", "Центральный шов", 18, 45, 1),
+      control("wingWidth", "Размах крыльев", 55, 95, 1),
+      depth,
+      control("fold", "Изгиб мембраны", 8, 32, 1),
+      control("signalSpeed", "Скорость импульса", 3, 9, 1),
+      control("pointCount", "Точки", 5000, 20000, 5000, { format: "count" }),
+      control("alpha", "Прозрачность", 30, 99, 1)
+    ],
+    advancedControls: [
+      control("pulseDivisor", "Податливость крыла", 6, 14, 1),
+      control("waveSpeed", "Темп волны", 2, 8, 1),
+      control("waveCount", "Волн вдоль тела", 1, 5, 1),
+      control("signalCount", "Длина импульса", 1, 6, 1)
+    ],
+    layers: [],
+    randomRanges: {
+      genomeSpeed: [1, 5, 1], length: [40, 62, 1], bodyWidth: [20, 42, 1],
+      wingWidth: [60, 94, 1], depth: [0.6, 1.5, 0.1], fold: [10, 30, 1],
+      signalSpeed: [4, 9, 1], pointCount: [5000, 20000, 5000], alpha: [45, 96, 1],
+      pulseDivisor: [6, 14, 1], waveSpeed: [2, 8, 1], waveCount: [1, 5, 1],
+      signalCount: [1, 6, 1]
+    },
+    evaluate: kryloforPoint
   }
 ]);
 

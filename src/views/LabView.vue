@@ -43,8 +43,8 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
-  const legacyNumber = ["P3", "P4"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
-  const legacyTitle = ["P3", "P4"].includes(record.displayNumber)
+  const legacyNumber = ["P3", "P4", "P5"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
+  const legacyTitle = ["P3", "P4", "P5"].includes(record.displayNumber)
     ? record.title.replace(new RegExp(`${record.displayNumber}\\b`), `${record.displayNumber}′`)
     : record.title;
   return {
@@ -135,7 +135,12 @@ const isTopologyGenome = computed(() => Boolean(selectedForm.value.meshGenome));
 const compiledTopologyGenome = computed(() => isTopologyGenome.value
   ? compileTopologyGenome(settings)
   : null);
-const canonicalSketch = computed(() => compiledTopologyGenome.value?.sketch
+const compiledFormulaGenome = computed(() => selectedForm.value.compileGenome
+  ? selectedForm.value.compileGenome(settings)
+  : null);
+const compiledGenome = computed(() => compiledTopologyGenome.value || compiledFormulaGenome.value);
+const isCompiledGenome = computed(() => Boolean(compiledGenome.value));
+const canonicalSketch = computed(() => compiledGenome.value?.sketch
   || selectedForm.value.sketch
   || selectedForm.value.genomeSketch);
 const imprintSource = computed(() => ({
@@ -200,8 +205,8 @@ const savedImprintRecord = computed(() => geneticImprintResult.value
   ? savedEntityRecords.value.find(record => record.code === geneticImprintResult.value.code)
   : null);
 const nextEntityLabel = computed(() => `P${nextMutationNumber(savedEntityRecords.value)}`);
-const bareRunnerLabel = computed(() => isTopologyGenome.value
-  ? `${compiledTopologyGenome.value.preset.label}: итоговый ${compiledTopologyGenome.value.characters}-символьный RAW-геном`
+const bareRunnerLabel = computed(() => isCompiledGenome.value
+  ? `${selectedForm.value.title}: итоговый ${compiledGenome.value.characters}-символьный RAW-геном`
   : hasBudgetVariants.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} из ${rawBudget.value} символов`
   : selectedForm.value.sketch
@@ -211,7 +216,7 @@ const bareRunnerLabel = computed(() => isTopologyGenome.value
   : selectedRawVariant.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} символов`
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
-const bareLead = computed(() => isTopologyGenome.value
+const bareLead = computed(() => isCompiledGenome.value
   ? `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : hasBudgetVariants.value
     ? selectedForm.value.id === "pelagion"
@@ -243,16 +248,20 @@ const chronophoreRawControlKeys = new Set([
 const chronophoreRawLayerKeys = new Set(["knot", "fibers", "flow"]);
 const rawPrimaryControls = computed(() => isTopologyGenome.value
   ? primaryControls.value
+  : compiledFormulaGenome.value
+    ? selectedForm.value.primaryControls
+    : isImprintRequested.value
+      ? selectedForm.value.primaryControls.filter(control => chronophoreRawControlKeys.has(control.key))
+      : []);
+const rawAdvancedControls = computed(() => compiledFormulaGenome.value
+  ? selectedForm.value.advancedControls
   : isImprintRequested.value
-    ? selectedForm.value.primaryControls.filter(control => chronophoreRawControlKeys.has(control.key))
+    ? selectedForm.value.advancedControls.filter(control => chronophoreRawControlKeys.has(control.key))
     : []);
-const rawAdvancedControls = computed(() => isImprintRequested.value
-  ? selectedForm.value.advancedControls.filter(control => chronophoreRawControlKeys.has(control.key))
-  : []);
 const rawLayers = computed(() => isImprintRequested.value
   ? selectedForm.value.layers.filter(layer => chronophoreRawLayerKeys.has(layer.key))
   : []);
-const hasRawControls = computed(() => isTopologyGenome.value || isImprintRequested.value);
+const hasRawControls = computed(() => isCompiledGenome.value || isImprintRequested.value);
 const selectedTopology = computed(() => selectedForm.value.mesh
   ? resolveGridTopology(selectedForm.value.mesh, settings)
   : null);
@@ -454,10 +463,10 @@ function randomize() {
   preset.value = "RAW случайный";
 }
 
-async function copyTopologyGenome() {
-  if (!compiledTopologyGenome.value) return;
+async function copyCompiledGenome() {
+  if (!compiledGenome.value) return;
   try {
-    await navigator.clipboard.writeText(compiledTopologyGenome.value.code);
+    await navigator.clipboard.writeText(compiledGenome.value.code);
     genomeCopyLabel.value = "Скопировано ✓";
   } catch {
     genomeCopyLabel.value = "Не удалось";
@@ -587,7 +596,7 @@ onBeforeUnmount(() => {
         </div>
         <div class="canvas-meta" aria-hidden="true">
           <span><span class="live-dot raw"></span>{{ barePaused ? "pause / raw" : "raw / p5.js" }}</span>
-          <span>{{ bareCodeLength }} chars · {{ isTopologyGenome ? "compiled" : isImprintBare ? "raw mutation" : selectedRawVariant?.id || "canonical" }} · {{ bareSketch.viewModel ? "drag / saved view" : "isolated" }}</span>
+          <span>{{ bareCodeLength }} chars · {{ isCompiledGenome ? "compiled" : isImprintBare ? "raw mutation" : selectedRawVariant?.id || "canonical" }} · {{ bareSketch.viewModel ? "drag / saved view" : "isolated" }}</span>
         </div>
       </div>
 
@@ -625,7 +634,7 @@ onBeforeUnmount(() => {
         <div class="bare-mode-panel">
           <div>
             <p class="panel-kicker">RAW / GENOTYPE FEEDBACK</p>
-            <h2>{{ isTopologyGenome ? "Итоговый RAW" : isImprintBare ? "RAW-мутация" : selectedRawVariant?.title || "Код без посредника" }}</h2>
+            <h2>{{ isCompiledGenome ? "Итоговый RAW" : isImprintBare ? "RAW-мутация" : selectedRawVariant?.title || "Код без посредника" }}</h2>
             <p>{{ bareLead }}</p>
           </div>
 
@@ -712,7 +721,7 @@ onBeforeUnmount(() => {
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} из {{ rawBudget }} символов</dd></div>
             <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>последний ракурс · вне генома · 0 символов</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
-            <div><dt>Источник</dt><dd>{{ isTopologyGenome ? "текущие константы RAW" : hasBudgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
+            <div><dt>Источник</dt><dd>{{ isCompiledGenome ? "текущие константы RAW" : hasBudgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>
 
           <div v-if="selectedRawVariant" class="genome-comparison">
@@ -796,7 +805,7 @@ onBeforeUnmount(() => {
             </template>
           </div>
 
-          <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
+          <p v-if="isCompiledGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
           <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ rawBudgetContract }}</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
@@ -804,7 +813,7 @@ onBeforeUnmount(() => {
 
         <template v-if="hasRawControls">
           <div class="panel-title-row">
-            <h2>{{ isTopologyGenome ? "Константы RAW" : "Генетические параметры RAW" }}</h2>
+            <h2>{{ isCompiledGenome ? "Константы RAW" : "Генетические параметры RAW" }}</h2>
             <span class="status-badge">#{{ formNumber(selectedForm) }} · {{ preset }}</span>
           </div>
 
@@ -834,28 +843,28 @@ onBeforeUnmount(() => {
           </div>
 
           <section
-            v-if="compiledTopologyGenome"
+            v-if="compiledGenome"
             class="live-genome-panel"
-            :class="{ invalid: !compiledTopologyGenome.withinLimit }"
+            :class="{ invalid: !compiledGenome.withinLimit }"
             aria-label="Итоговый исполняемый RAW-геном"
           >
             <header>
               <div><span>Исполняемый RAW</span><small>это и есть результат</small></div>
-              <strong aria-live="polite">{{ compiledTopologyGenome.characters }} / {{ compiledTopologyGenome.limit }}</strong>
+              <strong aria-live="polite">{{ compiledGenome.characters }} / {{ compiledGenome.limit }}</strong>
             </header>
             <div
               class="genome-budget-track"
               role="progressbar"
               aria-label="Использование лимита генома"
-              :aria-valuenow="compiledTopologyGenome.characters"
+              :aria-valuenow="compiledGenome.characters"
               aria-valuemin="0"
-              :aria-valuemax="compiledTopologyGenome.limit"
-            ><span :style="{ width: `${compiledTopologyGenome.characters / compiledTopologyGenome.limit * 100}%` }"></span></div>
-            <pre><code>{{ compiledTopologyGenome.code }}</code></pre>
-            <p v-if="compiledTopologyGenome.withinLimit">Геном исполняется самостоятельно и проходит лимит 280 символов.</p>
+              :aria-valuemax="compiledGenome.limit"
+            ><span :style="{ width: `${compiledGenome.characters / compiledGenome.limit * 100}%` }"></span></div>
+            <pre><code>{{ compiledGenome.code }}</code></pre>
+            <p v-if="compiledGenome.withinLimit">Геном исполняется самостоятельно и проходит лимит 280 символов.</p>
             <p v-else role="alert">Лимит превышен: этот вариант не может считаться сущностью.</p>
             <div class="live-genome-actions">
-              <button class="button" type="button" @click="copyTopologyGenome">{{ genomeCopyLabel }}</button>
+              <button class="button" type="button" @click="copyCompiledGenome">{{ genomeCopyLabel }}</button>
               <span class="raw-live-caption">Уже исполняется на холсте</span>
             </div>
           </section>
