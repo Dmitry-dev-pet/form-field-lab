@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Form / Field — Sketch 36: Small Code</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050706;
+    }
+
+    body { display: grid; place-items: center; }
+
+    canvas {
+      display: block;
+      width: min(100vw, 56.25vh);
+      height: min(177.7778vw, 100vh);
+      background: #050706;
+    }
+
+    #download {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #download.ready { pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="film" width="1080" height="1920" aria-label="Sketch 36 — Small Code, Large Behavior"></canvas>
+  <a id="download" download="sketch-36-small-code.webm">DOWNLOAD WEBM</a>
+
+  <script type="module">
+    import { sketch36Original } from "../../src/data/sketch36Genome.js";
+
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+    const FIELD_SIZE = 1080;
+    const FPS = 30;
+    const TOTAL_FRAMES = 450;
+    const OPEN_START = 45;
+    const OPEN_END = 105;
+    const CLOSE_START = 285;
+    const CLOSE_END = 345;
+    const LOOP_START = 414;
+    const code = sketch36Original.code;
+    const codeLines = [code.slice(0, 70), code.slice(70, 140), code.slice(140, 210), code.slice(210)];
+
+    if (code.length !== 273 || codeLines.join("") !== code) {
+      throw new Error("Sketch 36 source drifted from the 273-character original.");
+    }
+
+    const canvas = document.querySelector("#film");
+    const output = canvas.getContext("2d", { alpha: false });
+    const sceneCanvas = document.createElement("canvas");
+    sceneCanvas.width = WIDTH;
+    sceneCanvas.height = HEIGHT;
+    const context = sceneCanvas.getContext("2d", { alpha: false });
+    const fieldCanvas = document.createElement("canvas");
+    fieldCanvas.width = FIELD_SIZE;
+    fieldCanvas.height = FIELD_SIZE;
+    const field = fieldCanvas.getContext("2d", { alpha: false });
+    const download = document.querySelector("#download");
+    const particles = [];
+    let randomState = 0x36360127;
+
+    window.__videoReady = false;
+    window.__videoMetadata = {
+      fps: FPS,
+      frames: TOTAL_FRAMES,
+      width: WIDTH,
+      height: HEIGHT,
+      originalLength: code.length,
+      sourceId: sketch36Original.id,
+      sourceAuthor: "@yuruyurau"
+    };
+
+    field.fillStyle = "#000";
+    field.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+
+    function random() {
+      randomState |= 0;
+      randomState = randomState + 0x6d2b79f5 | 0;
+      let value = Math.imul(randomState ^ randomState >>> 15, 1 | randomState);
+      value = value + Math.imul(value ^ value >>> 7, 61 | value) ^ value;
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    }
+
+    function random3D() {
+      const z = random() * 2 - 1;
+      const angle = random() * Math.PI * 2;
+      const radius = Math.sqrt(1 - z * z);
+      return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, z };
+    }
+
+    function clamp(value, minimum = 0, maximum = 1) {
+      return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function mix(from, to, amount) {
+      return from + (to - from) * amount;
+    }
+
+    function smoothstep(from, to, value) {
+      const amount = clamp((value - from) / (to - from));
+      return amount * amount * (3 - 2 * amount);
+    }
+
+    function easeOutBack(amount) {
+      const c1 = 1.70158;
+      const c3 = c1 + 1;
+      return 1 + c3 * Math.pow(amount - 1, 3) + c1 * Math.pow(amount - 1, 2);
+    }
+
+    function text(value, x, y, size, color, options = {}) {
+      context.save();
+      context.globalAlpha = options.alpha ?? 1;
+      context.fillStyle = color;
+      context.font = `${options.weight || 500} ${size}px ${options.family || "Arial, sans-serif"}`;
+      context.textAlign = options.align || "left";
+      context.textBaseline = options.baseline || "alphabetic";
+      context.fillText(value, x, y);
+      context.restore();
+    }
+
+    function line(x1, y1, x2, y2, color, width = 1) {
+      context.strokeStyle = color;
+      context.lineWidth = width;
+      context.beginPath();
+      context.moveTo(x1, y1);
+      context.lineTo(x2, y2);
+      context.stroke();
+    }
+
+    function roundedRect(x, y, width, height, radius) {
+      context.beginPath();
+      context.roundRect(x, y, width, height, radius);
+    }
+
+    function simulateOriginal() {
+      field.fillStyle = "rgba(0,0,0,0.035294)";
+      field.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+
+      particles.forEach((particle, index) => {
+        const r = ((particle.x * 2 + 2.5) ^ (particle.y + 2)) * 8;
+        const x = (particle.x + 2) * 270;
+        const y = (particle.y + 1.6) * 270;
+        const red = Math.min(255, index);
+        const green = Math.min(255, index / 3);
+        const blue = Math.min(255, index / 5);
+        field.fillStyle = `rgb(${red} ${green} ${blue})`;
+        field.fillRect(x, y, 2.1, 2.1);
+        const dx = Math.sin(particle.y * r) / 90;
+        const dy = Math.cos(particle.x * r) / 90;
+        particle.x += dx;
+        particle.y += dy;
+      });
+
+      if (particles.length > 2000) {
+        particles.splice(0, particles.length - 1980);
+      } else {
+        for (let index = 0; index < 20; index += 1) particles.push(random3D());
+      }
+    }
+
+    function drawHeader(fullProgress) {
+      text("FORM / FIELD", 64, 82, 16, "#d8ff54", { weight: 800 });
+      text("DIRECTOR CUT 01", 1016, 82, 14, "#78827c", { align: "right", weight: 700 });
+      line(64, 112, 1016, 112, "rgba(255,255,255,.13)");
+
+      if (fullProgress > 0.01) {
+        text("273 CHARACTERS", 64, 164, 14, "#d8ff54", { weight: 800, alpha: fullProgress });
+        text("≈ 2,000 PARTICLES", 1016, 164, 14, "#a9b1ac", {
+          align: "right",
+          weight: 700,
+          alpha: fullProgress
+        });
+      }
+    }
+
+    function drawCodeCard(alpha = 1, metrics = 0) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+      const x = 64;
+      const y = 660;
+      const width = 952;
+      const height = 480;
+      roundedRect(x, y, width, height, 28);
+      context.fillStyle = "rgba(10,14,12,.97)";
+      context.fill();
+      context.strokeStyle = "rgba(216,255,84,.42)";
+      context.lineWidth = 1.5;
+      context.stroke();
+
+      text("SKETCH 36 / SOURCE", x + 32, y + 54, 15, "#d8ff54", { weight: 800 });
+      text("273 / 280", x + width - 32, y + 54, 15, "#eef0e9", {
+        align: "right",
+        family: "ui-monospace, monospace",
+        weight: 700
+      });
+      line(x + 32, y + 78, x + width - 32, y + 78, "rgba(255,255,255,.12)");
+
+      codeLines.forEach((codeLine, index) => {
+        text(codeLine, x + 32, y + 134 + index * 62, 15, index === 3 ? "#d8ff54" : "#d9ded9", {
+          family: "ui-monospace, SFMono-Regular, Menlo, monospace",
+          weight: 500
+        });
+      });
+
+      text("BY @YURUYURAU · #つぶやきPROCESSING", x + 32, y + height - 34, 13, "#7f8b84", {
+        weight: 700
+      });
+      context.restore();
+
+      if (metrics > 0) {
+        text("SMALL CODE", 64, 1260, 50, "#f1f2ec", { weight: 500, alpha: metrics });
+        text("/ LARGE BEHAVIOR", 64, 1320, 50, "#f1f2ec", { weight: 500, alpha: metrics });
+        text("ONE FIELD · MEMORY · EXCHANGE", 68, 1370, 14, "#94a099", { weight: 700, alpha: metrics });
+      }
+    }
+
+    function drawCodeRail(alpha) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+      roundedRect(64, 1538, 952, 214, 22);
+      context.fillStyle = "rgba(8,11,9,.90)";
+      context.fill();
+      context.strokeStyle = "rgba(216,255,84,.28)";
+      context.stroke();
+      text("THE COMPLETE SOURCE", 88, 1576, 12, "#d8ff54", { weight: 800 });
+      text("273 / 280", 992, 1576, 12, "#e7eae3", { align: "right", family: "ui-monospace, monospace" });
+      codeLines.forEach((codeLine, index) => {
+        text(codeLine, 88, 1610 + index * 29, 10.5, index === 3 ? "#d8ff54" : "#9ca59f", {
+          family: "ui-monospace, SFMono-Regular, Menlo, monospace"
+        });
+      });
+      context.restore();
+    }
+
+    function drawEvidence(frameIndex, alpha) {
+      const items = [
+        { label: "FIELD", detail: "r = (x ^ y) × 8", start: 138 },
+        { label: "MEMORY", detail: "v += field", start: 174 },
+        { label: "EXCHANGE", detail: "+20 / −40", start: 210 }
+      ];
+      items.forEach((item, index) => {
+        const itemAlpha = alpha * smoothstep(item.start, item.start + 14, frameIndex);
+        if (itemAlpha <= 0) return;
+        const y = 1430 + index * 32;
+        text(item.label, 64, y, 11, "#d8ff54", { weight: 800, alpha: itemAlpha });
+        text(item.detail, 180, y, 11, "#8f9993", {
+          family: "ui-monospace, monospace",
+          alpha: itemAlpha
+        });
+      });
+    }
+
+    function drawField(frameIndex, progress) {
+      if (progress <= 0) return;
+      const eased = easeOutBack(progress);
+      const x = mix(64, 0, eased);
+      const y = mix(660, 260, eased);
+      const width = mix(952, 1080, eased);
+      const height = mix(480, 1160, eased);
+      const inspection = smoothstep(165, 225, frameIndex) * (1 - smoothstep(240, 282, frameIndex));
+      const sourceInset = mix(20, 66, inspection);
+
+      context.save();
+      roundedRect(x, y, width, height, mix(28, 0, progress));
+      context.clip();
+      context.globalAlpha = smoothstep(0, 0.2, progress);
+      context.drawImage(
+        fieldCanvas,
+        sourceInset,
+        sourceInset * 0.35,
+        FIELD_SIZE - sourceInset * 2,
+        FIELD_SIZE - sourceInset * 1.2,
+        x,
+        y,
+        width,
+        height
+      );
+      context.restore();
+
+      context.save();
+      context.globalAlpha = progress * 0.22;
+      context.strokeStyle = "#d8ff54";
+      context.lineWidth = 1;
+      context.strokeRect(x, y, width, height);
+      context.restore();
+    }
+
+    function drawFrame(frameIndex) {
+      simulateOriginal();
+      const opening = smoothstep(OPEN_START, OPEN_END, frameIndex);
+      const closing = smoothstep(CLOSE_START, CLOSE_END, frameIndex);
+      const fieldProgress = opening * (1 - closing);
+      const fullProgress = smoothstep(92, 116, frameIndex) * (1 - smoothstep(274, 300, frameIndex));
+      const metrics = smoothstep(350, 370, frameIndex) * (1 - smoothstep(397, LOOP_START, frameIndex));
+
+      context.fillStyle = "#050706";
+      context.fillRect(0, 0, WIDTH, HEIGHT);
+
+      const glow = context.createRadialGradient(540, 930, 80, 540, 930, 850);
+      glow.addColorStop(0, `rgba(216,255,84,${0.035 * fieldProgress})`);
+      glow.addColorStop(0.65, `rgba(38,80,64,${0.028 * fieldProgress})`);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 140, WIDTH, 1500);
+
+      drawHeader(fullProgress);
+      drawField(frameIndex, fieldProgress);
+      drawCodeCard(1 - smoothstep(OPEN_START + 5, OPEN_END - 4, frameIndex) + closing, metrics);
+      drawEvidence(frameIndex, fullProgress);
+      drawCodeRail(fullProgress);
+
+      if (fullProgress > 0) {
+        text("SMALL CODE / LARGE BEHAVIOR", 64, 1814, 14, "#cdd2ce", { weight: 800, alpha: fullProgress });
+        text("SKETCH 36 · @YURUYURAU", 1016, 1814, 13, "#77827b", {
+          align: "right",
+          weight: 700,
+          alpha: fullProgress
+        });
+      }
+
+      if (frameIndex >= LOOP_START) {
+        context.fillStyle = `rgba(5,7,6,${smoothstep(LOOP_START, LOOP_START + 8, frameIndex)})`;
+        context.fillRect(0, 0, WIDTH, HEIGHT);
+        drawHeader(0);
+        drawCodeCard(1, 0);
+      }
+
+      output.drawImage(sceneCanvas, 0, 0);
+    }
+
+    function startRecording() {
+      const stream = canvas.captureStream(FPS);
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm;codecs=vp8";
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 18_000_000
+      });
+      const chunks = [];
+      let frameIndex = 0;
+      let tailFrame = 0;
+      let expectedTime = performance.now();
+
+      recorder.addEventListener("dataavailable", event => {
+        if (event.data.size) chunks.push(event.data);
+      });
+      recorder.addEventListener("stop", () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        download.href = URL.createObjectURL(blob);
+        download.classList.add("ready");
+        window.__videoReady = true;
+        window.__videoBlobSize = blob.size;
+      });
+
+      recorder.start(1000);
+
+      function tick(now) {
+        if (now >= expectedTime) {
+          if (frameIndex < TOTAL_FRAMES) {
+            drawFrame(frameIndex);
+            frameIndex += 1;
+          } else if (tailFrame < 30) {
+            drawFrame(TOTAL_FRAMES - 1);
+            tailFrame += 1;
+          }
+          expectedTime += 1000 / FPS;
+        }
+        if (frameIndex >= TOTAL_FRAMES && tailFrame >= 30) {
+          recorder.stop();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    const query = new URLSearchParams(location.search);
+    if (query.has("record")) {
+      startRecording();
+    } else {
+      const previewFrame = Math.min(TOTAL_FRAMES - 1, Number(query.get("frame") || 195));
+      for (let frameIndex = 0; frameIndex <= previewFrame; frameIndex += 1) drawFrame(frameIndex);
+      window.__videoReady = true;
+    }
+  </script>
+</body>
+</html>

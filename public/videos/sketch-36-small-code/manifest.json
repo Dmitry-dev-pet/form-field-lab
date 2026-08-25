@@ -1,0 +1,34 @@
+{
+  "id": "sketch-36-small-code",
+  "title": "Small Code / Large Behavior",
+  "status": "exported",
+  "created": "2026-08-26",
+  "video": {
+    "file": "sketch-36-small-code.mp4",
+    "cover": "cover.png",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationSeconds": 15,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audio": false
+  },
+  "source": {
+    "sketch": 36,
+    "id": "1588062547315679232",
+    "author": "@yuruyurau",
+    "tag": "#つぶやきProcessing",
+    "characters": 273,
+    "particles": "1980-2020"
+  },
+  "mutation": null,
+  "presentation": {
+    "externalToGenome": true,
+    "concept": "small code unfolds into large behavior and returns to code",
+    "openingFrames": [45, 105],
+    "closingFrames": [285, 345],
+    "loopFrame": 414,
+    "sourceMechanicsChanged": false
+  }
+}
