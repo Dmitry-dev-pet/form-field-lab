@@ -15,6 +15,7 @@ function executeFrames(code) {
   const sandbox = {
     PI: Math.PI,
     sin: Math.sin,
+    cos: Math.cos,
     createCanvas() {},
     background() {
       points = [];
@@ -38,11 +39,12 @@ function executeFrames(code) {
 
 test("Krylofor keeps its membrane, depth, tail and signal inside 280 characters", () => {
   assert.equal(KRYLOFOR_GENOME_CHARACTERS, KRYLOFOR_GENOME.length);
-  assert.equal(KRYLOFOR_GENOME_CHARACTERS, 278);
+  assert.equal(KRYLOFOR_GENOME_CHARACTERS, 280);
   assert.equal(KRYLOFOR_GENOME_LIMIT, 280);
   assert.match(KRYLOFOR_GENOME, /v=\(i%99\/49-1\)\*\*3/);
-  assert.match(KRYLOFOR_GENOME, /s=sin\(4\*t-u\*2\)/);
-  assert.match(KRYLOFOR_GENOME, /sin\(7\*t-u\*3\)\*\*12/);
+  assert.match(KRYLOFOR_GENOME, /s=sin\(8\*t-u\*2\)/);
+  assert.match(KRYLOFOR_GENOME, /sin\(9\*t-u\*3\)\*\*8/);
+  assert.match(KRYLOFOR_GENOME, /point\(x\*cos\(t\)\+z\*sin\(t\)\+200,y\+200\)/);
   assert.doesNotMatch(KRYLOFOR_GENOME, /WEBGL/);
   assert.doesNotThrow(() => new Function(KRYLOFOR_GENOME));
 
@@ -67,7 +69,6 @@ test("every Krylofor control endpoint recompiles to a valid autonomous RAW", () 
     wingWidth: 55,
     depth: 0.5,
     fold: 8,
-    pulseDivisor: 6,
     waveSpeed: 2,
     waveCount: 1,
     signalSpeed: 3,
@@ -83,7 +84,6 @@ test("every Krylofor control endpoint recompiles to a valid autonomous RAW", () 
     wingWidth: 95,
     depth: 1.6,
     fold: 32,
-    pulseDivisor: 14,
     waveSpeed: 8,
     waveCount: 5,
     signalSpeed: 9,
@@ -104,7 +104,7 @@ test("every Krylofor control endpoint recompiles to a valid autonomous RAW", () 
   }
 });
 
-test("Krylofor sliders change the executed genome while camera state stays external", () => {
+test("Krylofor sliders change the executed genome while the manual camera stays external", () => {
   const original = compileKryloforGenome(KRYLOFOR_DEFAULTS);
   const changed = compileKryloforGenome({ ...KRYLOFOR_DEFAULTS, wingWidth: 91 });
   const cameraOnly = compileKryloforGenome({
@@ -118,5 +118,5 @@ test("Krylofor sliders change the executed genome while camera state stays exter
   assert.notEqual(changed.id, original.id);
   assert.equal(cameraOnly.code, original.code);
   assert.equal(cameraOnly.id, original.id);
-  assert.equal(original.sketch.viewModel, "point-cloud-orbit");
+  assert.equal(original.sketch.viewModel, "point-cloud-auto-y-orbit");
 });

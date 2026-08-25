@@ -490,11 +490,11 @@ function kryloforPoint(index, time, settings, layers, target) {
   const profile = Math.sin(u / 1.6);
   const wave = Math.sin(settings.waveSpeed * time - u * settings.waveCount);
   const signalPhase = settings.signalSpeed * time - u * settings.signalCount;
-  const signal = Math.sin(signalPhase) ** 12;
+  const signal = Math.sin(signalPhase) ** 8;
 
   target.x = (u - 2) * settings.length + 200;
-  target.y = v * profile * (settings.bodyWidth + settings.wingWidth * profile)
-    * (1 + wave / settings.pulseDivisor) + u * u * wave + 200;
+  target.y = v * profile * (settings.bodyWidth + settings.wingWidth * profile + wave)
+    + u * u * wave + 200;
   target.z = profile * settings.depth * (
     15 * Math.sin(3 * v) + settings.fold * wave * (1 - v * v)
   );
@@ -1011,22 +1011,22 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Крылофор",
     title: "Крылофор",
-    association: "мембрана · два крыла · хвост · импульс",
-    description: "Единая точечная мембрана сгущается в центральный шов, раскрывается двумя крыльями и сходит в хвост. Геометрическая волна и узкий цветовой импульс бегут вдоль одного параметра.",
+    association: "мембрана · два крыла · хвост · автоповорот",
+    description: "Единая точечная мембрана сгущается в центральный шов, раскрывается двумя крыльями и сходит в хвост. Геометрическая волна, цветовой импульс и медленный пространственный оборот исполняются самим RAW.",
     origin: "form-field-synthesis",
     genomeSketch: KRYLOFOR_GENOME_SKETCH,
     compileGenome: compileKryloforGenome,
     savedColor: Object.freeze({
       mode: "formula",
       preset: "custom",
-      expression: "sin(7 * t - 3 * y) ^ 12",
-      colorA: "#50a0ff",
+      expression: "sin(9 * t - 3 * y) ^ 8",
+      colorA: "#0808ff",
       colorB: "#ff50ff"
     }),
-    timeStep: 0.02,
+    timeStep: 0.01,
     defaults: KRYLOFOR_DEFAULTS,
     primaryControls: [
-      control("genomeSpeed", "Темп", 1, 5, 1, { format: "integerSpeed" }),
+      control("genomeSpeed", "Темп сущности", 1, 5, 1, { format: "integerSpeed" }),
       control("length", "Длина тела", 35, 65, 1),
       control("bodyWidth", "Центральный шов", 18, 45, 1),
       control("wingWidth", "Размах крыльев", 55, 95, 1),
@@ -1037,7 +1037,6 @@ export const spatialForms = Object.freeze([
       control("alpha", "Прозрачность", 30, 99, 1)
     ],
     advancedControls: [
-      control("pulseDivisor", "Податливость крыла", 6, 14, 1),
       control("waveSpeed", "Темп волны", 2, 8, 1),
       control("waveCount", "Волн вдоль тела", 1, 5, 1),
       control("signalCount", "Длина импульса", 1, 6, 1)
@@ -1047,7 +1046,7 @@ export const spatialForms = Object.freeze([
       genomeSpeed: [1, 5, 1], length: [40, 62, 1], bodyWidth: [20, 42, 1],
       wingWidth: [60, 94, 1], depth: [0.6, 1.5, 0.1], fold: [10, 30, 1],
       signalSpeed: [4, 9, 1], pointCount: [5000, 20000, 5000], alpha: [45, 96, 1],
-      pulseDivisor: [6, 14, 1], waveSpeed: [2, 8, 1], waveCount: [1, 5, 1],
+      waveSpeed: [2, 8, 1], waveCount: [1, 5, 1],
       signalCount: [1, 6, 1]
     },
     evaluate: kryloforPoint

@@ -69,3 +69,13 @@ test("the memory runner projects points and generated edges with the same saved 
   assert.match(html, /projectedSpatialLine/);
   assert.match(html, /globalThis\.Z/);
 });
+
+test("the Krylofor runner composes its embedded Y turn with the saved manual camera", () => {
+  const code = "t=0,draw=_=>{t+=.01;createCanvas(400,400);x=z=1;point(x*cos(t)+z*sin(t)+200,200)}";
+  const html = runnerDocument(code, { viewModel: "point-cloud-auto-y-orbit" });
+
+  assert.match(html, /point-cloud-auto-y-orbit/);
+  assert.match(html, /globalThis\.t/);
+  assert.match(html, /-axial \* Math\.sin\(angle\) \+ depth \* Math\.cos\(angle\)/);
+  assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
+});

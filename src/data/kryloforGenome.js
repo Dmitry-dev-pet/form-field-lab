@@ -2,16 +2,15 @@ export const KRYLOFOR_GENOME_LIMIT = 280;
 
 export const KRYLOFOR_DEFAULTS = Object.freeze({
   speed: 1,
-  genomeSpeed: 2,
+  genomeSpeed: 1,
   length: 50,
   bodyWidth: 30,
   wingWidth: 80,
   depth: 1,
   fold: 20,
-  pulseDivisor: 9,
-  waveSpeed: 4,
+  waveSpeed: 8,
   waveCount: 2,
-  signalSpeed: 7,
+  signalSpeed: 9,
   signalCount: 3,
   pointCount: 10000,
   alpha: 80,
@@ -42,7 +41,6 @@ export function compileKryloforGenome(settings = {}) {
     wingWidth: integer(settings.wingWidth, KRYLOFOR_DEFAULTS.wingWidth, 55, 95),
     depth: depthScale(settings.depth),
     fold: integer(settings.fold, KRYLOFOR_DEFAULTS.fold, 8, 32),
-    pulseDivisor: integer(settings.pulseDivisor, KRYLOFOR_DEFAULTS.pulseDivisor, 6, 14),
     waveSpeed: integer(settings.waveSpeed, KRYLOFOR_DEFAULTS.waveSpeed, 2, 8),
     waveCount: integer(settings.waveCount, KRYLOFOR_DEFAULTS.waveCount, 1, 5),
     signalSpeed: integer(settings.signalSpeed, KRYLOFOR_DEFAULTS.signalSpeed, 3, 9),
@@ -57,7 +55,7 @@ export function compileKryloforGenome(settings = {}) {
   const timeStep = `.0${parameters.genomeSpeed}`;
   const points = scientificThousands(pointCount);
   const longitudinalScale = scientificThousands(pointCount / 5);
-  const code = `t=0,draw=_=>{t||createCanvas(w=400,w);background(7);for(t+=${timeStep},i=${points};i--;){u=i/${longitudinalScale};v=(i%99/49-1)**3;p=sin(u/1.6);s=sin(${parameters.waveSpeed}*t-u*${parameters.waveCount});x=(u-2)*${parameters.length};z=p*(${rimDepth}*sin(3*v)+${fold}*s*(1-v*v));y=v*p*(${parameters.bodyWidth}+${parameters.wingWidth}*p)*(1+s/${parameters.pulseDivisor})+u*u*s;stroke(80+175*sin(${parameters.signalSpeed}*t-u*${parameters.signalCount})**12,160,w,${parameters.alpha});point(x+200,y+200)}}//#つぶやきProcessing`;
+  const code = `t=0,draw=_=>{t||createCanvas(w=400,w);background(7);for(t+=${timeStep},i=${points};i--;){u=i/${longitudinalScale};v=(i%99/49-1)**3;p=sin(u/1.6);s=sin(${parameters.waveSpeed}*t-u*${parameters.waveCount});x=(u-2)*${parameters.length};z=p*(${rimDepth}*sin(3*v)+${fold}*s*(1-v*v));y=v*p*(${parameters.bodyWidth}+${parameters.wingWidth}*p+s)+u*u*s;stroke(w*sin(${parameters.signalSpeed}*t-u*${parameters.signalCount})**8,8,w,${parameters.alpha});point(x*cos(t)+z*sin(t)+200,y+200)}}//#つぶやきProcessing`;
   const identity = [
     parameters.genomeSpeed,
     parameters.length,
@@ -65,7 +63,6 @@ export function compileKryloforGenome(settings = {}) {
     parameters.wingWidth,
     rimDepth,
     parameters.fold,
-    parameters.pulseDivisor,
     parameters.waveSpeed,
     parameters.waveCount,
     parameters.signalSpeed,
@@ -74,7 +71,7 @@ export function compileKryloforGenome(settings = {}) {
     parameters.alpha
   ].join("-");
   const id = `krylofor-${identity}`;
-  const sketch = Object.freeze({ id, code, viewModel: "point-cloud-orbit" });
+  const sketch = Object.freeze({ id, code, viewModel: "point-cloud-auto-y-orbit" });
 
   return Object.freeze({
     id,

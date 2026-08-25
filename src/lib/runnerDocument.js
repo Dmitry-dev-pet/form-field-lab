@@ -1,6 +1,8 @@
 function installSpatialViewBridge(viewModel, initialViewState) {
   document.documentElement.dataset.viewModel = viewModel;
-  const orbitEnabled = viewModel === "pelagion-orbit" || viewModel === "point-cloud-orbit";
+  const orbitEnabled = viewModel === "pelagion-orbit"
+    || viewModel === "point-cloud-orbit"
+    || viewModel === "point-cloud-auto-y-orbit";
   const state = {
     orientation: { x: 0, y: 0, z: 0, w: 1 },
     invertY: true
@@ -121,6 +123,13 @@ function installSpatialViewBridge(viewModel, initialViewState) {
 
   function pointDepth() {
     if (viewModel === "point-cloud-orbit") return Number(globalThis.z);
+    if (viewModel === "point-cloud-auto-y-orbit") {
+      const axial = Number(globalThis.x);
+      const depth = Number(globalThis.z);
+      const angle = Number(globalThis.t);
+      if (![axial, depth, angle].every(Number.isFinite)) return Number.NaN;
+      return -axial * Math.sin(angle) + depth * Math.cos(angle);
+    }
     const axial = Number(globalThis.x);
     const depth = Number(globalThis.z);
     const angle = Number(globalThis.a);
@@ -130,6 +139,13 @@ function installSpatialViewBridge(viewModel, initialViewState) {
 
   function lineEndDepth() {
     if (viewModel === "point-cloud-orbit") return Number(globalThis.Z);
+    if (viewModel === "point-cloud-auto-y-orbit") {
+      const axial = Number(globalThis.X);
+      const depth = Number(globalThis.Z);
+      const angle = Number(globalThis.t);
+      if (![axial, depth, angle].every(Number.isFinite)) return Number.NaN;
+      return -axial * Math.sin(angle) + depth * Math.cos(angle);
+    }
     const axial = Number(globalThis.X);
     const depth = Number(globalThis.Z);
     const angle = Number(globalThis.a);

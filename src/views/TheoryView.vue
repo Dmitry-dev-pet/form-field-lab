@@ -193,10 +193,13 @@ u_i&=5i/N,
 p_i&=\sin(u_i/1.6),
 &s_i(t)&=\sin(\omega_wt-k_wu_i),\\
 x_i&=L(u_i-2),\\
-y_i&=v_ip_i(B+Wp_i)\left(1+s_i/D\right)+u_i^2s_i,\\
+y_i&=v_ip_i(B+Wp_i+s_i)+u_i^2s_i,\\
 z_i&=p_i\left[15\lambda\sin(3v_i)+F\lambda s_i(1-v_i^2)\right],\\
-n_i(t)&=\sin^{12}(\omega_nt-k_nu_i),\\
-\mathbf C_i(t)&=(80+175n_i,160,255,\alpha).
+n_i(t)&=\sin^{8}(\omega_nt-k_nu_i),
+&\theta(t)&=t,\\
+\widetilde x_i&=x_i\cos\theta+z_i\sin\theta,
+&\widetilde z_i&=-x_i\sin\theta+z_i\cos\theta,\\
+\mathbf C_i(t)&=(255n_i,8,255,\alpha).
 \end{aligned}`;
 
 const sphereGridLatexSource = String.raw`\begin{aligned}
@@ -305,7 +308,7 @@ const defaultCopyLabels = {
   chronophoreSeed: "Копировать 280",
   mnemophoreSeed: "Копировать 280",
   blastophoreSeed: "Копировать RAW 279",
-  kryloforSeed: "Копировать RAW 278",
+  kryloforSeed: "Копировать RAW 280",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -936,12 +939,22 @@ onMounted(async () => {
               \[
               \begin{aligned}
               x_i&amp;=L(u_i-2),\\
-              y_i&amp;=v_ip_i(B+Wp_i)(1+s_i/D)+u_i^2s_i,\\
+              y_i&amp;=v_ip_i(B+Wp_i+s_i)+u_i^2s_i,\\
               z_i&amp;=p_i\left[15\lambda\sin(3v_i)+F\lambda s_i(1-v_i^2)\right].
               \end{aligned}
               \]
             </div>
-            <p>Независимая фаза <code>nᵢ = sin¹²(ωₙt − kₙuᵢ)</code> образует узкий световой импульс. Цвет показывает положение фронта раньше, чем геометрический изгиб достигает этой части мембраны: это визуальная модель сигнала, а не физическая нервная система.</p>
+            <p>Независимая фаза <code>nᵢ = sin⁸(ωₙt − kₙuᵢ)</code> образует световой импульс. Цвет показывает положение фронта раньше, чем геометрический изгиб достигает этой части мембраны: это визуальная модель сигнала, а не физическая нервная система.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \theta(t)&amp;=t,\\
+              \widetilde x_i&amp;=x_i\cos\theta+z_i\sin\theta,\\
+              \widetilde z_i&amp;=-x_i\sin\theta+z_i\cos\theta.
+              \end{aligned}
+              \]
+            </div>
+            <p>Угол <code>θ=t</code> входит в исполняемую строку: Крылофор медленно поворачивается вокруг вертикальной оси даже без лаборатории. Поворот пальцем остаётся отдельной матрицей наблюдателя и накладывается поверх этой встроенной кинематики.</p>
           </div>
           <div class="pelagion-genome">
             <div class="genome-meter">
@@ -949,7 +962,7 @@ onMounted(async () => {
               <strong>{{ KRYLOFOR_GENOME_CHARACTERS }} / {{ KRYLOFOR_GENOME_LIMIT }}</strong>
             </div>
             <pre><code>{{ KRYLOFOR_GENOME }}</code></pre>
-            <p>Все ползунки Крылофора компилируют новые числовые константы прямо в эту строку. Разрешённые диапазоны сохраняют итог внутри 280 символов; камера и её последний кватернион хранятся отдельно.</p>
+            <p>Все ползунки Крылофора компилируют новые числовые константы прямо в эту строку. Разрешённые диапазоны сохраняют итог внутри 280 символов. Автоповорот является частью RAW; отдельно хранится только последний кватернион ручного ракурса.</p>
             <div class="pelagion-links">
               <RouterLink :to="{ name: 'lab', query: { form: 'krylofor' } }">Открыть Крылофор →</RouterLink>
             </div>
