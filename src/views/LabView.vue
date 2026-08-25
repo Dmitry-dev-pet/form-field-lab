@@ -240,6 +240,17 @@ const rawBudgetContract = computed(() => selectedForm.value.id === "pelagion"
   : selectedForm.value.id === "blastophore"
     ? "279 символов уже содержат полный цикл почкования и точную перетяжку до нулевого радиуса. 512 добавляет два ядра, 768 — тканевую сетку, 900 — бегущий морфогенетический фронт. Камера и фаза переходят между стадиями вне генома."
     : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.");
+const rawColorPalettes = computed(() => selectedForm.value.rawColorPalettes || []);
+const rawColorLaws = computed(() => selectedForm.value.rawColorLaws || []);
+const selectedRawColorPalette = computed(() => rawColorPalettes.value.find(
+  option => option.id === settings.colorPalette
+) || rawColorPalettes.value[0] || null);
+const selectedRawColorLaw = computed(() => rawColorLaws.value.find(
+  option => option.id === settings.colorLaw
+) || rawColorLaws.value[0] || null);
+const rawColorPreviewStyle = computed(() => selectedRawColorPalette.value
+  ? { background: `linear-gradient(90deg, ${selectedRawColorPalette.value.from}, ${selectedRawColorPalette.value.to})` }
+  : {});
 const primaryControls = computed(() => compiledTopologyGenome.value?.preset.controls
   || selectedForm.value.primaryControls);
 const chronophoreRawControlKeys = new Set([
@@ -248,15 +259,21 @@ const chronophoreRawControlKeys = new Set([
   "pulse", "pulseFrequency"
 ]);
 const chronophoreRawLayerKeys = new Set(["knot", "fibers", "flow"]);
+const rawSignalControlKeys = new Set(["signalSpeed", "signalCount"]);
+function visibleFormulaControls(controls) {
+  if (!selectedRawColorLaw.value) return controls;
+  const active = new Set(selectedRawColorLaw.value.controls);
+  return controls.filter(control => !rawSignalControlKeys.has(control.key) || active.has(control.key));
+}
 const rawPrimaryControls = computed(() => isTopologyGenome.value
   ? primaryControls.value
   : compiledFormulaGenome.value
-    ? selectedForm.value.primaryControls
+    ? visibleFormulaControls(selectedForm.value.primaryControls)
     : isImprintRequested.value
       ? selectedForm.value.primaryControls.filter(control => chronophoreRawControlKeys.has(control.key))
       : []);
 const rawAdvancedControls = computed(() => compiledFormulaGenome.value
-  ? selectedForm.value.advancedControls
+  ? visibleFormulaControls(selectedForm.value.advancedControls)
   : isImprintRequested.value
     ? selectedForm.value.advancedControls.filter(control => chronophoreRawControlKeys.has(control.key))
     : []);
@@ -348,6 +365,13 @@ function rangeStyle(control) {
 
 function changed() {
   preset.value = "Изменено";
+}
+
+function chooseRawColor(kind, id) {
+  const options = kind === "colorPalette" ? rawColorPalettes.value : rawColorLaws.value;
+  if (!options.some(option => option.id === id)) return;
+  settings[kind] = id;
+  preset.value = "Цвет RAW";
 }
 
 function toggleLayer(key) {
@@ -456,6 +480,12 @@ function randomize() {
     }
     preset.value = "RAW случайный";
     return;
+  }
+  if (rawColorPalettes.value.length) {
+    settings.colorPalette = rawColorPalettes.value[Math.floor(Math.random() * rawColorPalettes.value.length)].id;
+  }
+  if (rawColorLaws.value.length) {
+    settings.colorLaw = rawColorLaws.value[Math.floor(Math.random() * rawColorLaws.value.length)].id;
   }
   for (const control of [...rawPrimaryControls.value, ...rawAdvancedControls.value]) {
     settings[control.key] = Number(
@@ -868,6 +898,53 @@ onBeforeUnmount(() => {
             <div class="live-genome-actions">
               <button class="button" type="button" @click="copyCompiledGenome">{{ genomeCopyLabel }}</button>
               <span class="raw-live-caption">Уже исполняется на холсте</span>
+            </div>
+          </section>
+
+          <section
+            v-if="rawColorPalettes.length && rawColorLaws.length"
+            class="raw-color-panel"
+            aria-label="Генетическая настройка цвета RAW"
+          >
+            <header class="raw-color-header">
+              <div><span>Цвет RAW</span><small>палитра и закон находятся в коде</small></div>
+              <code>{{ selectedRawColorLaw.formula }}</code>
+            </header>
+            <div class="raw-color-preview" :style="rawColorPreviewStyle" aria-hidden="true"></div>
+
+            <div class="raw-color-group">
+              <div class="raw-color-label"><strong>Палитра</strong><small>перестановка каналов · 0 дополнительных символов</small></div>
+              <div class="raw-palette-grid" role="group" aria-label="Палитра формульного цвета">
+                <button
+                  v-for="option in rawColorPalettes"
+                  :key="option.id"
+                  class="raw-palette-option"
+                  type="button"
+                  :aria-pressed="settings.colorPalette === option.id"
+                  @click="chooseRawColor('colorPalette', option.id)"
+                >
+                  <span :style="{ background: `linear-gradient(90deg, ${option.from}, ${option.to})` }" aria-hidden="true"></span>
+                  <small>{{ option.label }}</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="raw-color-group">
+              <div class="raw-color-label"><strong>Математический закон</strong><small>каждый вариант сохраняет RAW ≤ 280</small></div>
+              <div class="raw-law-grid" role="group" aria-label="Математический закон цвета">
+                <button
+                  v-for="option in rawColorLaws"
+                  :key="option.id"
+                  class="raw-law-option"
+                  type="button"
+                  :aria-pressed="settings.colorLaw === option.id"
+                  @click="chooseRawColor('colorLaw', option.id)"
+                >
+                  <strong>{{ option.label }}</strong>
+                  <code>{{ option.formula }}</code>
+                </button>
+              </div>
+              <p>{{ selectedRawColorLaw.description }}</p>
             </div>
           </section>
 

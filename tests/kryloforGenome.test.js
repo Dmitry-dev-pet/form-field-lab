@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import {
   compileKryloforGenome,
+  KRYLOFOR_COLOR_LAWS,
+  KRYLOFOR_COLOR_PALETTES,
   KRYLOFOR_DEFAULTS,
   KRYLOFOR_GENOME,
   KRYLOFOR_GENOME_CHARACTERS,
@@ -104,9 +106,41 @@ test("every Krylofor control endpoint recompiles to a valid autonomous RAW", () 
   }
 });
 
+test("every Krylofor palette and mathematical color law remains autonomous", () => {
+  const codes = [];
+  for (const law of KRYLOFOR_COLOR_LAWS) {
+    for (const palette of KRYLOFOR_COLOR_PALETTES) {
+      const compiled = compileKryloforGenome({
+        ...KRYLOFOR_DEFAULTS,
+        colorLaw: law.id,
+        colorPalette: palette.id
+      });
+      codes.push(compiled.code);
+      assert.ok(compiled.withinLimit, `${law.id}/${palette.id}: ${compiled.characters}`);
+      assert.ok(compiled.characters <= KRYLOFOR_GENOME_LIMIT);
+      assert.equal(compiled.parameters.colorLaw, law.id);
+      assert.equal(compiled.parameters.colorPalette, palette.id);
+      assert.doesNotThrow(() => new Function(compiled.code));
+    }
+  }
+  assert.equal(new Set(codes).size, KRYLOFOR_COLOR_LAWS.length * KRYLOFOR_COLOR_PALETTES.length);
+  assert.deepEqual(
+    KRYLOFOR_COLOR_LAWS.map(law => compileKryloforGenome({
+      ...KRYLOFOR_DEFAULTS,
+      colorLaw: law.id
+    }).characters),
+    [280, 278, 279, 272, 272, 268]
+  );
+});
+
 test("Krylofor sliders change the executed genome while the manual camera stays external", () => {
   const original = compileKryloforGenome(KRYLOFOR_DEFAULTS);
   const changed = compileKryloforGenome({ ...KRYLOFOR_DEFAULTS, wingWidth: 91 });
+  const recolored = compileKryloforGenome({
+    ...KRYLOFOR_DEFAULTS,
+    colorPalette: "heat",
+    colorLaw: "depth"
+  });
   const cameraOnly = compileKryloforGenome({
     ...KRYLOFOR_DEFAULTS,
     yaw: 1.4,
@@ -116,6 +150,8 @@ test("Krylofor sliders change the executed genome while the manual camera stays 
 
   assert.notEqual(changed.code, original.code);
   assert.notEqual(changed.id, original.id);
+  assert.notEqual(recolored.code, original.code);
+  assert.notEqual(recolored.id, original.id);
   assert.equal(cameraOnly.code, original.code);
   assert.equal(cameraOnly.id, original.id);
   assert.equal(original.sketch.viewModel, "point-cloud-auto-y-orbit");

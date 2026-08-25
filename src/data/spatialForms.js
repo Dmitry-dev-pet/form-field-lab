@@ -17,6 +17,8 @@ import {
 import { SPHERE_GRID_GENOME_SKETCH } from "./sphereGridGenome.js";
 import {
   compileKryloforGenome,
+  KRYLOFOR_COLOR_LAWS,
+  KRYLOFOR_COLOR_PALETTES,
   KRYLOFOR_DEFAULTS,
   KRYLOFOR_GENOME_SKETCH
 } from "./kryloforGenome.js";
@@ -490,7 +492,6 @@ function kryloforPoint(index, time, settings, layers, target) {
   const profile = Math.sin(u / 1.6);
   const wave = Math.sin(settings.waveSpeed * time - u * settings.waveCount);
   const signalPhase = settings.signalSpeed * time - u * settings.signalCount;
-  const signal = Math.sin(signalPhase) ** 8;
 
   target.x = (u - 2) * settings.length + 200;
   target.y = v * profile * (settings.bodyWidth + settings.wingWidth * profile + wave)
@@ -498,6 +499,18 @@ function kryloforPoint(index, time, settings, layers, target) {
   target.z = profile * settings.depth * (
     15 * Math.sin(3 * v) + settings.fold * wave * (1 - v * v)
   );
+  const modular = value => ((value % 1) + 1) % 1;
+  const signal = settings.colorLaw === "bands"
+    ? modular(settings.signalSpeed * time + u * settings.signalCount)
+    : settings.colorLaw === "polynomial"
+      ? modular(settings.signalSpeed * time - u) ** 2
+      : settings.colorLaw === "seam"
+        ? 1 - v * v
+        : settings.colorLaw === "depth"
+          ? Math.min(1, target.z * target.z / 400)
+          : settings.colorLaw === "profile"
+            ? profile * profile
+            : Math.sin(signalPhase) ** 8;
   target.parameter = u;
   target.k = wave;
   target.e = v;
@@ -1016,6 +1029,8 @@ export const spatialForms = Object.freeze([
     origin: "form-field-synthesis",
     genomeSketch: KRYLOFOR_GENOME_SKETCH,
     compileGenome: compileKryloforGenome,
+    rawColorPalettes: KRYLOFOR_COLOR_PALETTES,
+    rawColorLaws: KRYLOFOR_COLOR_LAWS,
     savedColor: Object.freeze({
       mode: "formula",
       preset: "custom",
