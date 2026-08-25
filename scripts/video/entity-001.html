@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Form / Field — Entity 001</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #050706;
+    }
+
+    body {
+      display: grid;
+      place-items: center;
+    }
+
+    canvas {
+      display: block;
+      width: min(100vw, 56.25vh);
+      height: min(177.7778vw, 100vh);
+      background: #050706;
+    }
+
+    #download {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 2;
+      padding: 8px 12px;
+      border: 1px solid #d8ff54;
+      color: #d8ff54;
+      font: 12px ui-monospace, monospace;
+      text-decoration: none;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #download.ready {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="film" width="1080" height="1920" aria-label="Пилотное видео Form / Field"></canvas>
+  <a id="download" download="entity-001.webm">DOWNLOAD WEBM</a>
+
+  <script type="module">
+    import {
+      inspectSketch36Genome,
+      sketch36Defaults,
+      sketch36Original
+    } from "../../src/data/sketch36Genome.js";
+
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+    const FIELD_SIZE = 1080;
+    const FPS = 30;
+    const TOTAL_FRAMES = 444;
+    const MORPH_START = 285;
+    const MORPH_END = 390;
+    const mutation = inspectSketch36Genome({
+      ...sketch36Defaults,
+      mode: "memory",
+      depth: "orbit"
+    });
+
+    if (!mutation.fits || sketch36Original.code.length !== 273 || mutation.length !== 263) {
+      throw new Error("Video metadata drifted from the executable sketch genomes.");
+    }
+
+    const canvas = document.querySelector("#film");
+    const output = canvas.getContext("2d", { alpha: false });
+    const sceneCanvas = document.createElement("canvas");
+    sceneCanvas.width = WIDTH;
+    sceneCanvas.height = HEIGHT;
+    const context = sceneCanvas.getContext("2d", { alpha: false });
+    const fieldCanvas = document.createElement("canvas");
+    fieldCanvas.width = FIELD_SIZE;
+    fieldCanvas.height = FIELD_SIZE;
+    const field = fieldCanvas.getContext("2d", { alpha: false });
+    const download = document.querySelector("#download");
+    const particles = [];
+    let randomState = 0x5ead2401;
+
+    window.__videoReady = false;
+    window.__videoMetadata = {
+      fps: FPS,
+      frames: TOTAL_FRAMES,
+      width: WIDTH,
+      height: HEIGHT,
+      originalLength: sketch36Original.code.length,
+      mutationLength: mutation.length,
+      mutationCode: mutation.code
+    };
+
+    field.fillStyle = "#000";
+    field.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+
+    function random() {
+      randomState |= 0;
+      randomState = randomState + 0x6d2b79f5 | 0;
+      let value = Math.imul(randomState ^ randomState >>> 15, 1 | randomState);
+      value = value + Math.imul(value ^ value >>> 7, 61 | value) ^ value;
+      return ((value ^ value >>> 14) >>> 0) / 4294967296;
+    }
+
+    function random3D() {
+      const z = random() * 2 - 1;
+      const angle = random() * Math.PI * 2;
+      const radius = Math.sqrt(1 - z * z);
+      return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius, z };
+    }
+
+    function clamp(value, minimum = 0, maximum = 255) {
+      return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function mix(from, to, amount) {
+      return from + (to - from) * amount;
+    }
+
+    function smoothstep(from, to, value) {
+      const amount = clamp((value - from) / (to - from), 0, 1);
+      return amount * amount * (3 - 2 * amount);
+    }
+
+    function fadeRange(frame, start, end, width = 16) {
+      return smoothstep(start, start + width, frame) * (1 - smoothstep(end - width, end, frame));
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, height, radius);
+    }
+
+    function text(value, x, y, size, color, options = {}) {
+      context.save();
+      context.fillStyle = color;
+      context.font = `${options.weight || 500} ${size}px ${options.family || "Arial, sans-serif"}`;
+      context.textAlign = options.align || "left";
+      context.textBaseline = options.baseline || "alphabetic";
+      if (options.tracking) {
+        let cursor = x;
+        const direction = context.textAlign === "right" ? -1 : 1;
+        const glyphs = [...value];
+        if (context.textAlign === "right") glyphs.reverse();
+        context.textAlign = direction === 1 ? "left" : "right";
+        for (const glyph of glyphs) {
+          context.fillText(glyph, cursor, y);
+          cursor += direction * (context.measureText(glyph).width + options.tracking);
+        }
+      } else {
+        context.fillText(value, x, y);
+      }
+      context.restore();
+    }
+
+    function drawParticleField(frameIndex, morph) {
+      field.fillStyle = "rgba(0,0,0,0.035294)";
+      field.fillRect(0, 0, FIELD_SIZE, FIELD_SIZE);
+
+      const orbitAngle = Math.max(0, frameIndex - MORPH_START) / 90;
+      const zoom = mix(1.67, 1.38, morph);
+      const sourceCenterX = 270;
+      const sourceCenterY = 216;
+
+      particles.forEach((particle, index) => {
+        const xorField = ((particle.x * 2 + 2.5) ^ (particle.y + 2)) * 8;
+
+        const originalX = (particle.x + 2) * 135;
+        const orbitX = (
+          particle.x * Math.cos(orbitAngle)
+          - particle.z * Math.sin(orbitAngle)
+          + 2
+        ) * 135;
+        const sourceX = mix(originalX, orbitX, morph);
+        const sourceY = (particle.y + 1.6) * 135;
+        const x = FIELD_SIZE / 2 + (sourceX - sourceCenterX) * 2 * zoom;
+        const y = FIELD_SIZE / 2 + (sourceY - sourceCenterY) * 2 * zoom;
+
+        const originalRed = clamp(index);
+        const originalGreen = clamp(index / 3);
+        const originalBlue = clamp(index / 5);
+        const red = Math.round(originalRed);
+        const green = Math.round(originalGreen);
+        const blue = Math.round(originalBlue);
+        const size = mix(2.05, 2.7, morph);
+
+        field.fillStyle = `rgb(${red} ${green} ${blue})`;
+        field.fillRect(x, y, size, size);
+
+        const originalDx = Math.sin(particle.y * xorField) / 90;
+        const originalDy = Math.cos(particle.x * xorField) / 90;
+        particle.x += originalDx;
+        particle.y += originalDy;
+      });
+
+      if (frameIndex < MORPH_START) {
+        if (particles.length > 2000) {
+          particles.splice(0, particles.length - 1980);
+        } else {
+          for (let index = 0; index < 20; index += 1) particles.push(random3D());
+        }
+      }
+    }
+
+    function drawChip(label, formula, x, y, progress) {
+      if (progress <= 0) return;
+      context.save();
+      context.globalAlpha *= progress;
+      roundRect(context, x, y, 250, 76, 38);
+      context.fillStyle = "rgba(12,18,15,0.92)";
+      context.fill();
+      context.strokeStyle = "rgba(216,255,84,0.42)";
+      context.lineWidth = 1.5;
+      context.stroke();
+      text(label, x + 25, y + 30, 16, "#d8ff54", { weight: 700, tracking: 1.8 });
+      text(formula, x + 25, y + 55, 14, "#9aa49e", { family: "ui-monospace, monospace" });
+      context.restore();
+    }
+
+    function drawFrame(frameIndex) {
+      const morph = smoothstep(MORPH_START, MORPH_END, frameIndex);
+      const visibility = smoothstep(0, 18, frameIndex) * (1 - smoothstep(408, 426, frameIndex));
+      drawParticleField(frameIndex, morph);
+
+      context.fillStyle = "#050706";
+      context.fillRect(0, 0, WIDTH, HEIGHT);
+
+      context.save();
+      context.globalAlpha = visibility;
+
+      const glow = context.createRadialGradient(540, 950, 40, 540, 950, 760);
+      glow.addColorStop(0, morph > 0.4 ? "rgba(0,233,205,0.10)" : "rgba(216,255,84,0.075)");
+      glow.addColorStop(0.58, "rgba(35,47,38,0.035)");
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 240, WIDTH, 1450);
+
+      context.strokeStyle = "rgba(216,255,84,0.08)";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.arc(540, 952, 475, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.arc(540, 952, 392, 0, Math.PI * 2);
+      context.stroke();
+
+      text("FORM / FIELD", 72, 92, 18, "#d8ff54", { weight: 800, tracking: 3.2 });
+      text("VIDEO STUDY 001", 1008, 92, 16, "#718078", { align: "right", tracking: 2.2 });
+      context.fillStyle = "rgba(255,255,255,0.12)";
+      context.fillRect(72, 124, 936, 1);
+
+      text("ПОЛЕ СТАНОВИТСЯ", 72, 218, 68, "#f4f1e8", {
+        family: "Georgia, serif",
+        weight: 500
+      });
+      text("ОРГАНИЗМОМ", 72, 298, 82, "#f4f1e8", {
+        family: "Georgia, serif",
+        weight: 500
+      });
+      text("273 СИМВОЛА → ОДНО ПОВЕДЕНИЕ", 75, 348, 14, "#849089", {
+        weight: 700,
+        tracking: 2.1
+      });
+
+      context.save();
+      context.globalAlpha = mix(1, 0.86, morph);
+      context.drawImage(fieldCanvas, 0, 408, WIDTH, WIDTH);
+      context.restore();
+
+      const fieldChip = fadeRange(frameIndex, 162, 281, 18);
+      const memoryChip = fadeRange(frameIndex, 181, 281, 18);
+      const exchangeChip = fadeRange(frameIndex, 200, 281, 18);
+      drawChip("ПОЛЕ", "r = (x ^ y) × 8", 64, 1392, fieldChip);
+      drawChip("ПАМЯТЬ", "v += field", 415, 1392, memoryChip);
+      drawChip("ОБМЕН", "+20 / −40", 766, 1392, exchangeChip);
+
+      const originalOpacity = 1 - smoothstep(MORPH_START - 12, MORPH_START + 18, frameIndex);
+      const entityOpacity = smoothstep(MORPH_END - 30, MORPH_END, frameIndex);
+
+      context.save();
+      context.globalAlpha *= originalOpacity;
+      text("SKETCH 36", 72, 1602, 20, "#d8ff54", { weight: 800, tracking: 3 });
+      text("ORIGINAL · 273 / 280", 72, 1650, 36, "#f4f1e8", {
+        family: "ui-monospace, monospace",
+        weight: 700
+      });
+      context.restore();
+
+      context.save();
+      context.globalAlpha *= entityOpacity;
+      text("FIRST CONTINUOUS MUTATION", 72, 1602, 18, "#57f2d4", { weight: 800, tracking: 2.4 });
+      text("ENTITY 001 · 263 / 280", 72, 1650, 36, "#f4f1e8", {
+        family: "ui-monospace, monospace",
+        weight: 700
+      });
+      text("MEMORY · XOR · ORBIT · AGE", 72, 1690, 15, "#8fa49b", {
+        weight: 700,
+        tracking: 1.7
+      });
+      context.restore();
+
+      context.fillStyle = "rgba(255,255,255,0.12)";
+      context.fillRect(72, 1762, 936, 1);
+      text("BASED ON SKETCH 36 BY @YURUYURAU", 72, 1812, 15, "#9aa49e", {
+        weight: 700,
+        tracking: 1.65
+      });
+      text("#つぶやきPROCESSING", 1008, 1812, 15, "#9aa49e", {
+        align: "right",
+        weight: 700,
+        tracking: 1.35
+      });
+
+      context.restore();
+      output.drawImage(sceneCanvas, 0, 0);
+    }
+
+    function startRecording() {
+      const stream = canvas.captureStream(FPS);
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm;codecs=vp8";
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 16_000_000
+      });
+      const chunks = [];
+      let frameIndex = 0;
+      let tailFrame = 0;
+      let expectedTime = performance.now();
+
+      recorder.addEventListener("dataavailable", event => {
+        if (event.data.size) chunks.push(event.data);
+      });
+      recorder.addEventListener("stop", () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        download.href = URL.createObjectURL(blob);
+        download.classList.add("ready");
+        window.__videoReady = true;
+        window.__videoBlobSize = blob.size;
+      });
+
+      recorder.start(1000);
+
+      function tick(now) {
+        if (now >= expectedTime) {
+          if (frameIndex < TOTAL_FRAMES) {
+            drawFrame(frameIndex);
+            frameIndex += 1;
+          } else if (tailFrame < 30) {
+            output.fillStyle = "#050706";
+            output.fillRect(0, 0, WIDTH, HEIGHT);
+            output.fillStyle = tailFrame % 2 ? "#050706" : "#050707";
+            output.fillRect(0, HEIGHT - 1, 1, 1);
+            tailFrame += 1;
+          }
+          expectedTime += 1000 / FPS;
+        }
+        if (frameIndex >= TOTAL_FRAMES && tailFrame >= 30) {
+          recorder.stop();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    if (new URLSearchParams(location.search).has("record")) {
+      startRecording();
+    } else {
+      const previewFrame = Number(new URLSearchParams(location.search).get("frame") || 405);
+      for (let frameIndex = 0; frameIndex <= previewFrame; frameIndex += 1) drawFrame(frameIndex);
+      window.__videoReady = true;
+    }
+  </script>
+</body>
+</html>

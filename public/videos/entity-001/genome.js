@@ -1,0 +1,1 @@
+t=0,$=[...Array(2e3)].map(p5.Vector.random3D);draw=_=>{t++||createCanvas(540,540);background(0,9);$.map((v,i)=>(r=(v.x*2+2.5^v.y+2)*8,stroke(i,i/3,i/5).point((v.x*cos(t/90)-v.z*sin(t/90)+2)*135,(v.y+1.6)*135),v.add(sin(v.y*r)/90,cos(v.x*r)/90)))}//#つぶやきProcessing

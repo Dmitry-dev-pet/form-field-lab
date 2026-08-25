@@ -1,0 +1,41 @@
+{
+  "id": "entity-001",
+  "title": "Поле становится организмом",
+  "status": "exported",
+  "created": "2026-08-25",
+  "video": {
+    "file": "entity-001.mp4",
+    "cover": "cover.png",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationSeconds": 15,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audio": false
+  },
+  "source": {
+    "sketch": 36,
+    "id": "1588062547315679232",
+    "author": "@yuruyurau",
+    "tag": "#つぶやきProcessing",
+    "characters": 273
+  },
+  "mutation": {
+    "characters": 263,
+    "mode": "memory",
+    "fieldLaw": "xor",
+    "coupling": "cross",
+    "seed": "sphere",
+    "depth": "orbit",
+    "render": "points",
+    "color": "age"
+  },
+  "presentation": {
+    "externalToGenome": true,
+    "transition": "same-particle interpolation",
+    "introFrames": 18,
+    "mutationFrames": [285, 390],
+    "outroFrames": [408, 426]
+  }
+}
