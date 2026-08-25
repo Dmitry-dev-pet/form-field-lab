@@ -7,6 +7,7 @@ import { sketches } from "../data/sketches.js";
 const route = useRoute();
 const router = useRouter();
 const studiedId = "2091191600814907612";
+const sketch36Id = "1588062547315679232";
 const initialIndex = sketches.findIndex(sketch => sketch.id === route.query.s)
   ?? sketches.findIndex(sketch => sketch.id === studiedId);
 const selectedIndex = ref(initialIndex >= 0 ? initialIndex : sketches.findIndex(sketch => sketch.id === studiedId));
@@ -64,7 +65,8 @@ async function copyCode() {
         </div>
         <div class="inline-actions">
           <button class="button" type="button" @click="runner?.reload()">Перезапустить</button>
-          <RouterLink class="button primary" :to="`/sketch/${selected.id}`">Открыть отдельно</RouterLink>
+          <RouterLink v-if="selected.id === sketch36Id" class="button primary" to="/lab/36">Играть с №36</RouterLink>
+          <RouterLink class="button" :class="{ primary: selected.id !== sketch36Id }" :to="`/sketch/${selected.id}`">Открыть отдельно</RouterLink>
           <a class="button" :href="selected.source" target="_blank" rel="noopener noreferrer">Оригинал ↗</a>
         </div>
       </article>

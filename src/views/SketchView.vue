@@ -48,6 +48,10 @@ async function copyCode() {
       <SketchRunner :sketch="sketch" :label="`Скетч ${index + 1} автора @yuruyurau`" />
     </div>
 
+    <div v-if="sketch.id === '1588062547315679232'" class="detail-special-action">
+      <RouterLink class="button primary" to="/lab/36">Разобрать механику и мутировать №36</RouterLink>
+    </div>
+
     <article class="code-panel">
       <header>
         <div><span>ORIGINAL / p5.js</span><h2>Полный исходный код</h2></div>

@@ -9,6 +9,12 @@ const routes = [
     meta: { title: "Лаборатория" }
   },
   {
+    path: "/lab/36",
+    name: "sketch-36-lab",
+    component: () => import("./views/Sketch36LabView.vue"),
+    meta: { title: "Лаборатория скетча №36" }
+  },
+  {
     path: "/evolution",
     name: "evolution",
     component: () => import("./views/EvolutionView.vue"),
