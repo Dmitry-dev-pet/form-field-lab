@@ -242,5 +242,12 @@ t=0,draw=$=>{t||createCanvas(w=400,w);background(9).stroke(w,96);for(t+=PI/45,i=
     source: "https://x.com/yuruyurau/status/2091907118580576571",
     code: `a=(y,d=mag(k=(5+sin(y-t)*2)*cos(i/40),e=y/6-11)/4)=>point((79+k*k)*cos(c=d-t/4)+200,3*sin(k*2)+.2/k+y/9*k*(2+sin(e*9-d*6+t))+79*sin(c)+200+d**4/2*cos(t*2-d*d))
 t=0,draw=$=>{t||createCanvas(w=400,w);background(9).stroke(w,66);for(t+=PI/90,i=1e4;i--;)a(i/235)}//#つぶやきProcessing`
+  },
+  {
+    id: "1588062547315679232",
+    createdAt: "2022-11-03T06:56:30.712Z",
+    source: "https://x.com/yuruyurau/status/1588062547315679232",
+    code: `$=[]
+draw=_=>{$[0]??createCanvas(540,540);background(0,9);$=$.map((v,i)=>stroke(i,i/3,i/5).point(v.copy().add(2,1.6).mult(135))+v.add(sin(v.y*(r=(v.x*2+2.5^v.y+2)*8))/90,cos(v.x*r)/90))[2e3]?$.slice(-1980):[...$,...[...Array(20)].map(p5.Vector.random3D)]} //#つぶやきProcessing`
   }
 ];

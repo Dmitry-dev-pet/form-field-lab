@@ -43,8 +43,8 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
-  const legacyNumber = ["P3", "P4", "P5", "P6"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
-  const legacyTitle = ["P3", "P4", "P5", "P6"].includes(record.displayNumber)
+  const legacyNumber = ["P3", "P4", "P5", "P6", "P7"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
+  const legacyTitle = ["P3", "P4", "P5", "P6", "P7"].includes(record.displayNumber)
     ? record.title.replace(new RegExp(`${record.displayNumber}\\b`), `${record.displayNumber}′`)
     : record.title;
   return {

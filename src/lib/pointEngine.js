@@ -14,15 +14,60 @@ const mathBindings = Object.freeze({
 export function createPointEngine(sketchOrCode) {
   const code = typeof sketchOrCode === "string" ? sketchOrCode : sketchOrCode.code;
   let points = [];
+  let initialized = false;
+  class PointVector {
+    constructor(x = 0, y = 0, z = 0) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+    }
+
+    copy() {
+      return new PointVector(this.x, this.y, this.z);
+    }
+
+    add(x = 0, y = 0, z = 0) {
+      if (x && typeof x === "object") {
+        this.x += Number(x.x) || 0;
+        this.y += Number(x.y) || 0;
+        this.z += Number(x.z) || 0;
+      } else {
+        this.x += Number(x) || 0;
+        this.y += Number(y) || 0;
+        this.z += Number(z) || 0;
+      }
+      return this;
+    }
+
+    mult(scale = 1) {
+      this.x *= scale;
+      this.y *= scale;
+      this.z *= scale;
+      return this;
+    }
+
+    static random3D() {
+      const z = Math.random() * 2 - 1;
+      const angle = Math.random() * Math.PI * 2;
+      const radius = Math.sqrt(1 - z * z);
+      return new PointVector(radius * Math.cos(angle), radius * Math.sin(angle), z);
+    }
+  }
   const target = {
     ...mathBindings,
+    Array,
     createCanvas: () => undefined,
-    stroke: () => undefined,
-    background: () => ({ stroke: () => undefined }),
+    p5: { Vector: PointVector },
     point: (x, y) => {
+      if (x && typeof x === "object") {
+        y = x.y;
+        x = x.x;
+      }
       if (Number.isFinite(x) && Number.isFinite(y)) points.push([x, y]);
     }
   };
+  target.stroke = () => target;
+  target.background = () => target;
   const scope = new Proxy(target, {
     has: () => true,
     get: (object, key) => key === Symbol.unscopables ? undefined : object[key],
@@ -38,6 +83,13 @@ export function createPointEngine(sketchOrCode) {
     frame() {
       points = [];
       drawFrame();
+      if (!initialized) {
+        for (let attempt = 0; points.length <= 1000 && attempt < 64; attempt += 1) {
+          points = [];
+          drawFrame();
+        }
+        initialized = true;
+      }
       return points;
     }
   };

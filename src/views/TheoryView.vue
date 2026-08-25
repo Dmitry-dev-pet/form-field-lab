@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, onMounted, ref } from "vue";
+import MechanismMicroscope from "../components/MechanismMicroscope.vue";
 import {
   CHRONOPHORE_GENOME,
   CHRONOPHORE_GENOME_CHARACTERS,
@@ -34,6 +35,10 @@ import {
   CHIRALOPHORE_GENOME_CHARACTERS,
   CHIRALOPHORE_GENOME_LIMIT
 } from "../data/chiralophoreGenome.js";
+import {
+  TESSELOPHORE_CORE_GENOME,
+  TESSELOPHORE_RAW_VARIANTS
+} from "../data/tesselophoreGenome.js";
 import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
@@ -227,6 +232,30 @@ g_i(t)&\in\{s_i^2,\;b_i/3,\;p_i^2\},
 &\mathbf C_i&=\pi_c(255g_i,180+70p_i,255).
 \end{aligned}`;
 
+const tesselophoreLatexSource = String.raw`\begin{aligned}
+u_i&=i/200,
+&\alpha_i&=(i\bmod200)/32,\\
+r_i&=70\sin^{0.6}(\pi u_i/5),
+&\mathbf B_i(t)&=
+\begin{bmatrix}
+40(u_i-2.5)\\
+r_i\cos\alpha_i+12\sin(t/20-u_i)\\
+r_i\sin\alpha_i
+\end{bmatrix},\\
+q_i^{(n)}&=\left\lfloor x_i^{(n)}/8\right\rfloor
+\mathbin{\oplus}\left\lfloor y_i^{(n)}/8\right\rfloor,
+&\mathbf F_i^{(n)}&=
+\begin{bmatrix}
+\sin(q_i^{(n)}+t_n/20)/5\\
+\cos(q_i^{(n)}-t_n/20)/5\\
+0
+\end{bmatrix},\\
+\mathbf p_i^{(n+1)}&=.97\mathbf p_i^{(n)}+.03\mathbf B_i(t_n)+\mathbf F_i^{(n)},
+&i=n\bmod1000&\Longrightarrow\mathbf p_i\leftarrow70\operatorname{random3D}(),\\
+A_i(n)&=((n-i+1000)\bmod1000)/1000,
+&\mathbf C_i(n)&=\operatorname{HSB}(250A_i,200,255).
+\end{aligned}`;
+
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
@@ -328,6 +357,7 @@ const defaultCopyLabels = {
   blastophore: "Копировать TeX",
   krylofor: "Копировать TeX",
   chiralophore: "Копировать TeX",
+  tesselophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   livingSeed: "Копировать RAW гребка",
@@ -336,6 +366,7 @@ const defaultCopyLabels = {
   blastophoreSeed: "Копировать RAW 279",
   kryloforSeed: "Копировать RAW 280",
   chiralophoreSeed: "Копировать RAW 278",
+  tesselophoreSeed: "Копировать RAW 273",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -868,6 +899,25 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+        <div class="source-mechanism-note">
+          <div>
+            <span>ORIGINAL MECHANISM / SKETCH #36</span>
+            <h3>Мнемофора наследует память, но не всю механику источника</h3>
+          </div>
+          <p>В проверенном <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">исходном посте @yuruyurau ↗</a> точка не догоняет заданную оболочку. Она интегрирует собственное поле, частота которого квантована побитовым XOR:</p>
+          <div class="math-scroll">
+            \[
+            \begin{aligned}
+            r_n&amp;=8\left(\operatorname{int}(2x_n+2.5)\mathbin{\oplus}\operatorname{int}(y_n+2)\right),\\
+            x_{n+1}&amp;=x_n+\sin(y_nr_n)/90,\\
+            y_{n+1}&amp;=y_n+\cos(x_nr_n)/90,\\
+            z_{n+1}&amp;=z_n.
+            \end{aligned}
+            \]
+          </div>
+          <p>Поэтому решётка появляется не из «квадратности синуса», а из скачков частоты между целочисленными клетками. Массив и полупрозрачный фон дают две памяти: траекторию частиц и затухающий след экрана. <a href="https://zenn.dev/kkeeth/articles/tweet-processing-20221104" target="_blank" rel="noopener noreferrer">Разбор KEETH на Zenn ↗</a> и <a href="https://qiita.com/youtoy/items/263f407021c4b3003365" target="_blank" rel="noopener noreferrer">развёртка Yosuke Toyota ↗</a> помогли отделить эти слои.</p>
+        </div>
+        <MechanismMicroscope />
         <div class="tiny-code-context">
           <p><strong>Происхождение идеи.</strong> Мнемофора — самостоятельная реализация Form / Field, но принцип сохраняемого массива частиц, который каждый кадр обновляет собственные координаты, сознательно развивает публичный <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">скетч @yuruyurau ↗</a>. Авторство исходной работы не переносится на нашу сущность.</p>
           <p><strong>Граница наблюдателя.</strong> Кватернион камеры хранится отдельно. Касание вращает уже существующую историю и не вызывает перерождение, мутацию или новый случайный посев.</p>
@@ -1073,6 +1123,79 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Синтез, а не коллаж.</strong> Из свежих работ взяты направления исследования — фазовая интерференция, радиальный импульс и вложенное преобразование. Формула и её компактная реализация построены заново.</p>
           <p><strong>Граница модели.</strong> Хиралофор показывает, как противофазная кинематика создаёт образ мягкого организма. Он не моделирует давление жидкости, мышцы или обмен энергией.</p>
+        </div>
+      </article>
+
+      <article id="tesselophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>13 / METABOLIC ORGANISM</span><h2>Тесселофора: тело меняет вещество, но остаётся собой</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('tesselophore', tesselophoreLatexSource)">{{ copyLabels.tesselophore }}</button>
+            <button class="button" type="button" @click="copy('tesselophoreSeed', TESSELOPHORE_CORE_GENOME)">{{ copyLabels.tesselophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Тесселофора соединяет то, что микроскоп разделял на слои. Тысяча сохраняемых точек догоняет одну веретенообразную оболочку. Продольная складка проходит через всё тело, поэтому его цельность задаётся общей движущейся целью, а не близостью случайных частиц.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i&amp;=i/200,
+              &amp;\alpha_i&amp;=(i\bmod200)/32,\\
+              r_i&amp;=70\sin^{0.6}(\pi u_i/5),
+              &amp;\mathbf B_i(t)&amp;=
+              \begin{bmatrix}
+              40(u_i-2.5)\\
+              r_i\cos\alpha_i+12\sin(t/20-u_i)\\
+              r_i\sin\alpha_i
+              \end{bmatrix}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Начиная с бюджета 512, текущие координаты самой частицы выбирают клетку XOR-поля. Поле не рисует решётку поверх тела: оно вмешивается в его рекуррентное движение.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              q_i^{(n)}&amp;=\lfloor x_i^{(n)}/8\rfloor\mathbin{\oplus}\lfloor y_i^{(n)}/8\rfloor,\\
+              \mathbf F_i^{(n)}&amp;=
+              \begin{bmatrix}
+              \sin(q_i^{(n)}+t_n/20)/5\\
+              \cos(q_i^{(n)}-t_n/20)/5\\0
+              \end{bmatrix},\\
+              \mathbf p_i^{(n+1)}&amp;=.97\mathbf p_i^{(n)}+.03\mathbf B_i(t_n)+\mathbf F_i^{(n)}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Каждый кадр одна частица заменяется новым <code>random3D()</code>-посевом. Её возраст вычисляется из номера кадра и индекса, поэтому он одновременно управляет цветом и не требует отдельного массива:</p>
+            <div class="math-scroll">
+              \[
+              i=n\bmod1000\Rightarrow\mathbf p_i\leftarrow70\operatorname{random3D}(),
+              \qquad A_i(n)=\frac{(n-i+1000)\bmod1000}{1000}.
+              \]
+            </div>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Цельное тело с памятью</span>
+              <strong>{{ TESSELOPHORE_CORE_GENOME.length }} / 280</strong>
+            </div>
+            <pre><code>{{ TESSELOPHORE_CORE_GENOME }}</code></pre>
+            <ul class="topology-genome-counts" aria-label="Уровни бюджета Тесселофоры">
+              <li v-for="variant in TESSELOPHORE_RAW_VARIANTS" :key="variant.id">
+                <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
+            <p>273 символа дают цельную оболочку, её бегущую складку и память координат. 441 добавляют дискретное поле, смену поколений, возрастной цвет и экранный след. 572 соединяют соседей в видимую обновляемую ткань.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'tesselophore' } }">Открыть Тесселофору →</RouterLink>
+              <RouterLink :to="{ name: 'archive', query: { s: '1588062547315679232' } }">Сравнить с оригиналом №36 →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Новая сущность.</strong> Тесселофора не повторяет траекторию исходного скетча. Из источника взяты проверенные принципы — сохраняемое состояние, XOR-клетки, поколение и индекс-возраст; геометрия тела, цель рекурсии и тканевые связи построены заново.</p>
+          <p><strong>Что считается организмом.</strong> Ни одна конкретная частица не обязательна. Идентичность сохраняют общий сосуд <code>Bᵢ(t)</code>, непрерывность состояния и закон обмена, даже когда за тысячу кадров заменится всё вещество.</p>
+          <p><strong>Граница наблюдателя.</strong> Поворот пальцем остаётся внешней камерой. Он не меняет XOR-клетку, возраст частицы, момент рождения или RAW-код.</p>
         </div>
       </article>
     </div>

@@ -29,6 +29,10 @@ import {
   CHIRALOPHORE_GENOME_SKETCH,
   compileChiralophoreGenome
 } from "./chiralophoreGenome.js";
+import {
+  TESSELOPHORE_GENOME_SKETCH,
+  TESSELOPHORE_RAW_VARIANTS
+} from "./tesselophoreGenome.js";
 import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
   decodeGridVertex,
@@ -556,6 +560,24 @@ function chiralophorePoint(index, time, settings, layers, target) {
   target.mix = settings.colorLaw === "tissues"
     ? index % 2
     : settings.colorLaw === "profile" ? profile * profile : impulse * impulse;
+  return target;
+}
+
+function tesselophorePoint(index, time, settings, _layers, target) {
+  const u = index / 200;
+  const angle = index % 200 / 32;
+  const radius = 70 * Math.sin(Math.PI * u / 5) ** 0.6;
+
+  target.x = 40 * (u - 2.5) + 200;
+  target.y = radius * Math.cos(angle) + 12 * Math.sin(time / 20 - u) + 200;
+  target.z = radius * Math.sin(angle) * Number(settings.depth);
+  target.parameter = u;
+  target.k = Math.sin(angle);
+  target.e = Math.cos(angle);
+  target.d = radius;
+  target.c = angle;
+  target.branch = index % 20;
+  target.forms = 20;
   return target;
 }
 
@@ -1149,6 +1171,38 @@ export const spatialForms = Object.freeze([
       chirality: [-1, 1, 2]
     },
     evaluate: chiralophorePoint
+  },
+  {
+    id: "tesselophore",
+    displayNumber: "P7",
+    sketchNumber: null,
+    shortLabel: "Тесселофора",
+    title: "Тесселофора",
+    association: "цельная оболочка · XOR-клетки · обмен поколений · возраст",
+    description: "Сохраняемая оболочка проходит через дискретное клеточное поле. Частицы рождаются заново, стареют в цвете и покидают тело, пока его общий сосуд остаётся узнаваемым.",
+    origin: "source-mechanism-synthesis",
+    genomeSketch: TESSELOPHORE_GENOME_SKETCH,
+    budgetVariants: TESSELOPHORE_RAW_VARIANTS,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "memory-age",
+      expression: "fract((t - i / 1000) * 0.25)",
+      colorA: "#ff341f",
+      colorB: "#e8fbff"
+    }),
+    timeStep: 1,
+    defaults: {
+      speed: 1,
+      depth: 1,
+      pointCount: 1000,
+      alpha: 90,
+      backgroundColor: "#090909"
+    },
+    primaryControls: [depth],
+    advancedControls: [],
+    layers: [],
+    randomRanges: {},
+    evaluate: tesselophorePoint
   }
 ]);
 

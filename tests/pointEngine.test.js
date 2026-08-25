@@ -4,12 +4,15 @@ import { sketches } from "../src/data/sketches.js";
 import { createPointEngine, interpolatePointClouds } from "../src/lib/pointEngine.js";
 import { runnerDocument } from "../src/lib/runnerDocument.js";
 
-test("catalog contains 35 unique attributed sketches", () => {
-  assert.equal(sketches.length, 35);
-  assert.equal(new Set(sketches.map(sketch => sketch.id)).size, 35);
+test("catalog contains 36 unique attributed sketches", () => {
+  assert.equal(sketches.length, 36);
+  assert.equal(new Set(sketches.map(sketch => sketch.id)).size, 36);
   assert.ok(sketches.every(sketch => sketch.source === `https://x.com/yuruyurau/status/${sketch.id}`));
-  assert.equal(sketches.at(-1).id, "2091907118580576571");
-  assert.equal(sketches.at(-1).code.length, 275);
+  assert.equal(sketches.at(-1).id, "1588062547315679232");
+  assert.equal(sketches.at(-1).createdAt, "2022-11-03T06:56:30.712Z");
+  assert.equal(sketches.at(-1).code.length, 273);
+  assert.match(sketches.at(-1).code, /p5\.Vector\.random3D/);
+  assert.match(sketches.at(-1).code, /\^v\.y\+2/);
 });
 
 test("every archived formula compiles and produces a point cloud", () => {

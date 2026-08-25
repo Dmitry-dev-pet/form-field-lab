@@ -1985,6 +1985,141 @@ mjx-container[display="true"] {
 .pelagion-links a { color: var(--acid); font-size: 0.67rem; text-decoration: none; }
 .pelagion-links a:hover { text-decoration: underline; }
 
+.source-mechanism-note {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.54fr) minmax(0, 1fr);
+  gap: 18px 28px;
+  margin: 0 24px 22px;
+  padding: 22px;
+  border: 1px solid rgba(88, 255, 231, 0.2);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(88,255,231,0.055), rgba(9,11,9,0.92) 52%);
+}
+
+.source-mechanism-note > div:first-child { grid-row: 1 / span 3; }
+.source-mechanism-note > div:first-child span,
+.microscope-head span,
+.microscope-copy > span {
+  color: var(--cyan);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.59rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.source-mechanism-note h3,
+.microscope-head h3,
+.microscope-copy h4 {
+  margin: 7px 0 0;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+.source-mechanism-note h3 { font-size: 1.45rem; line-height: 1.12; }
+.source-mechanism-note p { margin: 0; color: var(--muted); font-size: 0.71rem; line-height: 1.68; }
+.source-mechanism-note a { color: var(--acid); text-decoration: none; }
+.source-mechanism-note a:hover { text-decoration: underline; }
+.source-mechanism-note .math-scroll { margin: 0; }
+
+.mechanism-microscope {
+  margin: 0 24px 24px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: #090b09;
+}
+
+.microscope-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.microscope-head h3 { font-size: 1.45rem; }
+.microscope-transport { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.microscope-layout { display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(250px, 0.92fr); }
+
+.microscope-stage {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 18px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(88,255,231,0.045), transparent 60%),
+    var(--canvas);
+  place-items: center;
+}
+
+.microscope-stage canvas {
+  display: block;
+  width: min(100%, 540px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: #090909;
+}
+
+.microscope-readout {
+  position: absolute;
+  right: 28px;
+  bottom: 26px;
+  left: 28px;
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(244,243,237,0.12);
+  border-radius: 9px;
+  color: var(--muted);
+  background: rgba(5,7,6,0.76);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.58rem;
+  backdrop-filter: blur(12px);
+}
+
+.microscope-controls {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  border-left: 1px solid var(--line);
+}
+
+.microscope-tabs { display: grid; }
+.microscope-tabs button {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  min-height: 56px;
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+}
+
+.microscope-tabs button:hover { color: var(--ink); background: rgba(255,255,255,0.025); }
+.microscope-tabs button[aria-selected="true"] {
+  color: var(--ink);
+  background: linear-gradient(90deg, rgba(215,255,88,0.1), transparent 75%);
+  box-shadow: inset 3px 0 var(--acid);
+}
+
+.microscope-tabs button span {
+  color: var(--acid);
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 0.62rem;
+}
+
+.microscope-tabs button strong { font-size: 0.73rem; font-weight: 650; }
+.microscope-copy { padding: 24px 20px 26px; }
+.microscope-copy h4 { font-size: 1.65rem; line-height: 1.05; }
+.microscope-copy p { margin: 14px 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.7; }
+
 .dna-overview {
   display: grid;
   grid-template-columns: minmax(270px, 0.72fr) minmax(0, 1.28fr);
@@ -2372,6 +2507,12 @@ mjx-container[display="true"] {
   .theory-grid { grid-template-columns: 1fr; }
   .movement-equations { grid-template-columns: 1fr; }
   .pelagion-theory-grid { grid-template-columns: 1fr; }
+  .source-mechanism-note { grid-template-columns: 1fr; }
+  .source-mechanism-note > div:first-child { grid-row: auto; }
+  .microscope-layout { grid-template-columns: 1fr; }
+  .microscope-controls { border-top: 1px solid var(--line); border-left: 0; }
+  .microscope-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .microscope-tabs button:nth-child(odd) { border-right: 1px solid var(--line); }
   .detail-meta { justify-items: start; padding-top: 0; }
   .dna-overview { grid-template-columns: 1fr; }
   .section-heading { grid-template-columns: 1fr; align-items: start; gap: 13px; }
@@ -2439,6 +2580,14 @@ mjx-container[display="true"] {
   .code-panel > header, .card-header { padding: 19px 18px 16px; }
   .code-panel > pre { padding: 18px; }
   .theory-body { padding: 16px 18px 20px; }
+  .source-mechanism-note, .mechanism-microscope { margin-right: 12px; margin-left: 12px; }
+  .source-mechanism-note { padding: 18px; }
+  .microscope-head { align-items: stretch; flex-direction: column; padding: 18px; }
+  .microscope-transport { justify-content: flex-start; }
+  .microscope-transport .button { flex: 1; }
+  .microscope-stage { padding: 10px; }
+  .microscope-readout { right: 18px; bottom: 18px; left: 18px; flex-direction: column; gap: 3px; }
+  .microscope-tabs button { grid-template-columns: 26px minmax(0, 1fr); min-height: 62px; padding: 9px 11px; }
   .parameter-key { grid-template-columns: 1fr; }
   .detail-head { padding: 0 7px; }
   .detail-stage { padding: 18px; border-radius: 21px; }
