@@ -6,6 +6,8 @@ import {
   COMMUNITY_AUTHORS,
   COMMUNITY_GENES,
   COMMUNITY_SCAN,
+  LIVE_FIELD_NOTES,
+  LIVE_FIELD_SCAN,
   PELAGION_LINEAGE
 } from "../data/communityDna.js";
 import {
@@ -129,6 +131,37 @@ async function copyGenome() {
             >@{{ handle }} <small>{{ author(handle).count }}</small></a>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section class="dna-section" aria-labelledby="live-field-title">
+      <header class="section-heading">
+        <div>
+          <p class="eyebrow">Live X field · {{ LIVE_FIELD_SCAN.capturedAt }}</p>
+          <h2 id="live-field-title">Пять свежих сигналов</h2>
+        </div>
+        <p>Из {{ LIVE_FIELD_SCAN.inspectedPosts }} последних результатов отделены исполняемые работы и аналитические идеи. Это полевая заметка, а не пересчёт замороженного снимка 845.</p>
+      </header>
+
+      <div class="gene-list">
+        <article v-for="(note, index) in LIVE_FIELD_NOTES" :key="note.id" class="gene-row">
+          <div class="gene-index">L{{ String(index + 1).padStart(2, "0") }}</div>
+          <div class="gene-copy">
+            <h3>{{ note.title }}</h3>
+            <p>{{ note.mechanism }}</p>
+            <p class="gene-inheritance"><strong>Для Хиралофора:</strong> {{ note.relevance }}</p>
+          </div>
+          <div class="gene-authors">
+            <a :href="note.url" target="_blank" rel="noopener noreferrer">{{ note.author }} ↗</a>
+          </div>
+        </article>
+      </div>
+
+      <div class="lineage-note">
+        <p><strong>Метод.</strong> Ссылки фиксируют происхождение наблюдений. Чужие минимизированные строки не становятся кодом новой сущности: совместимые принципы реализуются независимо и проходят отдельную проверку лимита.</p>
+        <div class="lineage-links">
+          <a :href="LIVE_FIELD_SCAN.searchUrl" target="_blank" rel="noopener noreferrer">Повторить поиск в X ↗</a>
+        </div>
       </div>
     </section>
 

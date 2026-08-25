@@ -5,6 +5,8 @@ import {
   COMMUNITY_AUTHORS,
   COMMUNITY_GENES,
   COMMUNITY_SCAN,
+  LIVE_FIELD_NOTES,
+  LIVE_FIELD_SCAN,
   PELAGION_LINEAGE
 } from "../src/data/communityDna.js";
 import {
@@ -69,6 +71,17 @@ test("the community census is internally complete", () => {
 test("Pelagion lineage keeps direct archive evidence", () => {
   assert.ok(PELAGION_LINEAGE.length >= 6);
   assert.ok(PELAGION_LINEAGE.every(item => /^https:\/\/tsubuyaki\.art\/sketch\.html\?id=\d+$/.test(item.url)));
+});
+
+test("the live X field notes remain dated, attributed, and separate from the frozen census", () => {
+  assert.equal(LIVE_FIELD_SCAN.capturedAt, "2026-08-25");
+  assert.equal(LIVE_FIELD_SCAN.inspectedPosts, 18);
+  assert.match(LIVE_FIELD_SCAN.searchUrl, /^https:\/\/x\.com\/search\?/);
+  assert.equal(LIVE_FIELD_NOTES.length, 5);
+  assert.equal(new Set(LIVE_FIELD_NOTES.map(note => note.id)).size, LIVE_FIELD_NOTES.length);
+  assert.ok(LIVE_FIELD_NOTES.every(note => /^https:\/\/x\.com\/[^/]+\/status\/\d+$/.test(note.url)));
+  assert.ok(LIVE_FIELD_NOTES.some(note => note.url.endsWith("/2091907118580576571")));
+  assert.equal(COMMUNITY_SCAN.sketches, 845);
 });
 
 test("the autonomous Pelagion genome stays inside the challenge limit", () => {

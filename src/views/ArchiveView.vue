@@ -46,9 +46,9 @@ async function copyCode() {
     <header class="view-head">
       <div>
         <p class="eyebrow">Archive / @yuruyurau</p>
-        <h1 class="display-title">Все 34 скетча</h1>
+        <h1 class="display-title">Все {{ sketches.length }} скетчей</h1>
       </div>
-      <p class="view-lead">Подтверждённая подборка однотвитовых p5.js-работ. Выбранная формула запускается в изолированном контейнере, остальные не расходуют процессор.</p>
+      <p class="view-lead">Подтверждённая подборка однотвитовых p5.js-работ. Исторические номера №01–34 сохранены; свежая найденная работа добавлена как №35. Выбранная формула запускается в изолированном контейнере.</p>
     </header>
 
     <div class="archive-workspace">
@@ -72,7 +72,7 @@ async function copyCode() {
       <aside class="archive-index" aria-label="Каталог скетчей">
         <div class="panel-title-row">
           <h2>Каталог</h2>
-          <span class="count-label">34 / p5.js</span>
+          <span class="count-label">{{ sketches.length }} / p5.js</span>
         </div>
         <ol class="sketch-grid">
           <li v-for="(sketch, index) in sketches" :key="sketch.id">

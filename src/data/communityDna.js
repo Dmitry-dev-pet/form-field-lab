@@ -53,6 +53,55 @@ export const COMMUNITY_AUTHOR_MAP = Object.freeze(Object.fromEntries(
   COMMUNITY_AUTHORS.map(author => [author.handle, author])
 ));
 
+export const LIVE_FIELD_SCAN = Object.freeze({
+  capturedAt: "2026-08-25",
+  inspectedPosts: 18,
+  searchUrl: "https://x.com/search?q=%23%E3%81%A4%E3%81%B6%E3%82%84%E3%81%8DProcessing&src=typed_query&f=live"
+});
+
+export const LIVE_FIELD_NOTES = Object.freeze([
+  {
+    id: "radial-pulse",
+    author: "@yuruyurau",
+    title: "Импульс четвёртой степени",
+    mechanism: "Член d⁴ cos(2t − d²) резко усиливает смещение удалённых слоёв, оставляя центральную ткань спокойнее.",
+    relevance: "Для Хиралофора это пример локализации сильного гребка по радиусу; исходное выражение в синтез не переносится.",
+    url: "https://x.com/yuruyurau/status/2091907118580576571"
+  },
+  {
+    id: "phase-interference",
+    author: "@TakagiHitoshi",
+    title: "Зеркальная интерференция",
+    mechanism: "Две окружности получают противоположный оттенок и фазовый сдвиг, а DIFFERENCE превращает их пересечение в самостоятельный сигнал.",
+    relevance: "Геометрию Хиралофора лучше не дублировать, но цвет может показывать встречу правой и левой винтовых фаз.",
+    url: "https://x.com/TakagiHitoshi/status/2092158782193459217"
+  },
+  {
+    id: "noise-contour",
+    author: "@nicolasbaez",
+    title: "Шумовой радиус",
+    mechanism: "noise(θ) управляет радиусом полярного контура, поэтому случайность меняет связную границу, а не разбрасывает независимые точки.",
+    relevance: "Это возможная микронеровность кожи, но только за пределами канонического лимита 280 или после очень дешёвой аппроксимации.",
+    url: "https://x.com/nicolasbaez/status/2092092374922969475"
+  },
+  {
+    id: "nested-transform",
+    author: "@SnowEsamosc",
+    title: "Вложенное дыхание",
+    mechanism: "Последовательность rotate + scale заставляет множество прямоугольных слоёв пульсировать как одна составная оболочка.",
+    relevance: "Полезный принцип для гребня: один фазовый закон может согласованно деформировать все поперечные сечения.",
+    url: "https://x.com/SnowEsamosc/status/2091892503293419814"
+  },
+  {
+    id: "spectral-audit",
+    author: "@eight_bitter",
+    title: "Спектральный отпечаток движения",
+    mechanism: "FFT координат рассматривается как способ отделить устойчивые пространственные гармоники от меняющейся во времени амплитуды.",
+    relevance: "Это не ген формы, а будущая проверка: потомок должен менять анатомию, тогда как камера сохраняет спектральное родство.",
+    url: "https://x.com/eight_bitter/status/2091765434513039429"
+  }
+]);
+
 export const COMMUNITY_GENES = Object.freeze([
   {
     id: "body",

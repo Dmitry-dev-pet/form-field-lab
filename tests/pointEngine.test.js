@@ -4,10 +4,12 @@ import { sketches } from "../src/data/sketches.js";
 import { createPointEngine, interpolatePointClouds } from "../src/lib/pointEngine.js";
 import { runnerDocument } from "../src/lib/runnerDocument.js";
 
-test("catalog contains 34 unique attributed sketches", () => {
-  assert.equal(sketches.length, 34);
-  assert.equal(new Set(sketches.map(sketch => sketch.id)).size, 34);
+test("catalog contains 35 unique attributed sketches", () => {
+  assert.equal(sketches.length, 35);
+  assert.equal(new Set(sketches.map(sketch => sketch.id)).size, 35);
   assert.ok(sketches.every(sketch => sketch.source === `https://x.com/yuruyurau/status/${sketch.id}`));
+  assert.equal(sketches.at(-1).id, "2091907118580576571");
+  assert.equal(sketches.at(-1).code.length, 275);
 });
 
 test("every archived formula compiles and produces a point cloud", () => {
