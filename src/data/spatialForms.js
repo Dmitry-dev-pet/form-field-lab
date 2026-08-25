@@ -22,6 +22,13 @@ import {
   KRYLOFOR_DEFAULTS,
   KRYLOFOR_GENOME_SKETCH
 } from "./kryloforGenome.js";
+import {
+  CHIRALOPHORE_COLOR_LAWS,
+  CHIRALOPHORE_COLOR_PALETTES,
+  CHIRALOPHORE_DEFAULTS,
+  CHIRALOPHORE_GENOME_SKETCH,
+  compileChiralophoreGenome
+} from "./chiralophoreGenome.js";
 import { topologyGenomeDefaults } from "./topologyGenomes.js";
 import {
   decodeGridVertex,
@@ -519,6 +526,36 @@ function kryloforPoint(index, time, settings, layers, target) {
   target.branch = v < 0 ? 0 : 1;
   target.forms = 2;
   target.mix = signal;
+  return target;
+}
+
+function chiralophorePoint(index, time, settings, layers, target) {
+  const u = index / 2000;
+  const v = index % 80 / 13 - 3;
+  const profile = Math.sin(u / 1.6);
+  const phase = settings.pulseSpeed * time
+    - settings.axialWaves * u
+    + index % 2 * 3;
+  const impulse = Math.sin(phase) ** 5;
+  const radius = profile * (settings.radius + settings.pulse * impulse);
+  const angle = v + Math.sin(
+    2 * v + settings.chirality * settings.twist * u
+  ) / settings.fold;
+  const depthDivisor = settings.depth === 0.5 ? 6 : settings.depth === 1.5 ? 2 : 3;
+
+  target.x = settings.length * u - settings.length * 2.5 + 200;
+  target.y = radius * Math.cos(angle) + 200;
+  target.z = radius * Math.sin(angle) * (3 + impulse) / depthDivisor;
+  target.parameter = u;
+  target.k = impulse;
+  target.e = profile;
+  target.d = radius;
+  target.c = angle;
+  target.branch = index % 2;
+  target.forms = 2;
+  target.mix = settings.colorLaw === "tissues"
+    ? index % 2
+    : settings.colorLaw === "profile" ? profile * profile : impulse * impulse;
   return target;
 }
 
@@ -1027,6 +1064,7 @@ export const spatialForms = Object.freeze([
     association: "мембрана · два крыла · хвост · автоповорот",
     description: "Единая точечная мембрана сгущается в центральный шов, раскрывается двумя крыльями и сходит в хвост. Геометрическая волна, цветовой импульс и медленный пространственный оборот исполняются самим RAW.",
     origin: "form-field-synthesis",
+    autoOrbit: true,
     genomeSketch: KRYLOFOR_GENOME_SKETCH,
     compileGenome: compileKryloforGenome,
     rawColorPalettes: KRYLOFOR_COLOR_PALETTES,
@@ -1065,6 +1103,52 @@ export const spatialForms = Object.freeze([
       signalCount: [1, 6, 1]
     },
     evaluate: kryloforPoint
+  },
+  {
+    id: "chiralophore",
+    displayNumber: "P6",
+    sketchNumber: null,
+    shortLabel: "Хиралофор",
+    title: "Хиралофор",
+    association: "двойная фаза · хиральная складка · радиальный гребок",
+    description: "Две зеркально сдвинутые ткани делят одну оболочку. Нечётный фазовый импульс попеременно сжимает их, вложенный угол закручивает поперечные сечения, а медленный оборот показывает, что внутренний глаз является настоящей глубиной.",
+    origin: "live-field-synthesis",
+    autoOrbit: true,
+    genomeSketch: CHIRALOPHORE_GENOME_SKETCH,
+    compileGenome: compileChiralophoreGenome,
+    rawColorPalettes: CHIRALOPHORE_COLOR_PALETTES,
+    rawColorLaws: CHIRALOPHORE_COLOR_LAWS,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "custom",
+      expression: "sin(8t - 3u + 3(i mod 2)) ^ 10",
+      colorA: "#00b4ff",
+      colorB: "#ffb4ff"
+    }),
+    timeStep: 0.01,
+    defaults: CHIRALOPHORE_DEFAULTS,
+    primaryControls: [
+      control("genomeSpeed", "Темп сущности", 1, 5, 1, { format: "integerSpeed" }),
+      control("length", "Длина тела", 40, 70, 2),
+      control("radius", "Радиус оболочки", 50, 80, 1),
+      control("depth", "Глубина", 0.5, 1.5, 0.5, { format: "percent" }),
+      control("pulse", "Сила гребка", 10, 20, 1),
+      control("pulseSpeed", "Темп гребка", 5, 9, 1),
+      control("axialWaves", "Волн вдоль тела", 2, 6, 1)
+    ],
+    advancedControls: [
+      control("twist", "Вложенное вращение", 1, 5, 1),
+      control("fold", "Мягкость складки", 2, 6, 1),
+      control("chirality", "Знак хиральности", -1, 1, 2)
+    ],
+    layers: [],
+    randomRanges: {
+      genomeSpeed: [1, 5, 1], length: [40, 70, 2], radius: [50, 80, 1],
+      depth: [0.5, 1.5, 0.5], pulse: [10, 20, 1], pulseSpeed: [5, 9, 1],
+      axialWaves: [2, 6, 1], twist: [1, 5, 1], fold: [2, 6, 1],
+      chirality: [-1, 1, 2]
+    },
+    evaluate: chiralophorePoint
   }
 ]);
 

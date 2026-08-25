@@ -196,7 +196,7 @@ export function compileChronophoreImprint({
   });
 }
 
-export function nextMutationNumber(records = [], minimum = 6) {
+export function nextMutationNumber(records = [], minimum = 7) {
   return records.reduce((next, record) => {
     const value = Number.parseInt(String(record.displayNumber || "").replace(/\D/g, ""), 10);
     return Number.isFinite(value) ? Math.max(next, value + 1) : next;
@@ -212,7 +212,7 @@ export function createSavedEntityRecord({
   layers,
   color
 }) {
-  const entityNumber = Math.max(6, Math.round(Number(number) || 6));
+  const entityNumber = Math.max(7, Math.round(Number(number) || 7));
   const displayNumber = `P${entityNumber}`;
   return Object.freeze({
     version: GENOME_ENTITY_VERSION,

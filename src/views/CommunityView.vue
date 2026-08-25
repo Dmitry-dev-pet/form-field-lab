@@ -160,6 +160,7 @@ async function copyGenome() {
       <div class="lineage-note">
         <p><strong>Метод.</strong> Ссылки фиксируют происхождение наблюдений. Чужие минимизированные строки не становятся кодом новой сущности: совместимые принципы реализуются независимо и проходят отдельную проверку лимита.</p>
         <div class="lineage-links">
+          <RouterLink :to="{ name: 'lab', query: { form: 'chiralophore' } }">Вырастить Хиралофор →</RouterLink>
           <a :href="LIVE_FIELD_SCAN.searchUrl" target="_blank" rel="noopener noreferrer">Повторить поиск в X ↗</a>
         </div>
       </div>

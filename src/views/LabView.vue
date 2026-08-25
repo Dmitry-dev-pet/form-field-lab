@@ -43,8 +43,8 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
-  const legacyNumber = ["P3", "P4", "P5"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
-  const legacyTitle = ["P3", "P4", "P5"].includes(record.displayNumber)
+  const legacyNumber = ["P3", "P4", "P5", "P6"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
+  const legacyTitle = ["P3", "P4", "P5", "P6"].includes(record.displayNumber)
     ? record.title.replace(new RegExp(`${record.displayNumber}\\b`), `${record.displayNumber}′`)
     : record.title;
   return {
@@ -217,7 +217,7 @@ const bareRunnerLabel = computed(() => isCompiledGenome.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} символов`
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isCompiledGenome.value
-  ? selectedForm.value.id === "krylofor"
+  ? selectedForm.value.autoOrbit
     ? `На холсте исполняется итоговый ${bareCodeLength.value}-символьный RAW: форма, волна, цвет и автоматический пространственный оборот находятся в самой строке.`
     : `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : hasBudgetVariants.value
@@ -751,7 +751,7 @@ onBeforeUnmount(() => {
           <dl class="bare-mode-facts">
             <div><dt>Исполнение</dt><dd>p5.js в изолированном iframe</dd></div>
             <div><dt>Объём</dt><dd>{{ bareCodeLength }} из {{ rawBudget }} символов</dd></div>
-            <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>{{ selectedForm.id === "krylofor" ? "автоповорот · внутри RAW; ручной ракурс · 0 символов" : "последний ракурс · вне генома · 0 символов" }}</dd></div>
+            <div v-if="bareSketch.viewModel"><dt>Камера</dt><dd>{{ selectedForm.autoOrbit ? "автоповорот · внутри RAW; ручной ракурс · 0 символов" : "последний ракурс · вне генома · 0 символов" }}</dd></div>
             <div v-if="isImprintBare"><dt>Ядро</dt><dd>{{ imprintResult.coreCharacters }} / 280 + состояние {{ imprintResult.stateCharacters >= 0 ? "+" : "" }}{{ imprintResult.stateCharacters }}</dd></div>
             <div><dt>Источник</dt><dd>{{ isCompiledGenome ? "текущие константы RAW" : hasBudgetVariants ? "автоматический выбор по бюджету" : isImprintBare ? "генетические параметры и цвет" : selectedRawVariant?.id === 'living-stroke' ? "автономная RAW-хореография" : selectedForm.savedRecord ? `закреплённый потомок ${selectedForm.savedRecord.parentDisplayNumber}` : "неизменяемый канон" }}</dd></div>
           </dl>

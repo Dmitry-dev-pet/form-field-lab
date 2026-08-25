@@ -30,6 +30,11 @@ import {
   KRYLOFOR_GENOME_LIMIT
 } from "../data/kryloforGenome.js";
 import {
+  CHIRALOPHORE_GENOME,
+  CHIRALOPHORE_GENOME_CHARACTERS,
+  CHIRALOPHORE_GENOME_LIMIT
+} from "../data/chiralophoreGenome.js";
+import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -204,6 +209,24 @@ g_i(t)&\in\left\{\sin^{8}(\omega_nt-k_nu_i),\;(\omega_nt+k_nu_i)\bmod1,\right.\\
 &\pi_c&\in S_3.
 \end{aligned}`;
 
+const chiralophoreLatexSource = String.raw`\begin{aligned}
+u_i&=5i/N,
+&v_i&=(i\bmod80)/13-3,
+&b_i&=3(i\bmod2),\\
+p_i&=\sin(u_i/1.6),
+&s_i(t)&=\sin^5(\omega t-ku_i+b_i),\\
+r_i(t)&=p_i(R+As_i),
+&q_i&=v_i+\frac{1}{F}\sin(2v_i+\chi Tu_i),\\
+x_i&=L(u_i-2.5),
+&y_i&=r_i\cos q_i,\\
+z_i&=\lambda r_i\sin q_i\frac{3+s_i}{3},
+&\chi&\in\{-1,+1\},\\
+\widetilde x_i&=x_i\cos t+z_i\sin t,
+&\widetilde z_i&=-x_i\sin t+z_i\cos t,\\
+g_i(t)&\in\{s_i^2,\;b_i/3,\;p_i^2\},
+&\mathbf C_i&=\pi_c(255g_i,180+70p_i,255).
+\end{aligned}`;
+
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
@@ -304,6 +327,7 @@ const defaultCopyLabels = {
   mnemophore: "Копировать TeX",
   blastophore: "Копировать TeX",
   krylofor: "Копировать TeX",
+  chiralophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   livingSeed: "Копировать RAW гребка",
@@ -311,6 +335,7 @@ const defaultCopyLabels = {
   mnemophoreSeed: "Копировать 280",
   blastophoreSeed: "Копировать RAW 279",
   kryloforSeed: "Копировать RAW 280",
+  chiralophoreSeed: "Копировать RAW 278",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -982,6 +1007,72 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Что здесь новое.</strong> В отличие от трёх фазовых ветвей #05, две стороны Крылофора являются половинами одной поверхности и встречаются в общем шве. Выбранный цветовой закон может показывать независимую фазу движения, форму мембраны или её скрытую глубину.</p>
           <p><strong>Граница модели.</strong> Это компактная процедурная кинематика. Она создаёт убедительный образ живой мембраны, но не рассчитывает мышцы, жидкость или сопротивление среды.</p>
+        </div>
+      </article>
+
+      <article id="chiralophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>12 / INTERFERENCE ORGANISM</span><h2>Хиралофор: две фазы выращивают одно тело</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('chiralophore', chiralophoreLatexSource)">{{ copyLabels.chiralophore }}</button>
+            <button class="button" type="button" @click="copy('chiralophoreSeed', CHIRALOPHORE_GENOME)">{{ copyLabels.chiralophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Хиралофор — первый результат свежего полевого анализа, а не вариация одного найденного скетча. Чётные и нечётные точки образуют две ткани одной оболочки. Их фазы разнесены примерно на π, поэтому одна ткань расширяется, пока вторая сжимается.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i&amp;=5i/N,
+              &amp;v_i&amp;=(i\bmod80)/13-3,\\
+              b_i&amp;=3(i\bmod2),
+              &amp;p_i&amp;=\sin(u_i/1.6),\\
+              s_i(t)&amp;=\sin^5(\omega t-ku_i+b_i).
+              \end{aligned}
+              \]
+            </div>
+            <p>Нечётная пятая степень сохраняет знак импульса. Поэтому радиус не просто мерцает: две ткани обмениваются объёмом, создавая гребок без отдельной физической симуляции.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              r_i(t)&amp;=p_i(R+As_i),\\
+              q_i&amp;=v_i+\frac{1}{F}\sin(2v_i+\chi Tu_i),\qquad \chi\in\{-1,+1\},\\
+              x_i&amp;=L(u_i-2.5),\\
+              y_i&amp;=r_i\cos q_i,\\
+              z_i&amp;=\lambda r_i\sin q_i\frac{3+s_i}{3}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Угол <code>qᵢ</code> содержит синус другого угла. Эта вложенность закручивает каждое поперечное сечение, а знак <code>χ</code> меняет правую хиральность на левую без изменения топологии.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              \widetilde x_i&amp;=x_i\cos t+z_i\sin t,\\
+              \widetilde z_i&amp;=-x_i\sin t+z_i\cos t,\\
+              g_i(t)&amp;\in\{s_i^2,\;b_i/3,\;p_i^2\}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Автоповорот раскрывает внутренний «глаз» формы и находится в RAW. Перетаскивание пальцем лишь умножает результат на дополнительную матрицу камеры; оно не меняет <code>χ</code>, фазу тканей или код.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Две ткани, гребок, хиральность и камера</span>
+              <strong>{{ CHIRALOPHORE_GENOME_CHARACTERS }} / {{ CHIRALOPHORE_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ CHIRALOPHORE_GENOME }}</code></pre>
+            <p>Канонический геном занимает 278 символов. Три закона цвета показывают силу импульса, принадлежность к одной из двух тканей или продольный профиль тела. Шесть палитр меняют порядок каналов без добавления кода.</p>
+            <p>Ползунки меняют только короткие константы: длину, радиус, глубину, силу и частоту гребка, число продольных волн, вложенное вращение и знак хиральности. Каждый результат остаётся автономным RAW не длиннее 280 символов.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'chiralophore' } }">Открыть Хиралофор →</RouterLink>
+              <RouterLink to="/community#live-field-title">Полевые источники →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Синтез, а не коллаж.</strong> Из свежих работ взяты направления исследования — фазовая интерференция, радиальный импульс и вложенное преобразование. Формула и её компактная реализация построены заново.</p>
+          <p><strong>Граница модели.</strong> Хиралофор показывает, как противофазная кинематика создаёт образ мягкого организма. Он не моделирует давление жидкости, мышцы или обмен энергией.</p>
         </div>
       </article>
     </div>
