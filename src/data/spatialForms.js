@@ -1,6 +1,10 @@
 import { sketches } from "./sketches.js";
 import { CHRONOPHORE_GENOME_SKETCH } from "./chronophoreGenome.js";
 import {
+  BLASTOPHORE_GENOME_SKETCH,
+  BLASTOPHORE_RAW_VARIANTS
+} from "./blastophoreGenome.js";
+import {
   PELAGION_BUDGET_VARIANTS_BY_MODE,
   PELAGION_EVOLUTION_VARIANTS,
   PELAGION_LIVING_GENOME_SKETCH,
@@ -449,6 +453,31 @@ function chronophorePoint(index, time, settings, layers, target, interaction) {
   return target;
 }
 
+function blastophorePoint(index, time, settings, layers, target) {
+  const u = index / (settings.pointCount / 5);
+  const angle = index % 40 / 6;
+  const budding = Math.sin(time * settings.cycle / 2) ** 2;
+  const bud = Math.exp(-settings.budSharpness * (u - settings.budCenter) ** 2);
+  const neck = Math.exp(-settings.neckSharpness * (u - settings.neckCenter) ** 2);
+  const profile = Math.max(0, Math.sin(Math.PI * u / 5)) ** 0.6;
+  const radius = settings.radius * profile
+    * (1 + budding * bud * settings.budGrowth)
+    * (1 - budding * neck * settings.neckClosure);
+
+  target.x = (u - 2.5) * settings.length / 5
+    + settings.budOffset * budding * bud + 200;
+  target.y = radius * Math.cos(angle) + 200;
+  target.z = radius * Math.sin(angle) * settings.depth;
+  target.k = budding * bud;
+  target.e = neck;
+  target.d = budding;
+  target.c = angle;
+  target.branch = index % 40;
+  target.forms = 40;
+  target.angle = angle;
+  target.mix = budding;
+}
+
 export const spatialForms = Object.freeze([
   {
     id: "brancher",
@@ -883,6 +912,67 @@ export const spatialForms = Object.freeze([
       memory: [0.62, 0.94, 0.01], pointCount: [6000, 15000, 1000], alpha: [55, 135, 1]
     },
     evaluate: evaluateMemorySeed
+  },
+  {
+    id: "blastophore",
+    displayNumber: "P4",
+    sketchNumber: null,
+    shortLabel: "Бластофор",
+    title: "Бластофор",
+    association: "онтогенез · почкование · перетяжка · сборка",
+    description: "Организм существует как жизненный цикл: цельная оболочка выращивает почку, формирует шейку-сингулярность, временно читается как два тела и возвращается к зародышу.",
+    origin: "form-field-synthesis",
+    genomeSketch: BLASTOPHORE_GENOME_SKETCH,
+    budgetVariants: BLASTOPHORE_RAW_VARIANTS,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "membrane",
+      expression: "clamp(0.12 + 0.82 * k + 0.28 * sin(c), 0, 1)",
+      colorA: "#78dcff",
+      colorB: "#fff050"
+    }),
+    timeStep: 0.02,
+    defaults: {
+      speed: 1, cycle: 1, length: 275, radius: 60, depth: 1,
+      budCenter: 4, budSharpness: 1, budGrowth: 1,
+      budOffset: 70, neckCenter: 3.2, neckSharpness: 9, neckClosure: 1,
+      pointCount: 10000, alpha: 100, backgroundColor: "#090909"
+    },
+    primaryControls: [
+      speed,
+      control("cycle", "Темп развития", 0.35, 2.2, 0.05, { digits: 2 }),
+      control("length", "Длина зародыша", 190, 340, 1),
+      control("radius", "Объём оболочки", 35, 90, 1),
+      depth,
+      control("budOffset", "Отделение почки", 20, 125, 1),
+      control("neckClosure", "Сжатие шейки", 0.2, 1, 0.02, { format: "percent" }),
+      points(18000),
+      alpha
+    ],
+    advancedControls: [
+      control("budCenter", "Положение почки", 3.3, 4.6, 0.05, { digits: 2 }),
+      control("budSharpness", "Локальность роста", 0.45, 2.4, 0.05, { digits: 2 }),
+      control("budGrowth", "Рост почки", 0.25, 1.8, 0.05, { digits: 2 }),
+      control("neckCenter", "Положение шейки", 2.7, 3.8, 0.05, { digits: 2 }),
+      control("neckSharpness", "Резкость перетяжки", 3, 18, 0.5, { digits: 1 })
+    ],
+    layers: [
+      { key: "shell", label: "Цельная оболочка", default: true },
+      { key: "bud", label: "Дочерняя почка", default: true },
+      { key: "neck", label: "Шейка-сингулярность", default: true },
+      { key: "nuclei", label: "Два ядра", default: true },
+      { key: "tissue", label: "Тканевая сетка", default: true },
+      { key: "signal", label: "Морфогенетический фронт", default: true }
+    ],
+    randomRanges: {
+      speed: [0.55, 1.55, 0.05], cycle: [0.55, 1.6, 0.05],
+      length: [220, 315, 1], radius: [44, 78, 1], depth: [0.6, 1.5, 0.05],
+      budCenter: [3.55, 4.35, 0.05], budSharpness: [0.65, 1.8, 0.05],
+      budGrowth: [0.55, 1.5, 0.05], budOffset: [42, 105, 1],
+      neckCenter: [2.9, 3.55, 0.05], neckSharpness: [5, 15, 0.5],
+      neckClosure: [0.65, 1, 0.02], pointCount: [8000, 16000, 1000], alpha: [65, 130, 1]
+    },
+    evaluate: blastophorePoint
   }
 ]);
 

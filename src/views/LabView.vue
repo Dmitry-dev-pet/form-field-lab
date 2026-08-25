@@ -43,9 +43,9 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
-  const legacyNumber = record.displayNumber === "P3" ? "P3′" : record.displayNumber;
-  const legacyTitle = record.displayNumber === "P3"
-    ? record.title.replace(/P3\b/, "P3′")
+  const legacyNumber = ["P3", "P4"].includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
+  const legacyTitle = ["P3", "P4"].includes(record.displayNumber)
+    ? record.title.replace(new RegExp(`${record.displayNumber}\\b`), `${record.displayNumber}′`)
     : record.title;
   return {
     ...chronophoreForm,
@@ -118,7 +118,9 @@ const mutationMessage = ref("");
 const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref(defaultBareVariant(initialForm));
 const rawBudget = ref(RAW_CODE_BUDGET_MIN);
-const rawBudgetPresets = computed(() => selectedForm.value.id === "pelagion"
+const rawBudgetPresets = computed(() => selectedForm.value.budgetVariants?.some(
+  variant => variant.sketch.code.length > RAW_CODE_BUDGET_PRESETS.at(-1)
+)
   ? [...RAW_CODE_BUDGET_PRESETS, RAW_CODE_BUDGET_MAX]
   : RAW_CODE_BUDGET_PRESETS);
 const spaSnapshot = ref(restoredViewFor(initialForm));
@@ -214,6 +216,8 @@ const bareLead = computed(() => isTopologyGenome.value
   : hasBudgetVariants.value
     ? selectedForm.value.id === "pelagion"
       ? `Выбранный корневой RAW микроэволюции сохраняется целиком; лимит ${rawBudget.value} только дописывает к нему помещающийся слой: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
+      : selectedForm.value.id === "blastophore"
+        ? `Автономный цикл почкования сохраняется целиком; лимит ${rawBudget.value} добавляет только помещающуюся стадию анатомии: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
       : `Лимит ${rawBudget.value} автоматически выбирает самый насыщенный автономный геном, который действительно в него помещается: сейчас ${selectedRawVariant.value.title.toLowerCase()}.`
   : selectedForm.value.sketch
     ? "На холсте без преобразований выполняется исходный p5.js-код автора."
@@ -224,6 +228,11 @@ const bareLead = computed(() => isTopologyGenome.value
   : selectedRawVariant.value
     ? selectedRawVariant.value.description
     : `Канонический ${bareCodeLength.value}-символьный геном остаётся неизменным и доступен для сравнения.`);
+const rawBudgetContract = computed(() => selectedForm.value.id === "pelagion"
+  ? "микроэволюция выбирает корневую формулу не длиннее 280; уровни 512/768/900 не заменяют её, а добавляют орган, двухнаправленную сетку и автономный импульс. Камера и фаза переходят без перезапуска; касание остаётся только камерой."
+  : selectedForm.value.id === "blastophore"
+    ? "279 символов уже содержат полный цикл почкования и точную перетяжку до нулевого радиуса. 512 добавляет два ядра, 768 — тканевую сетку, 900 — бегущий морфогенетический фронт. Камера и фаза переходят между стадиями вне генома."
+    : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.");
 const primaryControls = computed(() => compiledTopologyGenome.value?.preset.controls
   || selectedForm.value.primaryControls);
 const chronophoreRawControlKeys = new Set([
@@ -788,7 +797,7 @@ onBeforeUnmount(() => {
           </div>
 
           <p v-if="isTopologyGenome" class="bare-mode-note"><strong>Инвариант:</strong> это не предварительный просмотр, а точный результат выбора. Любое изменение генетического ползунка пересобирает исполняемый код.</p>
-          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ selectedForm.id === 'pelagion' ? "микроэволюция выбирает корневую формулу не длиннее 280; уровни 512/768/900 не заменяют её, а добавляют орган, двухнаправленную сетку и автономный импульс. Камера и фаза переходят без перезапуска; касание остаётся только камерой." : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы." }}</p>
+          <p v-else-if="hasBudgetVariants" class="bare-mode-note"><strong>Контракт бюджета:</strong> {{ rawBudgetContract }}</p>
           <p v-else-if="selectedRawVariant" class="bare-mode-note"><strong>Прямое исполнение:</strong> выбран самостоятельный компактный геном. Последние камера и фаза сохраняются как состояние просмотра вне лимита; касание не становится мутацией.</p>
           <p v-else class="bare-mode-note"><strong>Граница:</strong> исходный геном не перезаписывается. Палец и мышь меняют только ракурс; отдельная кнопка реакции не входит в геном. Потомок появляется лишь после явного изменения параметров и команды «Запечатлеть».</p>
         </div>

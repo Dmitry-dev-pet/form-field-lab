@@ -6,6 +6,12 @@ import {
   CHRONOPHORE_GENOME_LIMIT
 } from "../data/chronophoreGenome.js";
 import {
+  BLASTOPHORE_GENOME,
+  BLASTOPHORE_GENOME_CHARACTERS,
+  BLASTOPHORE_GENOME_LIMIT,
+  BLASTOPHORE_RAW_VARIANTS
+} from "../data/blastophoreGenome.js";
+import {
   PELAGION_EVOLUTION_VARIANTS,
   PELAGION_GENOME,
   PELAGION_GENOME_CHARACTERS,
@@ -158,6 +164,24 @@ y_i&=\begin{cases}9q_i+30,&h_i=0,\\5q_i-50,&h_i>0,\end{cases}
 &0&<\lambda\ll1.
 \end{aligned}`;
 
+const blastophoreLatexSource = String.raw`\begin{aligned}
+u_i&=i/2000,
+&\theta_i&=(i\bmod40)/6,\\
+b(t)&=\sin^2(t/2),
+&g(u)&=e^{-(u-4)^2},
+&n(u)&=e^{-9(u-3.2)^2},\\
+r(u,t)&=60\sin^{0.6}\!\left(\frac{\pi u}{5}\right)
+\left(1+b(t)g(u)\right)\left(1-b(t)n(u)\right),\\
+x(u,t)&=55(u-2.5)+70b(t)g(u),\\
+y(u,\theta,t)&=r(u,t)\cos\theta,
+&z(u,\theta,t)&=r(u,t)\sin\theta,\\
+q(u,t)&=e^{-4(u-2)^2}+b(t)e^{-5(u-4)^2},\\
+m(u,t)&=\sin^{12}(6t-2u),\\
+b((2k+1)\pi)&=1,
+&n(3.2)&=1
+\Longrightarrow r(3.2,(2k+1)\pi)=0.
+\end{aligned}`;
+
 const sphereGridLatexSource = String.raw`\begin{aligned}
 \mathcal M(t)&=(V,E,F,\mathbf P(t)),
 &\mathbf P_i(t)&=(x_i(t),y_i(t),z_i(t)),\\
@@ -256,11 +280,13 @@ const defaultCopyLabels = {
   pelagion: "Копировать TeX",
   chronophore: "Копировать TeX",
   mnemophore: "Копировать TeX",
+  blastophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
   livingSeed: "Копировать RAW гребка",
   chronophoreSeed: "Копировать 280",
   mnemophoreSeed: "Копировать 280",
+  blastophoreSeed: "Копировать RAW 279",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
 };
@@ -796,6 +822,72 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Происхождение идеи.</strong> Мнемофора — самостоятельная реализация Form / Field, но принцип сохраняемого массива частиц, который каждый кадр обновляет собственные координаты, сознательно развивает публичный <a href="https://x.com/yuruyurau/status/1588062547315679232" target="_blank" rel="noopener noreferrer">скетч @yuruyurau ↗</a>. Авторство исходной работы не переносится на нашу сущность.</p>
           <p><strong>Граница наблюдателя.</strong> Кватернион камеры хранится отдельно. Касание вращает уже существующую историю и не вызывает перерождение, мутацию или новый случайный посев.</p>
+        </div>
+      </article>
+
+      <article id="blastophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>10 / DEVELOPMENTAL ORGANISM</span><h2>Бластофор: форма как жизненный цикл</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('blastophore', blastophoreLatexSource)">{{ copyLabels.blastophore }}</button>
+            <button class="button" type="button" @click="copy('blastophoreSeed', BLASTOPHORE_GENOME)">{{ copyLabels.blastophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Бластофор определён не одной неподвижной фигурой, а замкнутым онтогенетическим циклом. Те же 10 000 точек сначала образуют общий зародыш, затем выращивают дочернюю долю, стягивают соединяющую шейку и после максимального разделения возвращаются к исходному телу.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i&amp;=i/2000,&amp;\theta_i&amp;=(i\bmod40)/6,\\
+              b(t)&amp;=\sin^2(t/2),
+              &amp;g(u)&amp;=e^{-(u-4)^2},
+              &amp;n(u)&amp;=e^{-9(u-3.2)^2}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Поле <code>g</code> локализует рост почки, а более узкое поле <code>n</code> формирует перетяжку. Произведение двух множителей одновременно сохраняет объём дочерней доли и позволяет шейке действительно достичь нулевого радиуса:</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              r(u,t)&amp;=60\sin^{0.6}\!\left(\frac{\pi u}{5}\right)
+              (1+b(t)g(u))(1-b(t)n(u)),\\
+              x(u,t)&amp;=55(u-2.5)+70b(t)g(u),\\
+              y&amp;=r\cos\theta,&amp;z&amp;=r\sin\theta.
+              \end{aligned}
+              \]
+            </div>
+            <p>В момент максимального почкования \(b=1\). В центре шейки \(n(3.2)=1\), поэтому второй множитель становится нулём: \(r(3.2,t)=0\). Это явная сингулярность смены топологии изображения, а не скрытое переключение между двумя моделями.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              q(u,t)&amp;=e^{-4(u-2)^2}+b(t)e^{-5(u-4)^2},\\
+              m(u,t)&amp;=\sin^{12}(6t-2u).
+              \end{aligned}
+              \]
+            </div>
+            <p>Поле \(q\) хранит материнское ядро и постепенно проявляет дочернее. Двенадцатая степень \(m\) превращает синус в узкий фронт: на уровне 900 он проходит по тканевой сетке и локально расширяет активное сечение.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Полный цикл почкования</span>
+              <strong>{{ BLASTOPHORE_GENOME_CHARACTERS }} / {{ BLASTOPHORE_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ BLASTOPHORE_GENOME }}</code></pre>
+            <ul class="topology-genome-counts" aria-label="Уровни бюджета Бластофора">
+              <li v-for="variant in BLASTOPHORE_RAW_VARIANTS" :key="variant.id">
+                <span>{{ variant.title }}</span><code>{{ variant.sketch.code.length }}</code>
+              </li>
+            </ul>
+            <p>279 символов уже содержат оболочку, объёмную координату <code>z</code>, рост почки, точную перетяжку, обратную сборку и формульный цвет. 512 выбирает 393-символьный геном с двумя ядрами; 768 — 653-символьную тканевую сетку; 900 — 838-символьный морфогенетический фронт. Каждый уровень буквально сохраняет исходный цикл.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'blastophore' } }">Запустить жизненный цикл →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Граница рождения.</strong> Сейчас это воспроизводимый цикл почкования: дочерняя доля возвращается в общее тело. Самостоятельный потомок появится только в будущей явной операции закрепления, а не от движения камеры или автоматического кадра.</p>
+          <p><strong>Анимационный принцип.</strong> Функция \(\sin^2(t/2)\) даёт естественные slow-in/slow-out в начале роста и перед обратной сборкой. Камера остаётся полностью пользовательской и не расходует символы RAW.</p>
         </div>
       </article>
     </div>

@@ -6,6 +6,8 @@ const mathBindings = Object.freeze({
   tan: Math.tan,
   atan2: Math.atan2,
   abs: Math.abs,
+  exp: Math.exp,
+  sq: value => value * value,
   mag: Math.hypot
 });
 

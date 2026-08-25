@@ -17,7 +17,8 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     "sphere-grid",
     "pelagion",
     "chronophore",
-    "mnemophore"
+    "mnemophore",
+    "blastophore"
   ]);
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
