@@ -1,0 +1,51 @@
+{
+  "id": "pelagion-original-004",
+  "series": "Form / Field Originals",
+  "number": 4,
+  "title": "Pelagion — One Wave Moves the Whole Body",
+  "status": "exported",
+  "created": "2026-08-26",
+  "video": {
+    "file": "pelagion-original-004.mp4",
+    "cover": "cover.png",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "frames": 450,
+    "durationSeconds": 15,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audio": false
+  },
+  "genome": {
+    "entity": "pelagion",
+    "origin": "form-field-synthesis",
+    "characters": 274,
+    "limit": 280,
+    "particles": 10000,
+    "timeStep": 0.02,
+    "singleBodyWave": true,
+    "sourceMechanicsChanged": false
+  },
+  "deterministicRender": {
+    "renderer": "form-field-frame-indexed-v1",
+    "frameIndexed": true,
+    "realtimeCapture": false,
+    "independentRuns": 2,
+    "provenance": "provenance.json",
+    "repeatability": "repeatability.json"
+  },
+  "presentation": {
+    "externalToGenome": true,
+    "camera": "RAW y-orbit with fixed portrait staging",
+    "safeZone": {
+      "source": "TikTok In-Feed Standard LTR",
+      "sourceCanvas": [720, 1280],
+      "sourceRect": [80, 160, 440, 680],
+      "renderRect": [120, 240, 660, 1020]
+    },
+    "essentialTextMinimumPixels": 46,
+    "codeTextPixels": 38,
+    "displayTextMaximumPixels": 260
+  }
+}

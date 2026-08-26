@@ -1,0 +1,1 @@
+t=0,draw=_=>{t||createCanvas(w=400,w);background(9);for(t+=.02,i=1e4;i--;){u=i/2e3;v=i%40/6;s=sin(t*4-u)**3;r=60*sin(PI*u/5)**.6*(1+s/9);z=r*sin(v)*(1+s/4);x=(u-2.5)*(60-5*s);a=t/3;stroke(180+70*s,220,255);point(x*cos(a)+z*sin(a)+200,r*cos(v)+4*u*u*s+200)}}//#つぶやきProcessing

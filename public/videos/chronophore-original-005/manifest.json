@@ -1,0 +1,53 @@
+{
+  "id": "chronophore-original-005",
+  "series": "Form / Field Originals",
+  "number": 5,
+  "title": "Chronophore — The Points Move, the Knot Remains",
+  "status": "exported",
+  "created": "2026-08-26",
+  "video": {
+    "file": "chronophore-original-005.mp4",
+    "cover": "cover.png",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "frames": 450,
+    "durationSeconds": 15,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audio": false
+  },
+  "genome": {
+    "entity": "chronophore",
+    "origin": "form-field-synthesis",
+    "characters": 273,
+    "limit": 280,
+    "particles": 20000,
+    "winding": [2, 3],
+    "strands": 9,
+    "timeStep": 0.02,
+    "phaseKnotPersists": true,
+    "sourceMechanicsChanged": false
+  },
+  "deterministicRender": {
+    "renderer": "form-field-frame-indexed-v1",
+    "frameIndexed": true,
+    "realtimeCapture": false,
+    "independentRuns": 2,
+    "provenance": "provenance.json",
+    "repeatability": "repeatability.json"
+  },
+  "presentation": {
+    "externalToGenome": true,
+    "camera": "RAW z-projection orbit with fixed portrait staging",
+    "safeZone": {
+      "source": "TikTok In-Feed Standard LTR",
+      "sourceCanvas": [720, 1280],
+      "sourceRect": [80, 160, 440, 680],
+      "renderRect": [120, 240, 660, 1020]
+    },
+    "essentialTextMinimumPixels": 46,
+    "codeTextPixels": 38,
+    "displayTextMaximumPixels": 260
+  }
+}

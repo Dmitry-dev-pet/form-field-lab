@@ -10,6 +10,10 @@
 
 `mnemophore-original-003.html` — третий выпуск и первый полностью детерминированный рендер серии. Точный 271-символьный RAW хранит тысячу координат между кадрами; два независимых покадровых прогона подтверждают одинаковые 450 PNG и итоговый MP4.
 
+`pelagion-original-004.html` — четвёртый выпуск. Точный 274-символьный живой Пелагион показывает, как одна фаза одновременно сжимает, изгибает и разворачивает цельную оболочку.
+
+`chronophore-original-005.html` — пятый выпуск. Точный 273-символьный Хронофор проводит 20 000 точек через намотку 2:3: частицы движутся, но фазовый узел остаётся.
+
 Параметры камеры, титров и перехода не входят в RAW-геном.
 
 Для локального рендера нужны Python Playwright, Chrome и FFmpeg:
@@ -20,9 +24,11 @@ python3 scripts/video/render_sketch_36_small_code.py
 python3 scripts/video/render_blastophore_original_001.py
 python3 scripts/video/render_krylofor_original_002.py
 python3 scripts/video/render_mnemophore_original_003.py --verify
+python3 scripts/video/render_pelagion_original_004.py --verify
+python3 scripts/video/render_chronophore_original_005.py --verify
 ```
 
-Первые четыре команды используют realtime-совместимый `render_video.py`; исходный WebM временный, а флаг `--keep-webm` сохраняет его рядом с MP4. Мнемофора использует новый `deterministic_video.py` и не создаёт WebM вообще.
+Первые четыре команды используют realtime-совместимый `render_video.py`; исходный WebM временный, а флаг `--keep-webm` сохраняет его рядом с MP4. Начиная с Мнемофоры, выпуски используют `deterministic_video.py` и не создают WebM вообще.
 
 ## Детерминированный рендер
 
@@ -34,13 +40,15 @@ python3 scripts/video/render_mnemophore_original_003.py --verify
 python3 -m pip install -r scripts/video/requirements-deterministic.txt
 python3 -m playwright install chromium
 python3 scripts/video/render_mnemophore_original_003.py --verify
+python3 scripts/video/render_pelagion_original_004.py --verify
+python3 scripts/video/render_chronophore_original_005.py --verify
 ```
 
 Для побайтовой воспроизводимости между машинами предусмотрен закреплённый Linux/amd64-контейнер:
 
 ```bash
 docker build --platform linux/amd64 -f scripts/video/Dockerfile.deterministic -t form-field-renderer:1 .
-docker run --rm --platform linux/amd64 -v "$PWD:/work" -w /work form-field-renderer:1 scripts/video/render_mnemophore_original_003.py --verify
+docker run --rm --platform linux/amd64 -v "$PWD:/work" -w /work form-field-renderer:1 scripts/video/render_pelagion_original_004.py --verify
 ```
 
 Локальные OFL-шрифты и их лицензии находятся в `public/fonts/form-field/`.

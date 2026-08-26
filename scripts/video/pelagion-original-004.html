@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Form / Field Original 004 — Pelagion</title>
+  <style>
+    @font-face {
+      font-family: "FF Barlow Condensed";
+      src: url("../../public/fonts/form-field/BarlowCondensed-Regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF Barlow Condensed";
+      src: url("../../public/fonts/form-field/BarlowCondensed-SemiBold.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 600;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF Cormorant Garamond";
+      src: url("../../public/fonts/form-field/CormorantGaramond-Italic-wght.ttf") format("truetype");
+      font-style: italic;
+      font-weight: 300 700;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF IBM Plex Mono";
+      src: url("../../public/fonts/form-field/IBMPlexMono-Regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    :root {
+      color-scheme: dark;
+      --film-background: #041014;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--film-background);
+    }
+
+    body { display: grid; place-items: center; }
+
+    canvas {
+      display: block;
+      width: min(100vw, 56.25vh);
+      height: min(177.7778vw, 100vh);
+      background: var(--film-background);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="film" width="1080" height="1920" aria-label="Pelagion: 274 characters move as one body"></canvas>
+
+  <script type="module">
+    import { PELAGION_LIVING_GENOME } from "../../src/data/pelagionGenome.js";
+
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+    const FPS = 30;
+    const TOTAL_FRAMES = 450;
+    const SAFE = Object.freeze({ x: 120, y: 240, width: 660, height: 1020 });
+    const PALETTE = Object.freeze({
+      background: "#041014",
+      paper: "#effcf8",
+      quiet: "#a9c6c6",
+      current: "#79f4e1",
+      pulse: "#ff9bbb"
+    });
+    const code = PELAGION_LIVING_GENOME;
+    const codeLines = Array.from({ length: Math.ceil(code.length / 28) }, (_, index) => (
+      code.slice(index * 28, index * 28 + 28)
+    ));
+
+    if (code.length !== 274 || codeLines.join("") !== code) {
+      throw new Error("Pelagion drifted from its 274-character living stroke.");
+    }
+
+    const canvas = document.querySelector("#film");
+    const context = canvas.getContext("2d", { alpha: false });
+    const query = new URLSearchParams(location.search);
+
+    window.__videoReady = false;
+    window.__videoMetadata = {
+      fps: FPS,
+      frames: TOTAL_FRAMES,
+      width: WIDTH,
+      height: HEIGHT,
+      genomeLength: code.length,
+      genomeLimit: 280,
+      entity: "pelagion",
+      particles: 10000,
+      timeStep: 0.02,
+      sourceMechanicsChanged: false,
+      safeZone: SAFE
+    };
+
+    function clamp(value, minimum = 0, maximum = 1) {
+      return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function mix(from, to, amount) {
+      return from + (to - from) * amount;
+    }
+
+    function smoothstep(from, to, value) {
+      const amount = clamp((value - from) / (to - from));
+      return amount * amount * (3 - 2 * amount);
+    }
+
+    function fadeRange(frame, start, end, edge = 14) {
+      return smoothstep(start, start + edge, frame) * (1 - smoothstep(end - edge, end, frame));
+    }
+
+    function trackedText(value, x, y, size, color, options = {}) {
+      context.save();
+      context.globalAlpha *= options.alpha ?? 1;
+      context.fillStyle = color;
+      context.font = `${options.style || "normal"} ${options.weight || 400} ${size}px ${options.family || '"FF Barlow Condensed", sans-serif'}`;
+      context.textAlign = options.align || "left";
+      context.textBaseline = options.baseline || "alphabetic";
+
+      if (!options.tracking) {
+        context.fillText(value, x, y);
+      } else {
+        let cursor = x;
+        for (const glyph of [...value]) {
+          context.fillText(glyph, cursor, y);
+          cursor += context.measureText(glyph).width + options.tracking;
+        }
+      }
+      context.restore();
+    }
+
+    function drawOcean(frameIndex, visibility) {
+      const gradient = context.createRadialGradient(520, 930, 40, 520, 930, 790);
+      gradient.addColorStop(0, `rgba(30,119,122,${0.15 * visibility})`);
+      gradient.addColorStop(0.48, `rgba(8,56,67,${0.09 * visibility})`);
+      gradient.addColorStop(1, "rgba(4,16,20,0)");
+      context.fillStyle = gradient;
+      context.fillRect(0, 120, WIDTH, 1600);
+
+      context.save();
+      context.globalAlpha = 0.12 * visibility;
+      context.strokeStyle = PALETTE.current;
+      context.lineWidth = 2;
+      for (let line = 0; line < 7; line += 1) {
+        const y = 520 + line * 138;
+        context.beginPath();
+        for (let x = -40; x <= WIDTH + 40; x += 20) {
+          const wave = Math.sin(x / 115 + frameIndex * 0.018 + line * 0.7) * 12;
+          if (x === -40) context.moveTo(x, y + wave);
+          else context.lineTo(x, y + wave);
+        }
+        context.stroke();
+      }
+      context.restore();
+    }
+
+    function drawCodePlate(alpha, split) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+
+      trackedText("FORM / FIELD", SAFE.x, 294, 46, PALETTE.current, {
+        weight: 600,
+        tracking: 2.7
+      });
+      trackedText("ORIGINAL 004", SAFE.x, 352, 46, PALETTE.quiet, {
+        weight: 400,
+        tracking: 2.0
+      });
+      trackedText("274", SAFE.x, 488, 160, PALETTE.paper, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 600
+      });
+      trackedText("/ 280", SAFE.x + 300, 482, 58, PALETTE.pulse, {
+        family: '"FF IBM Plex Mono", monospace',
+        weight: 400
+      });
+
+      codeLines.forEach((line, index) => {
+        const direction = index % 2 ? 1 : -1;
+        trackedText(line, SAFE.x + direction * split * 150, 556 + index * 50, 38, index === codeLines.length - 1 ? PALETTE.current : PALETTE.quiet, {
+          family: '"FF IBM Plex Mono", monospace',
+          weight: 400
+        });
+      });
+
+      trackedText("ONE WAVE MOVES THE WHOLE BODY", SAFE.x, 1100, 46, PALETTE.paper, {
+        weight: 600,
+        tracking: 0.35
+      });
+      trackedText("PELAGION", SAFE.x, 1192, 78, PALETTE.current, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 500
+      });
+      context.restore();
+    }
+
+    function drawPelagion(frameIndex, visibility, collapse) {
+      if (visibility <= 0) return;
+      const time = (frameIndex + 1) * 0.02;
+      const scale = 3.28;
+      const centerX = 540;
+      const centerY = 960;
+
+      drawOcean(frameIndex, visibility);
+      context.save();
+      context.globalAlpha = visibility;
+      context.globalCompositeOperation = "screen";
+      context.translate(centerX, centerY);
+      context.scale(mix(1, 0.055, collapse), mix(1, 0.42, collapse));
+      context.translate(-centerX, -centerY);
+
+      for (let index = 9999; index >= 0; index -= 1) {
+        const u = index / 2000;
+        const v = index % 40 / 6;
+        const stroke = Math.sin(time * 4 - u) ** 3;
+        const radius = 60 * Math.sin(Math.PI * u / 5) ** 0.6 * (1 + stroke / 9);
+        const z = radius * Math.sin(v) * (1 + stroke / 4);
+        const x = (u - 2.5) * (60 - 5 * stroke);
+        const orbit = time / 3;
+        const projectedX = x * Math.cos(orbit) + z * Math.sin(orbit);
+        const projectedY = radius * Math.cos(v) + 4 * u * u * stroke;
+        const screenX = centerX + projectedX * scale;
+        const screenY = centerY + projectedY * scale;
+        const red = Math.round(180 + 70 * stroke);
+
+        context.fillStyle = `rgba(${red},220,255,0.16)`;
+        context.fillRect(screenX - 2.4, screenY - 2.4, 4.8, 4.8);
+        context.fillStyle = `rgb(${red},220,255)`;
+        context.fillRect(screenX, screenY, 1.55, 1.55);
+      }
+      context.restore();
+    }
+
+    function drawStatement(alpha) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+      trackedText("PELAGION", SAFE.x, 358, 84, PALETTE.current, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 500
+      });
+      trackedText("274", SAFE.x, 684, 260, PALETTE.paper, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 600
+      });
+      trackedText("CHARACTERS", SAFE.x, 770, 60, PALETTE.pulse, {
+        weight: 600,
+        tracking: 2.1
+      });
+      trackedText("MOVE", SAFE.x, 950, 74, PALETTE.paper, {
+        weight: 600,
+        tracking: 1.2
+      });
+      trackedText("AS ONE BODY", SAFE.x, 1038, 74, PALETTE.paper, {
+        weight: 600,
+        tracking: 0.8
+      });
+      trackedText("FORM / FIELD ORIGINAL 004", SAFE.x, 1180, 46, PALETTE.current, {
+        weight: 600,
+        tracking: 1.45
+      });
+      context.restore();
+    }
+
+    function drawSafeZone() {
+      context.save();
+      context.fillStyle = "rgba(255,70,90,.17)";
+      context.fillRect(0, 0, WIDTH, SAFE.y);
+      context.fillRect(0, SAFE.y + SAFE.height, WIDTH, HEIGHT - SAFE.y - SAFE.height);
+      context.fillRect(0, SAFE.y, SAFE.x, SAFE.height);
+      context.fillRect(SAFE.x + SAFE.width, SAFE.y, WIDTH - SAFE.x - SAFE.width, SAFE.height);
+      context.strokeStyle = "rgba(255,255,255,.88)";
+      context.lineWidth = 3;
+      context.strokeRect(SAFE.x, SAFE.y, SAFE.width, SAFE.height);
+      trackedText("TIKTOK UI SAFE ZONE", SAFE.x + 16, SAFE.y + 42, 30, "#fff", {
+        family: '"FF IBM Plex Mono", monospace',
+        weight: 400
+      });
+      context.restore();
+    }
+
+    function renderFrame(requestedFrame) {
+      const frameIndex = Math.round(clamp(Number(requestedFrame), 0, TOTAL_FRAMES - 1));
+      context.fillStyle = PALETTE.background;
+      context.fillRect(0, 0, WIDTH, HEIGHT);
+
+      const organismVisibility = smoothstep(48, 78, frameIndex) * (1 - smoothstep(374, 402, frameIndex));
+      const openingFold = 1 - smoothstep(48, 84, frameIndex);
+      const closingFold = smoothstep(374, 402, frameIndex);
+      drawPelagion(frameIndex, organismVisibility, Math.max(openingFold, closingFold));
+
+      const openingCode = 1 - smoothstep(40, 70, frameIndex);
+      const returningCode = smoothstep(430, 446, frameIndex);
+      const codeAlpha = Math.max(openingCode, returningCode);
+      const codeSplit = frameIndex < 100
+        ? smoothstep(40, 70, frameIndex)
+        : 1 - smoothstep(430, 446, frameIndex);
+      drawCodePlate(codeAlpha, codeSplit);
+      drawStatement(fadeRange(frameIndex, 384, 432, 6));
+
+      if (query.has("safe")) drawSafeZone();
+      return frameIndex;
+    }
+
+    const requiredFonts = [
+      '400 46px "FF Barlow Condensed"',
+      '600 46px "FF Barlow Condensed"',
+      'italic 500 84px "FF Cormorant Garamond"',
+      '400 38px "FF IBM Plex Mono"'
+    ];
+
+    Promise.all(requiredFonts.map(font => document.fonts.load(font))).then(() => {
+      window.__renderFrame = renderFrame;
+      if (!query.has("deterministic")) {
+        const previewFrame = Math.min(TOTAL_FRAMES - 1, Number(query.get("frame") || 235));
+        renderFrame(previewFrame);
+      }
+      window.__videoReady = true;
+    });
+  </script>
+</body>
+</html>
