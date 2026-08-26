@@ -37,6 +37,13 @@ import {
   MOIREPHORE_GENOME_SKETCH
 } from "./moirephoreGenome.js";
 import {
+  compileTorophoreGenome,
+  TOROPHORE_COLOR_LAWS,
+  TOROPHORE_COLOR_PALETTES,
+  TOROPHORE_DEFAULTS,
+  TOROPHORE_GENOME_SKETCH
+} from "./torophoreGenome.js";
+import {
   TESSELOPHORE_GENOME_SKETCH,
   TESSELOPHORE_RAW_VARIANTS
 } from "./tesselophoreGenome.js";
@@ -597,6 +604,41 @@ function moirephorePoint(index, time, settings, _layers, target) {
   target.c = angle;
   target.branch = index % 80;
   target.forms = 80;
+  target.mix = (colorSignal + 1) / 2;
+  return target;
+}
+
+function coherentNoise(value) {
+  const x = Math.abs(value);
+  const cell = Math.floor(x);
+  const phase = x - cell;
+  const blend = phase * phase * (3 - 2 * phase);
+  const sample = point => {
+    const signal = Math.sin(point * 12.9898) * 43758.5453;
+    return signal - Math.floor(signal);
+  };
+  return sample(cell) * (1 - blend) + sample(cell + 1) * blend;
+}
+
+function torophorePoint(index, time, settings, _layers, target) {
+  const phase = coherentNoise(index - time) * Math.PI * 2 * settings.turns;
+  const depthPhase = index / settings.depthWave - time / settings.depthSpeed;
+  const colorSignal = settings.colorLaw === "heading-rim"
+    ? Math.cos(phase)
+    : settings.colorLaw === "depth"
+      ? Math.sin(depthPhase)
+      : settings.colorLaw === "depth-rim" ? Math.cos(depthPhase) : Math.sin(phase);
+
+  target.x = index * Math.cos(phase) + 200;
+  target.y = index * Math.sin(phase) + 200;
+  target.z = settings.depth * Math.sin(depthPhase);
+  target.parameter = index / settings.organCount;
+  target.k = colorSignal;
+  target.e = depthPhase;
+  target.d = phase;
+  target.c = phase;
+  target.branch = index;
+  target.forms = settings.organCount;
   target.mix = (colorSignal + 1) / 2;
   return target;
 }
@@ -1285,6 +1327,50 @@ export const spatialForms = Object.freeze([
       waveA: [2, 6, 1], waveB: [3, 9, 1], twist: [2, 6, 1]
     },
     evaluate: moirephorePoint
+  },
+  {
+    id: "torophore",
+    displayNumber: "P9",
+    sketchNumber: null,
+    shortLabel: "Торофор",
+    title: "Торофор",
+    association: "колония торов · перенос без памяти · объёмный поток",
+    description: "Сотни одинаковых тороидальных органов получают положение, глубину, ориентацию и цвет из двух бегущих фаз. Ни траектории, ни координаты прошлых кадров не хранятся: форма каждый раз возникает заново из индекса и времени.",
+    origin: "toroidal-advection-synthesis",
+    autoOrbit: false,
+    genomeSketch: TOROPHORE_GENOME_SKETCH,
+    compileGenome: compileTorophoreGenome,
+    rawColorPalettes: TOROPHORE_COLOR_PALETTES,
+    rawColorLaws: TOROPHORE_COLOR_LAWS,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "custom",
+      expression: "clamp((1 + k) / 2, 0, 1)",
+      colorA: "#00ffff",
+      colorB: "#ff00ff"
+    }),
+    timeStep: 2,
+    defaults: TOROPHORE_DEFAULTS,
+    primaryControls: [
+      control("genomeSpeed", "Скорость переноса", 1, 5, 1, { format: "integerSpeed" }),
+      control("organCount", "Тороидальные органы", 120, 480, 60, { format: "count" }),
+      control("turns", "Обороты фазы", 1, 4, 1),
+      control("depth", "Глубина центров", 40, 99, 1),
+      control("organRadius", "Радиус органа", 30, 90, 10)
+    ],
+    advancedControls: [
+      control("depthWave", "Длина глубинной волны", 10, 40, 5),
+      control("depthSpeed", "Делитель скорости z", 1, 9, 1),
+      control("detailX", "Сегменты кольца", 4, 9, 1),
+      control("detailY", "Сегменты трубки", 3, 8, 1)
+    ],
+    layers: [],
+    randomRanges: {
+      genomeSpeed: [1, 5, 1], organCount: [120, 480, 60], turns: [1, 4, 1],
+      depth: [40, 99, 1], organRadius: [30, 90, 10], depthWave: [10, 40, 5],
+      depthSpeed: [1, 9, 1], detailX: [4, 9, 1], detailY: [3, 8, 1]
+    },
+    evaluate: torophorePoint
   }
 ]);
 

@@ -60,7 +60,7 @@ test("the Pelagion runner adds a spatial camera bridge outside the RAW code", ()
   assert.match(html, /"time":7/);
   assert.match(html, /pendingTime - firstStep/);
   assert.match(html, /globalThis\.redraw\(\)/);
-  assert.match(html, /canvas\?\.width === 400/);
+  assert.match(html, /canvas\?\.width > 0/);
   assert.match(html, /touch-action:none/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
 });
@@ -82,5 +82,24 @@ test("the Krylofor runner composes its embedded Y turn with the saved manual cam
   assert.match(html, /point-cloud-auto-y-orbit/);
   assert.match(html, /globalThis\.t/);
   assert.match(html, /-axial \* Math\.sin\(angle\) \+ depth \* Math\.cos\(angle\)/);
+  assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
+});
+
+test("the WEBGL runner rotates real primitives with the same external saved camera", () => {
+  const code = "t=0,setup=_=>createCanvas(720,720,WEBGL),draw=_=>{clear();t++;push();translate(1,2,3);torus(20);pop()}";
+  const html = runnerDocument(code, {
+    viewModel: "webgl-orbit",
+    initialViewState: {
+      orientation: { x: 0.25, y: 0, z: 0, w: 0.9682458 },
+      time: 8
+    }
+  });
+
+  assert.match(html, /webgl-orbit/);
+  assert.match(html, /projectedWebglFrame/);
+  assert.match(html, /sourceDraw/);
+  assert.match(html, /globalThis\.rotate\(angle/);
+  assert.match(html, /sourceDraw\.apply\(this, args\)/);
+  assert.match(html, /"time":8/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
 });

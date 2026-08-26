@@ -45,6 +45,12 @@ import {
   MOIREPHORE_GENOME_LIMIT
 } from "../data/moirephoreGenome.js";
 import {
+  TOROPHORE_GENOME,
+  TOROPHORE_GENOME_CHARACTERS,
+  TOROPHORE_GENOME_LIMIT,
+  TOROPHORE_SOURCE
+} from "../data/torophoreGenome.js";
+import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -257,6 +263,24 @@ n_i&=128+99g_i,
 &\mathbf C_i&=\pi_c(n_i,255-n_i,255).
 \end{aligned}`;
 
+const torophoreLatexSource = String.raw`\begin{aligned}
+C_n&=vn,
+&d_i^{(n)}&=2\pi K\,N(i-C_n),\\
+q_i^{(n)}&=i/F-C_n/S,
+&z_i^{(n)}&=D\sin q_i^{(n)},\\
+\mathbf p_i^{(n)}&=
+\begin{bmatrix}
+i\cos d_i^{(n)}\\
+i\sin d_i^{(n)}\\
+z_i^{(n)}
+\end{bmatrix},
+&\mathcal T_i^{(n)}&=\mathbf p_i^{(n)}+R_x(d_i^{(n)})\,\mathcal T(R),\\
+g_i&\in\{\sin d_i,\cos d_i,\sin q_i,\cos q_i\},
+&\mathbf C_i&=\pi_c(128+99g_i,127-99g_i,255),\\
+d_{i+v}^{(n+1)}&=2\pi K\,N(i+v-v(n+1))
+=d_i^{(n)}.
+\end{aligned}`;
+
 const tesselophoreLatexSource = String.raw`\begin{aligned}
 u_i&=i/200,
 &\alpha_i&=(i\bmod200)/32,\\
@@ -383,6 +407,7 @@ const defaultCopyLabels = {
   krylofor: "Копировать TeX",
   chiralophore: "Копировать TeX",
   moirephore: "Копировать TeX",
+  torophore: "Копировать TeX",
   tesselophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
@@ -393,6 +418,8 @@ const defaultCopyLabels = {
   kryloforSeed: "Копировать RAW 280",
   chiralophoreSeed: "Копировать RAW 278",
   moirephoreSeed: "Копировать RAW 279",
+  torophoreSeed: "Копировать RAW 251",
+  torophoreSource: "Копировать исходник",
   tesselophoreSeed: "Копировать RAW 273",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
@@ -1302,6 +1329,79 @@ onMounted(async () => {
         <div class="tiny-code-context">
           <p><strong>Что здесь новое.</strong> Хиралофор делит оболочку на две противофазные ткани; Муарофор оставляет ткань единой и заставляет два фазовых закона интерферировать внутри каждой её точки.</p>
           <p><strong>Граница модели.</strong> Это процедурная кинематика интерференции, а не модель гидродинамики или мышц. Органичность возникает из согласованности нескольких наблюдаемых признаков, а не доказывает биологическую природу формулы.</p>
+        </div>
+      </article>
+
+      <article id="torophore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>15 / STATELESS ADVECTION</span><h2>Торофор: организм из переносимой фазы</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('torophore', torophoreLatexSource)">{{ copyLabels.torophore }}</button>
+            <button class="button" type="button" @click="copy('torophoreSeed', TOROPHORE_GENOME)">{{ copyLabels.torophoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Торофор начинает с самого дешёвого механизма предоставленного WEBGL-фрагмента: значение шума зависит от разности индекса и времени. Никакой объект не помнит прежнюю координату, но весь фазовый рисунок переносится наружу с постоянной скоростью.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              C_n&amp;=vn,
+              &amp;d_i^{(n)}&amp;=2\pi K\,N(i-C_n),\\
+              d_{i+v}^{(n+1)}&amp;=2\pi K\,N(i+v-v(n+1))
+              =d_i^{(n)}.
+              \end{aligned}
+              \]
+            </div>
+            <p>Последнее равенство и есть двигатель. На следующем кадре прежняя фаза появляется у органа с индексом <code>i + v</code>. Движение существует как тождество аргумента функции, а не как обновляемый массив частиц.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              q_i^{(n)}&amp;=i/F-C_n/S,
+              &amp;z_i^{(n)}&amp;=D\sin q_i^{(n)},\\
+              \mathbf p_i^{(n)}&amp;=
+              \begin{bmatrix}
+              i\cos d_i^{(n)}\\ i\sin d_i^{(n)}\\ z_i^{(n)}
+              \end{bmatrix},
+              &amp;\mathcal T_i^{(n)}&amp;=\mathbf p_i^{(n)}+R_x(d_i^{(n)})\mathcal T(R).
+              \end{aligned}
+              \]
+            </div>
+            <p>В исходном механизме центры всех торов лежат в плоскости <code>z = 0</code>. Здесь центры получают вторую бегущую волну глубины, а каждый настоящий WEBGL-тор поворачивается тем же углом <code>dᵢ</code>, который задаёт его положение. Поэтому ракурс открывает не плоскую иллюзию, а объёмную колонию ориентированных органов.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              g_i&amp;\in\{\sin d_i,\cos d_i,\sin q_i,\cos q_i\},\\
+              n_i&amp;=128+99g_i,
+              &amp;\mathbf C_i&amp;=\pi_c(n_i,255-n_i,255).
+              \end{aligned}
+              \]
+            </div>
+            <p>Четыре цветовых закона показывают направление потока или глубинную волну; шесть палитр только переставляют каналы. Геометрия и цвет снова читают общие фазы.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Перенос, 3D-центры, торы, ориентация и цвет</span>
+              <strong>{{ TOROPHORE_GENOME_CHARACTERS }} / {{ TOROPHORE_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ TOROPHORE_GENOME }}</code></pre>
+            <p>Канон занимает 251 символ. Скорость, число органов, обороты шума, глубина, её длина и темп волны, радиус и детализация торов, четыре закона цвета и шесть палитр пересобирают эту же автономную строку.</p>
+            <p>Ручной трекбол хранится отдельно и не расходует оставшиеся 29 символов. Он меняет только матрицу наблюдателя; после перезагрузки восстанавливаются и ракурс, и фаза RAW.</p>
+            <details class="imprint-code-details">
+              <summary>Исходный механизм до синтеза</summary>
+              <pre><code>{{ TOROPHORE_SOURCE }}</code></pre>
+              <button class="button" type="button" @click="copy('torophoreSource', TOROPHORE_SOURCE)">{{ copyLabels.torophoreSource }}</button>
+            </details>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'torophore' } }">Открыть Торофор →</RouterLink>
+              <RouterLink to="/community#live-field-title">Полевые источники →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Что здесь новое.</strong> Исходник уже содержит настоящие 3D-примитивы, но располагает их центры в одной плоскости. Торофор добавляет объём траектории и наследуемую ориентацию, не добавляя состояние или физический движок.</p>
+          <p><strong>Граница модели.</strong> Это кинематический организм: он демонстрирует, как согласованные фазы создают читаемый поток и анатомию. Он не моделирует массу, столкновения, мышцы или гидродинамику.</p>
+          <p><strong>Происхождение.</strong> Исходный фрагмент сохранён буквально для сравнения, но пока не приписан автору без подтверждённой ссылки на публикацию.</p>
         </div>
       </article>
     </div>

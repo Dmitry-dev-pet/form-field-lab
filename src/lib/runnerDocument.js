@@ -2,7 +2,8 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   document.documentElement.dataset.viewModel = viewModel;
   const orbitEnabled = viewModel === "pelagion-orbit"
     || viewModel === "point-cloud-orbit"
-    || viewModel === "point-cloud-auto-y-orbit";
+    || viewModel === "point-cloud-auto-y-orbit"
+    || viewModel === "webgl-orbit";
   const state = {
     orientation: { x: 0, y: 0, z: 0, w: 1 },
     invertY: true
@@ -13,6 +14,7 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   };
   let sourcePoint = null;
   let sourceLine = null;
+  let sourceDraw = null;
   let pendingTime = null;
   let hasDrawn = false;
   let pointerId = null;
@@ -154,7 +156,7 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   }
 
   function installSpatialProjectors() {
-    if (!orbitEnabled || sourcePoint || typeof globalThis.point !== "function") return;
+    if (!orbitEnabled || viewModel === "webgl-orbit" || sourcePoint || typeof globalThis.point !== "function") return;
     sourcePoint = globalThis.point;
     sourceLine = typeof globalThis.line === "function" ? globalThis.line : null;
     globalThis.point = function projectedSpatialPoint(screenX, screenY) {
@@ -184,12 +186,34 @@ function installSpatialViewBridge(viewModel, initialViewState) {
     }
   }
 
+  function installWebglProjector() {
+    if (viewModel !== "webgl-orbit" || sourceDraw || typeof globalThis.draw !== "function") return;
+    sourceDraw = globalThis.draw;
+    globalThis.draw = function projectedWebglFrame(...args) {
+      globalThis.push();
+      const { x, y, z, w } = normalize(state.orientation);
+      const angle = 2 * Math.acos(Math.max(-1, Math.min(1, w)));
+      const scale = Math.sqrt(Math.max(0, 1 - w * w));
+      if (angle > 1e-8) {
+        globalThis.rotate(angle, scale > 1e-8 ? [x / scale, y / scale, z / scale] : [1, 0, 0]);
+      }
+      try {
+        return sourceDraw.apply(this, args);
+      } finally {
+        globalThis.pop();
+      }
+    };
+  }
+
   applyState(initialViewState);
+  installWebglProjector();
 
   function activate() {
     installSpatialProjectors();
+    installWebglProjector();
     const canvas = document.querySelector("canvas");
-    if (canvas?.width === 400 && (!orbitEnabled || sourcePoint)) {
+    const viewReady = viewModel === "webgl-orbit" ? sourceDraw : sourcePoint;
+    if (canvas?.width > 0 && (!orbitEnabled || viewReady)) {
       if (canvas.tabIndex < 0) canvas.tabIndex = 0;
       hasDrawn = true;
       const firstStep = Math.max(0, Number(globalThis.t) || 0);
