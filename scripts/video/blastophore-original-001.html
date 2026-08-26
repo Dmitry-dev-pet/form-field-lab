@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Form / Field Original 001 — Blastophore</title>
+  <style>
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #090909;
+    }
+
+    body { display: grid; place-items: center; }
+
+    canvas {
+      display: block;
+      width: min(100vw, 56.25vh);
+      height: min(177.7778vw, 100vh);
+      background: #090909;
+    }
+
+    #download {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #download.ready { pointer-events: auto; }
+  </style>
+</head>
+<body>
+  <canvas id="film" width="1080" height="1920" aria-label="Blastophore: one complete life cycle in 279 characters"></canvas>
+  <a id="download" download="blastophore-original-001.webm">DOWNLOAD WEBM</a>
+
+  <script type="module">
+    import {
+      BLASTOPHORE_GENOME,
+      BLASTOPHORE_GENOME_CHARACTERS
+    } from "../../src/data/blastophoreGenome.js";
+
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+    const FPS = 30;
+    const TOTAL_FRAMES = 450;
+    const LIFE_START = 60;
+    const LIFE_END = LIFE_START + 314;
+    const SAFE = Object.freeze({ x: 120, y: 240, width: 660, height: 1020 });
+    const code = BLASTOPHORE_GENOME;
+    const codeLines = Array.from({ length: Math.ceil(code.length / 32) }, (_, index) => (
+      code.slice(index * 32, index * 32 + 32)
+    ));
+
+    if (BLASTOPHORE_GENOME_CHARACTERS !== 279 || code.length !== 279 || codeLines.join("") !== code) {
+      throw new Error("Blastophore drifted from its 279-character autonomous root.");
+    }
+
+    const canvas = document.querySelector("#film");
+    const output = canvas.getContext("2d", { alpha: false });
+    const sceneCanvas = document.createElement("canvas");
+    sceneCanvas.width = WIDTH;
+    sceneCanvas.height = HEIGHT;
+    const context = sceneCanvas.getContext("2d", { alpha: false });
+    const download = document.querySelector("#download");
+    const query = new URLSearchParams(location.search);
+
+    window.__videoReady = false;
+    window.__videoMetadata = {
+      fps: FPS,
+      frames: TOTAL_FRAMES,
+      width: WIDTH,
+      height: HEIGHT,
+      genomeLength: code.length,
+      genomeLimit: 280,
+      entity: "blastophore",
+      lifeCycleRadians: Math.PI * 2,
+      safeZone: SAFE
+    };
+
+    function clamp(value, minimum = 0, maximum = 1) {
+      return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function mix(from, to, amount) {
+      return from + (to - from) * amount;
+    }
+
+    function smoothstep(from, to, value) {
+      const amount = clamp((value - from) / (to - from));
+      return amount * amount * (3 - 2 * amount);
+    }
+
+    function fadeRange(frame, start, end, edge = 14) {
+      return smoothstep(start, start + edge, frame) * (1 - smoothstep(end - edge, end, frame));
+    }
+
+    function trackedText(value, x, y, size, color, options = {}) {
+      context.save();
+      context.globalAlpha *= options.alpha ?? 1;
+      context.fillStyle = color;
+      context.font = `${options.style || "normal"} ${options.weight || 500} ${size}px ${options.family || '"Avenir Next Condensed", "Arial Narrow", sans-serif'}`;
+      context.textAlign = options.align || "left";
+      context.textBaseline = options.baseline || "alphabetic";
+
+      if (!options.tracking) {
+        context.fillText(value, x, y);
+      } else {
+        const glyphs = [...value];
+        let cursor = x;
+        for (const glyph of glyphs) {
+          context.fillText(glyph, cursor, y);
+          cursor += context.measureText(glyph).width + options.tracking;
+        }
+      }
+      context.restore();
+    }
+
+    function drawCodePlate(alpha, split) {
+      if (alpha <= 0) return;
+      const codeY = 554;
+      context.save();
+      context.globalAlpha = alpha;
+
+      trackedText("FORM / FIELD", SAFE.x, 294, 44, "#aeeaff", {
+        weight: 700,
+        tracking: 2.8
+      });
+      trackedText("ORIGINAL 001", SAFE.x, 350, 44, "#d9d3c7", {
+        weight: 500,
+        tracking: 2.1
+      });
+
+      trackedText("279", SAFE.x, 482, 154, "#f3eee4", {
+        family: '"Iowan Old Style", Georgia, serif',
+        weight: 600
+      });
+      trackedText("/ 280", SAFE.x + 290, 478, 58, "#ffcc72", {
+        family: '"SFMono-Regular", Menlo, monospace',
+        weight: 500
+      });
+
+      codeLines.forEach((line, index) => {
+        const direction = index % 2 ? 1 : -1;
+        trackedText(line, SAFE.x + direction * split * 145, codeY + index * 54, 34, index === codeLines.length - 1 ? "#ffcc72" : "#b8c7c8", {
+          family: '"SFMono-Regular", Menlo, monospace',
+          weight: 400
+        });
+      });
+
+      trackedText("ONE COMPLETE LIFE CYCLE", SAFE.x, 1136, 48, "#f3eee4", {
+        weight: 600,
+        tracking: 1.2
+      });
+      trackedText("BLASTOPHORE", SAFE.x, 1210, 68, "#aeeaff", {
+        family: '"Iowan Old Style", Georgia, serif',
+        style: "italic",
+        weight: 500
+      });
+      context.restore();
+    }
+
+    function drawOrganism(frameIndex, visibility, collapse) {
+      if (visibility <= 0) return;
+      const lifeFrame = clamp(frameIndex - LIFE_START + 1, 1, LIFE_END - LIFE_START);
+      const phase = lifeFrame * 0.02;
+      const b = Math.sin(phase / 2) ** 2;
+      const yaw = -0.22 + 0.1 * Math.sin(phase);
+      const pitch = 0.16 + 0.04 * Math.cos(phase / 2);
+      const roll = -Math.PI / 2 + 0.035 * Math.sin(phase / 2);
+      const cosYaw = Math.cos(yaw);
+      const sinYaw = Math.sin(yaw);
+      const cosPitch = Math.cos(pitch);
+      const sinPitch = Math.sin(pitch);
+      const cosRoll = Math.cos(roll);
+      const sinRoll = Math.sin(roll);
+      const scale = 3.55;
+      const centerX = 455;
+      const centerY = 925;
+
+      const glow = context.createRadialGradient(centerX, centerY, 40, centerX, centerY, 650);
+      glow.addColorStop(0, `rgba(103,210,255,${0.075 * visibility})`);
+      glow.addColorStop(0.45, `rgba(50,110,130,${0.035 * visibility})`);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 180, 930, 1450);
+
+      context.save();
+      context.globalAlpha = visibility;
+      context.globalCompositeOperation = "screen";
+
+      for (let index = 10000; index--;) {
+        const u = index / 2000;
+        const v = index % 40 / 6;
+        const g = Math.exp(-((u - 4) ** 2));
+        const n = Math.exp(-9 * (u - 3.2) ** 2);
+        const radius = 60 * Math.sin(Math.PI * u / 5) ** 0.6 * (1 + b * g) * (1 - b * n);
+        const sourceX = (u - 2.5) * 55 + 70 * b * g;
+        const sourceY = radius * Math.cos(v);
+        const sourceZ = radius * Math.sin(v);
+
+        const yawX = sourceX * cosYaw - sourceZ * sinYaw;
+        const yawZ = sourceX * sinYaw + sourceZ * cosYaw;
+        const pitchY = sourceY * cosPitch - yawZ * sinPitch;
+        const rollX = yawX * cosRoll - pitchY * sinRoll;
+        const rollY = yawX * sinRoll + pitchY * cosRoll;
+        const foldedX = mix(rollX, 0, collapse);
+        const foldedY = rollY * mix(1, 0.38, collapse);
+        const x = centerX + foldedX * scale;
+        const y = centerY + foldedY * scale;
+
+        const red = Math.round(155 + 99 * b * g);
+        context.fillStyle = `rgb(${red} 220 255)`;
+        const size = mix(2.1, 3.4, b * g);
+        context.fillRect(x, y, size, size);
+      }
+      context.restore();
+    }
+
+    function drawStatement(alpha) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+      trackedText("BLASTOPHORE", SAFE.x, 360, 82, "#aeeaff", {
+        family: '"Iowan Old Style", Georgia, serif',
+        style: "italic",
+        weight: 500
+      });
+      trackedText("279", SAFE.x, 690, 254, "#f3eee4", {
+        family: '"Iowan Old Style", Georgia, serif',
+        weight: 600
+      });
+      trackedText("CHARACTERS", SAFE.x, 770, 58, "#ffcc72", {
+        weight: 700,
+        tracking: 2.4
+      });
+      trackedText("ONE COMPLETE", SAFE.x, 970, 68, "#f3eee4", {
+        weight: 600,
+        tracking: 1.4
+      });
+      trackedText("LIFE CYCLE", SAFE.x, 1050, 68, "#f3eee4", {
+        weight: 600,
+        tracking: 1.4
+      });
+      trackedText("FORM / FIELD ORIGINAL 001", SAFE.x, 1182, 44, "#aeeaff", {
+        weight: 700,
+        tracking: 1.7
+      });
+      context.restore();
+    }
+
+    function drawSafeZone() {
+      context.save();
+      context.fillStyle = "rgba(255,70,90,.17)";
+      context.fillRect(0, 0, WIDTH, SAFE.y);
+      context.fillRect(0, SAFE.y + SAFE.height, WIDTH, HEIGHT - SAFE.y - SAFE.height);
+      context.fillRect(0, SAFE.y, SAFE.x, SAFE.height);
+      context.fillRect(SAFE.x + SAFE.width, SAFE.y, WIDTH - SAFE.x - SAFE.width, SAFE.height);
+      context.strokeStyle = "rgba(255,255,255,.88)";
+      context.lineWidth = 3;
+      context.strokeRect(SAFE.x, SAFE.y, SAFE.width, SAFE.height);
+      trackedText("TIKTOK UI SAFE ZONE", SAFE.x + 16, SAFE.y + 42, 30, "#fff", {
+        family: '"SFMono-Regular", Menlo, monospace',
+        weight: 700
+      });
+      context.restore();
+    }
+
+    function drawFrame(frameIndex) {
+      context.fillStyle = "#090909";
+      context.fillRect(0, 0, WIDTH, HEIGHT);
+
+      const organismVisibility = smoothstep(48, 76, frameIndex) * (1 - smoothstep(374, 400, frameIndex));
+      const collapse = smoothstep(374, 400, frameIndex);
+      drawOrganism(frameIndex, organismVisibility, collapse);
+
+      const openingCode = 1 - smoothstep(40, 70, frameIndex);
+      const returningCode = smoothstep(430, 446, frameIndex);
+      const codeAlpha = Math.max(openingCode, returningCode);
+      const codeSplit = frameIndex < 100
+        ? smoothstep(40, 70, frameIndex)
+        : 1 - smoothstep(430, 446, frameIndex);
+      drawCodePlate(codeAlpha, codeSplit);
+      drawStatement(fadeRange(frameIndex, 382, 432, 6));
+
+      if (query.has("safe")) drawSafeZone();
+      output.drawImage(sceneCanvas, 0, 0);
+    }
+
+    function startRecording() {
+      const stream = canvas.captureStream(FPS);
+      const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+        ? "video/webm;codecs=vp9"
+        : "video/webm;codecs=vp8";
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 20_000_000
+      });
+      const chunks = [];
+      let frameIndex = 0;
+      let tailFrame = 0;
+      let expectedTime = performance.now();
+
+      recorder.addEventListener("dataavailable", event => {
+        if (event.data.size) chunks.push(event.data);
+      });
+      recorder.addEventListener("stop", () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        download.href = URL.createObjectURL(blob);
+        download.classList.add("ready");
+        window.__videoReady = true;
+        window.__videoBlobSize = blob.size;
+      });
+
+      recorder.start(1000);
+
+      function tick(now) {
+        if (now >= expectedTime) {
+          if (frameIndex < TOTAL_FRAMES) {
+            drawFrame(frameIndex);
+            frameIndex += 1;
+          } else if (tailFrame < 30) {
+            drawFrame(TOTAL_FRAMES - 1);
+            tailFrame += 1;
+          }
+          expectedTime += 1000 / FPS;
+        }
+        if (frameIndex >= TOTAL_FRAMES && tailFrame >= 30) {
+          recorder.stop();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      requestAnimationFrame(tick);
+    }
+
+    if (query.has("record")) {
+      startRecording();
+    } else {
+      const previewFrame = Math.min(TOTAL_FRAMES - 1, Number(query.get("frame") || 217));
+      drawFrame(previewFrame);
+      window.__videoReady = true;
+    }
+  </script>
+</body>
+</html>

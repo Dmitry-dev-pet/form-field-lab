@@ -1,0 +1,7 @@
+279 символов. Один полный жизненный цикл.
+
+Бластофор выращивает дочернюю почку, стягивает шейку до сингулярности и снова собирается в единое тело. Вся геометрия, цвет и анимация исполняются автономным RAW-кодом Form / Field.
+
+https://dmitry-dev-pet.github.io/form-field-lab/#/lab?form=blastophore
+
+#p5js #creativecoding #generativeart #codeart

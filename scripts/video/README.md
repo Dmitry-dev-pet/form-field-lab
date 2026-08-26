@@ -4,6 +4,8 @@
 
 `sketch-36-small-code.html` — первый режиссёрский выпуск. Неизменённый 273-символьный скетч раскрывается из карточки исходного кода в поле примерно из 2000 частиц и складывается обратно. Мутаций в этом выпуске нет.
 
+`blastophore-original-001.html` — первый выпуск серии Form / Field Originals. Собственный 279-символьный Бластофор проходит полный цикл почкования в вертикальном кадре; критичная типографика помещена в официальный безопасный прямоугольник TikTok In-Feed Standard LTR.
+
 Параметры камеры, титров и перехода не входят в RAW-геном.
 
 Для локального рендера нужны Python Playwright, Chrome и FFmpeg:
@@ -11,6 +13,7 @@
 ```bash
 python3 scripts/video/render_entity_001.py
 python3 scripts/video/render_sketch_36_small_code.py
+python3 scripts/video/render_blastophore_original_001.py
 ```
 
 Команды используют общий `render_video.py` и создают MP4 и `cover.png` в соответствующих каталогах `public/videos/`. Исходный WebM временный; флаг `--keep-webm` сохраняет его рядом с MP4.
