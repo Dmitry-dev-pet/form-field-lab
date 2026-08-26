@@ -1,0 +1,12 @@
+{
+  "independentRuns": 2,
+  "matching": {
+    "coverSha256": "03542a52fad6bdeaa7d6100001b6575bced1e5166842b0be2cd1e53f75f35a07",
+    "frameSetSha256": "ceba68cca931ea3f4c08b2e2d3319f67f051a2e0aefb0c0840758c04983d61b8",
+    "provenanceSha256": "bdbeef39d88adb5a55b8e795ee859c9e6d933b199ccd317a53fe3b5384013b36",
+    "videoSha256": "15160ff60fa38c9c26290b0a92b99848ee28ece6daa7370033fee785808007aa"
+  },
+  "renderer": "form-field-frame-indexed-v1",
+  "schemaVersion": 1,
+  "verified": true
+}

@@ -1,0 +1,1 @@
+t=0,draw=_=>{t++||(createCanvas(w=400,w),p=Array(1e3).fill().map(_=>createVector()));background(9,24).stroke(w,90);p.map((v,i)=>(q=i/50|0,a=i%50/8,h=i%5,r=h?80*sin(PI*q/27)**.7+8*sin(t/20-q):20,v.lerp(r*cos(a),h?q*5-50:30+q*9,r*sin(a),.04),z=v.z,point(v.x+200,v.y+130)))}

@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Form / Field Original 003 — Mnemophore</title>
+  <style>
+    @font-face {
+      font-family: "FF Barlow Condensed";
+      src: url("../../public/fonts/form-field/BarlowCondensed-Regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF Barlow Condensed";
+      src: url("../../public/fonts/form-field/BarlowCondensed-SemiBold.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 600;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF Cormorant Garamond";
+      src: url("../../public/fonts/form-field/CormorantGaramond-Italic-wght.ttf") format("truetype");
+      font-style: italic;
+      font-weight: 300 700;
+      font-display: block;
+    }
+
+    @font-face {
+      font-family: "FF IBM Plex Mono";
+      src: url("../../public/fonts/form-field/IBMPlexMono-Regular.ttf") format("truetype");
+      font-style: normal;
+      font-weight: 400;
+      font-display: block;
+    }
+
+    :root {
+      color-scheme: dark;
+      --film-background: #050706;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: var(--film-background);
+    }
+
+    body { display: grid; place-items: center; }
+
+    canvas {
+      display: block;
+      width: min(100vw, 56.25vh);
+      height: min(177.7778vw, 100vh);
+      background: var(--film-background);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="film" width="1080" height="1920" aria-label="Mnemophore: 271 characters remember the previous frame"></canvas>
+
+  <script type="module">
+    import { MNEMOPHORE_CORE_GENOME } from "../../src/data/mnemophoreGenome.js";
+
+    const WIDTH = 1080;
+    const HEIGHT = 1920;
+    const FPS = 30;
+    const TOTAL_FRAMES = 450;
+    const SAFE = Object.freeze({ x: 120, y: 240, width: 660, height: 1020 });
+    const PALETTE = Object.freeze({
+      background: "#050706",
+      paper: "#eef8f4",
+      quiet: "#b8c7c2",
+      memory: "#a8ffd0",
+      time: "#ffd786"
+    });
+    const code = MNEMOPHORE_CORE_GENOME;
+    const codeLines = Array.from({ length: Math.ceil(code.length / 28) }, (_, index) => (
+      code.slice(index * 28, index * 28 + 28)
+    ));
+
+    if (code.length !== 271 || codeLines.join("") !== code) {
+      throw new Error("Mnemophore drifted from its 271-character memory root.");
+    }
+
+    const canvas = document.querySelector("#film");
+    const output = canvas.getContext("2d", { alpha: false });
+    const sceneCanvas = document.createElement("canvas");
+    sceneCanvas.width = WIDTH;
+    sceneCanvas.height = HEIGHT;
+    const context = sceneCanvas.getContext("2d", { alpha: false });
+    const trailCanvas = document.createElement("canvas");
+    trailCanvas.width = WIDTH;
+    trailCanvas.height = HEIGHT;
+    const trail = trailCanvas.getContext("2d");
+    const query = new URLSearchParams(location.search);
+
+    let particles = [];
+    let lastAdvancedFrame = -1;
+
+    window.__videoReady = false;
+    window.__videoMetadata = {
+      fps: FPS,
+      frames: TOTAL_FRAMES,
+      width: WIDTH,
+      height: HEIGHT,
+      genomeLength: code.length,
+      genomeLimit: 280,
+      entity: "mnemophore",
+      particles: 1000,
+      memoryLerp: 0.04,
+      stateful: true,
+      safeZone: SAFE
+    };
+
+    function clamp(value, minimum = 0, maximum = 1) {
+      return Math.min(maximum, Math.max(minimum, value));
+    }
+
+    function mix(from, to, amount) {
+      return from + (to - from) * amount;
+    }
+
+    function smoothstep(from, to, value) {
+      const amount = clamp((value - from) / (to - from));
+      return amount * amount * (3 - 2 * amount);
+    }
+
+    function fadeRange(frame, start, end, edge = 14) {
+      return smoothstep(start, start + edge, frame) * (1 - smoothstep(end - edge, end, frame));
+    }
+
+    function trackedText(value, x, y, size, color, options = {}) {
+      context.save();
+      context.globalAlpha *= options.alpha ?? 1;
+      context.fillStyle = color;
+      context.font = `${options.style || "normal"} ${options.weight || 400} ${size}px ${options.family || '"FF Barlow Condensed", sans-serif'}`;
+      context.textAlign = options.align || "left";
+      context.textBaseline = options.baseline || "alphabetic";
+
+      if (!options.tracking) {
+        context.fillText(value, x, y);
+      } else {
+        let cursor = x;
+        for (const glyph of [...value]) {
+          context.fillText(glyph, cursor, y);
+          cursor += context.measureText(glyph).width + options.tracking;
+        }
+      }
+      context.restore();
+    }
+
+    function resetMemory() {
+      particles = Array.from({ length: 1000 }, () => ({ x: 0, y: 0, z: 0 }));
+      lastAdvancedFrame = -1;
+      trail.clearRect(0, 0, WIDTH, HEIGHT);
+    }
+
+    function advanceMemory(frameIndex) {
+      const time = frameIndex + 1;
+      const orbit = mix(-0.62, 0.62, smoothstep(48, 390, frameIndex));
+      const cosOrbit = Math.cos(orbit);
+      const sinOrbit = Math.sin(orbit);
+      const scale = 3.72;
+      const centerX = 535;
+      const centerY = 785;
+
+      trail.globalCompositeOperation = "source-over";
+      trail.fillStyle = "rgba(9,9,9,0.0941176471)";
+      trail.fillRect(0, 0, WIDTH, HEIGHT);
+      trail.fillStyle = "rgba(255,255,255,0.3529411765)";
+
+      particles.forEach((particle, index) => {
+        const ring = index / 50 | 0;
+        const angle = index % 50 / 8;
+        const tissue = index % 5;
+        const radius = tissue
+          ? 80 * Math.sin(Math.PI * ring / 27) ** 0.7 + 8 * Math.sin(time / 20 - ring)
+          : 20;
+        const targetX = radius * Math.cos(angle);
+        const targetY = tissue ? ring * 5 - 50 : 30 + ring * 9;
+        const targetZ = radius * Math.sin(angle);
+
+        particle.x += (targetX - particle.x) * 0.04;
+        particle.y += (targetY - particle.y) * 0.04;
+        particle.z += (targetZ - particle.z) * 0.04;
+
+        const projectedX = particle.x * cosOrbit + particle.z * sinOrbit;
+        const x = centerX + projectedX * scale;
+        const y = centerY + particle.y * scale;
+        const pointSize = tissue ? 2.45 : 3.05;
+        trail.fillRect(x, y, pointSize, pointSize);
+      });
+    }
+
+    function drawCodePlate(alpha, split) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+
+      trackedText("FORM / FIELD", SAFE.x, 294, 46, PALETTE.memory, {
+        weight: 600,
+        tracking: 2.7
+      });
+      trackedText("ORIGINAL 003", SAFE.x, 352, 46, PALETTE.quiet, {
+        weight: 400,
+        tracking: 2.0
+      });
+      trackedText("271", SAFE.x, 488, 160, PALETTE.paper, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 600
+      });
+      trackedText("/ 280", SAFE.x + 300, 482, 58, PALETTE.time, {
+        family: '"FF IBM Plex Mono", monospace',
+        weight: 400
+      });
+
+      codeLines.forEach((line, index) => {
+        const direction = index % 2 ? 1 : -1;
+        trackedText(line, SAFE.x + direction * split * 150, 556 + index * 50, 38, index === codeLines.length - 1 ? PALETTE.memory : PALETTE.quiet, {
+          family: '"FF IBM Plex Mono", monospace',
+          weight: 400
+        });
+      });
+
+      trackedText("THE PREVIOUS FRAME SURVIVES", SAFE.x, 1100, 46, PALETTE.paper, {
+        weight: 600,
+        tracking: 0.65
+      });
+      trackedText("MNEMOPHORE", SAFE.x, 1192, 76, PALETTE.memory, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 500
+      });
+      context.restore();
+    }
+
+    function drawOrganism(frameIndex, visibility, collapse) {
+      if (visibility <= 0) return;
+      const centerX = 535;
+      const centerY = 960;
+      const glow = context.createRadialGradient(centerX, centerY, 30, centerX, centerY, 650);
+      glow.addColorStop(0, `rgba(128,255,194,${0.075 * visibility})`);
+      glow.addColorStop(0.5, `rgba(54,120,92,${0.035 * visibility})`);
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      context.fillStyle = glow;
+      context.fillRect(0, 190, WIDTH, 1510);
+
+      context.save();
+      context.globalAlpha = visibility;
+      context.globalCompositeOperation = "screen";
+      context.translate(centerX, centerY);
+      context.scale(mix(1, 0.06, collapse), mix(1, 0.44, collapse));
+      context.translate(-centerX, -centerY);
+      context.drawImage(trailCanvas, 0, 0);
+      context.restore();
+    }
+
+    function drawStatement(alpha) {
+      if (alpha <= 0) return;
+      context.save();
+      context.globalAlpha = alpha;
+      trackedText("MNEMOPHORE", SAFE.x, 358, 84, PALETTE.memory, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 500
+      });
+      trackedText("271", SAFE.x, 684, 260, PALETTE.paper, {
+        family: '"FF Cormorant Garamond", serif',
+        style: "italic",
+        weight: 600
+      });
+      trackedText("CHARACTERS", SAFE.x, 770, 60, PALETTE.time, {
+        weight: 600,
+        tracking: 2.1
+      });
+      trackedText("REMEMBER", SAFE.x, 950, 74, PALETTE.paper, {
+        weight: 600,
+        tracking: 1.2
+      });
+      trackedText("THE LAST FRAME", SAFE.x, 1038, 74, PALETTE.paper, {
+        weight: 600,
+        tracking: 1.0
+      });
+      trackedText("FORM / FIELD ORIGINAL 003", SAFE.x, 1180, 46, PALETTE.memory, {
+        weight: 600,
+        tracking: 1.45
+      });
+      context.restore();
+    }
+
+    function drawSafeZone() {
+      context.save();
+      context.fillStyle = "rgba(255,70,90,.17)";
+      context.fillRect(0, 0, WIDTH, SAFE.y);
+      context.fillRect(0, SAFE.y + SAFE.height, WIDTH, HEIGHT - SAFE.y - SAFE.height);
+      context.fillRect(0, SAFE.y, SAFE.x, SAFE.height);
+      context.fillRect(SAFE.x + SAFE.width, SAFE.y, WIDTH - SAFE.x - SAFE.width, SAFE.height);
+      context.strokeStyle = "rgba(255,255,255,.88)";
+      context.lineWidth = 3;
+      context.strokeRect(SAFE.x, SAFE.y, SAFE.width, SAFE.height);
+      trackedText("TIKTOK UI SAFE ZONE", SAFE.x + 16, SAFE.y + 42, 30, "#fff", {
+        family: '"FF IBM Plex Mono", monospace',
+        weight: 400
+      });
+      context.restore();
+    }
+
+    function composeFrame(frameIndex) {
+      context.fillStyle = PALETTE.background;
+      context.fillRect(0, 0, WIDTH, HEIGHT);
+
+      const organismVisibility = smoothstep(48, 78, frameIndex) * (1 - smoothstep(374, 402, frameIndex));
+      const openingFold = 1 - smoothstep(48, 84, frameIndex);
+      const closingFold = smoothstep(374, 402, frameIndex);
+      drawOrganism(frameIndex, organismVisibility, Math.max(openingFold, closingFold));
+
+      const openingCode = 1 - smoothstep(40, 70, frameIndex);
+      const returningCode = smoothstep(430, 446, frameIndex);
+      const codeAlpha = Math.max(openingCode, returningCode);
+      const codeSplit = frameIndex < 100
+        ? smoothstep(40, 70, frameIndex)
+        : 1 - smoothstep(430, 446, frameIndex);
+      drawCodePlate(codeAlpha, codeSplit);
+      drawStatement(fadeRange(frameIndex, 384, 432, 6));
+
+      if (query.has("safe")) drawSafeZone();
+      output.drawImage(sceneCanvas, 0, 0);
+    }
+
+    function renderFrame(requestedFrame) {
+      const frameIndex = Math.round(clamp(Number(requestedFrame), 0, TOTAL_FRAMES - 1));
+      if (frameIndex <= lastAdvancedFrame) resetMemory();
+      for (let step = lastAdvancedFrame + 1; step <= frameIndex; step += 1) {
+        advanceMemory(step);
+      }
+      lastAdvancedFrame = frameIndex;
+      composeFrame(frameIndex);
+      return frameIndex;
+    }
+
+    resetMemory();
+    document.fonts.ready.then(() => {
+      window.__renderFrame = renderFrame;
+      if (!query.has("deterministic")) {
+        const previewFrame = Math.min(TOTAL_FRAMES - 1, Number(query.get("frame") || 240));
+        renderFrame(previewFrame);
+      }
+      window.__videoReady = true;
+    });
+  </script>
+</body>
+</html>
