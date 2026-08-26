@@ -40,6 +40,11 @@ import {
   TESSELOPHORE_RAW_VARIANTS
 } from "../data/tesselophoreGenome.js";
 import {
+  MOIREPHORE_GENOME,
+  MOIREPHORE_GENOME_CHARACTERS,
+  MOIREPHORE_GENOME_LIMIT
+} from "../data/moirephoreGenome.js";
+import {
   compileTopologyGenome,
   TOPOLOGY_GENOME_PRESETS,
   topologyGenomeDefaults
@@ -232,6 +237,26 @@ g_i(t)&\in\{s_i^2,\;b_i/3,\;p_i^2\},
 &\mathbf C_i&=\pi_c(255g_i,180+70p_i,255).
 \end{aligned}`;
 
+const moirephoreLatexSource = String.raw`\begin{aligned}
+u_i&=5i/N,
+&v_i&=(i\bmod80)/13,\\
+a_i(t)&=Au_i-t,
+&b_i(t)&=Bu_i+t,\\
+p_i&=\sin(u_i/1.6),
+&r_i(t)&=p_i\left[R+I\sin a_i\cos b_i\right],\\
+q_i(t)&=v_i+\frac{\sin(a_i-b_i)}{F},\\
+x_i&=L(u_i-2.5),
+&y_i&=r_i\cos q_i,\\
+z_i&=\lambda r_i\sin q_i,\\
+\widetilde x_i&=x_i\cos t+z_i\sin t,
+&\widetilde z_i&=-x_i\sin t+z_i\cos t,\\
+a_i+b_i&=(A+B)u_i,
+&a_i-b_i&=(A-B)u_i-2t,\\
+g_i&\in\{\sin(a_i-b_i),\sin(a_i+b_i),\sin q_i,\cos q_i\},\\
+n_i&=128+99g_i,
+&\mathbf C_i&=\pi_c(n_i,255-n_i,255).
+\end{aligned}`;
+
 const tesselophoreLatexSource = String.raw`\begin{aligned}
 u_i&=i/200,
 &\alpha_i&=(i\bmod200)/32,\\
@@ -357,6 +382,7 @@ const defaultCopyLabels = {
   blastophore: "Копировать TeX",
   krylofor: "Копировать TeX",
   chiralophore: "Копировать TeX",
+  moirephore: "Копировать TeX",
   tesselophore: "Копировать TeX",
   sphereGrid: "Копировать TeX",
   seed: "Копировать 280",
@@ -366,6 +392,7 @@ const defaultCopyLabels = {
   blastophoreSeed: "Копировать RAW 279",
   kryloforSeed: "Копировать RAW 280",
   chiralophoreSeed: "Копировать RAW 278",
+  moirephoreSeed: "Копировать RAW 279",
   tesselophoreSeed: "Копировать RAW 273",
   sphereGridSeed: "Копировать 280",
   code: "Копировать JS"
@@ -400,14 +427,25 @@ function loadMathJax() {
   });
 }
 
+function scrollToTheoryTarget() {
+  const targetId = window.location.hash.split("#").at(-1) || "";
+  if (!targetId || targetId === "/theory") return;
+  const target = document.getElementById(decodeURIComponent(targetId));
+  target?.scrollIntoView({ block: "start" });
+}
+
 onMounted(async () => {
   await nextTick();
+  scrollToTheoryTarget();
+  window.setTimeout(scrollToTheoryTarget, 1200);
   try {
     await loadMathJax();
     await window.MathJax.typesetPromise();
   } catch {
     // Raw LaTeX remains readable if the CDN is unavailable.
   }
+  await nextTick();
+  scrollToTheoryTarget();
 });
 </script>
 
@@ -1196,6 +1234,74 @@ onMounted(async () => {
           <p><strong>Новая сущность.</strong> Тесселофора не повторяет траекторию исходного скетча. Из источника взяты проверенные принципы — сохраняемое состояние, XOR-клетки, поколение и индекс-возраст; геометрия тела, цель рекурсии и тканевые связи построены заново.</p>
           <p><strong>Что считается организмом.</strong> Ни одна конкретная частица не обязательна. Идентичность сохраняют общий сосуд <code>Bᵢ(t)</code>, непрерывность состояния и закон обмена, даже когда за тысячу кадров заменится всё вещество.</p>
           <p><strong>Граница наблюдателя.</strong> Поворот пальцем остаётся внешней камерой. Он не меняет XOR-клетку, возраст частицы, момент рождения или RAW-код.</p>
+        </div>
+      </article>
+
+      <article id="moirephore" class="theory-card pelagion-theory chronophore-theory">
+        <header class="card-header">
+          <div><span>14 / PHASE INTERFERENCE</span><h2>Муарофор: одна ткань между двумя волнами</h2></div>
+          <div class="card-actions">
+            <button class="button" type="button" @click="copy('moirephore', moirephoreLatexSource)">{{ copyLabels.moirephore }}</button>
+            <button class="button" type="button" @click="copy('moirephoreSeed', MOIREPHORE_GENOME)">{{ copyLabels.moirephoreSeed }}</button>
+          </div>
+        </header>
+        <div class="theory-body pelagion-theory-grid">
+          <div>
+            <p>Муарофор начинается не с готового силуэта, а с двух фазовых волн. В каноне их пространственные частоты равны 3 и 5: они взаимно просты, поэтому внутри короткого тела не совпадают везде одновременно.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              u_i&amp;=5i/N,
+              &amp;v_i&amp;=(i\bmod80)/13,\\
+              a_i(t)&amp;=Au_i-t,
+              &amp;b_i(t)&amp;=Bu_i+t,\\
+              p_i&amp;=\sin(u_i/1.6),
+              &amp;r_i(t)&amp;=p_i\left[R+I\sin a_i\cos b_i\right].
+              \end{aligned}
+              \]
+            </div>
+            <p>Профиль <code>pᵢ</code> замыкает оболочку на концах. Произведение волн не рисуется поверх неё: оно становится добавкой к радиусу. Поэтому светлые и тёмные биения совпадают с реальным расширением и сжатием ткани.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              q_i(t)&amp;=v_i+\frac{\sin(a_i-b_i)}{F},\\
+              x_i&amp;=L(u_i-2.5),\\
+              y_i&amp;=r_i\cos q_i,
+              &amp;z_i&amp;=\lambda r_i\sin q_i.
+              \end{aligned}
+              \]
+            </div>
+            <p>Разность фаз сдвигает угол каждого поперечного сечения и тем самым выращивает настоящую координату <code>z</code>. Автоповорот находится в RAW; сохранённый трекбол лишь меняет матрицу наблюдателя.</p>
+            <div class="math-scroll">
+              \[
+              \begin{aligned}
+              a_i+b_i&amp;=(A+B)u_i,\\
+              a_i-b_i&amp;=(A-B)u_i-2t,\\
+              g_i&amp;\in\{\sin(a_i-b_i),\sin(a_i+b_i),\sin q_i,\cos q_i\},\\
+              n_i&amp;=128+99g_i,
+              &amp;\mathbf C_i&amp;=\pi_c(n_i,255-n_i,255).
+              \end{aligned}
+              \]
+            </div>
+            <p>Сумма создаёт быстрый неподвижный рисунок вдоль тела, разность — медленное бегущее биение. Ещё два закона окрашивают скрытую глубину или видимый профиль. Цвет, геометрия и движение читают одни и те же фазы.</p>
+          </div>
+          <div class="pelagion-genome">
+            <div class="genome-meter">
+              <span>Две волны, оболочка, глубина, цвет и камера</span>
+              <strong>{{ MOIREPHORE_GENOME_CHARACTERS }} / {{ MOIREPHORE_GENOME_LIMIT }}</strong>
+            </div>
+            <pre><code>{{ MOIREPHORE_GENOME }}</code></pre>
+            <p>Канон занимает 279 символов. Длина, радиус, глубина, сила интерференции, обе частоты, фазовый сдвиг, число точек, четыре закона цвета и шесть перестановок каналов пересобирают именно эту строку.</p>
+            <p>Все разрешённые комбинации остаются не длиннее 280 символов. Готовые кадры, массивы состояния и физическая симуляция не используются.</p>
+            <div class="pelagion-links">
+              <RouterLink :to="{ name: 'lab', query: { form: 'moirephore' } }">Открыть Муарофор →</RouterLink>
+              <RouterLink to="/community#live-field-title">Полевые источники →</RouterLink>
+            </div>
+          </div>
+        </div>
+        <div class="tiny-code-context">
+          <p><strong>Что здесь новое.</strong> Хиралофор делит оболочку на две противофазные ткани; Муарофор оставляет ткань единой и заставляет два фазовых закона интерферировать внутри каждой её точки.</p>
+          <p><strong>Граница модели.</strong> Это процедурная кинематика интерференции, а не модель гидродинамики или мышц. Органичность возникает из согласованности нескольких наблюдаемых признаков, а не доказывает биологическую природу формулы.</p>
         </div>
       </article>
     </div>

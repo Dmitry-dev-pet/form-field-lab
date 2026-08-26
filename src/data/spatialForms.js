@@ -30,6 +30,13 @@ import {
   compileChiralophoreGenome
 } from "./chiralophoreGenome.js";
 import {
+  compileMoirephoreGenome,
+  MOIREPHORE_COLOR_LAWS,
+  MOIREPHORE_COLOR_PALETTES,
+  MOIREPHORE_DEFAULTS,
+  MOIREPHORE_GENOME_SKETCH
+} from "./moirephoreGenome.js";
+import {
   TESSELOPHORE_GENOME_SKETCH,
   TESSELOPHORE_RAW_VARIANTS
 } from "./tesselophoreGenome.js";
@@ -560,6 +567,37 @@ function chiralophorePoint(index, time, settings, layers, target) {
   target.mix = settings.colorLaw === "tissues"
     ? index % 2
     : settings.colorLaw === "profile" ? profile * profile : impulse * impulse;
+  return target;
+}
+
+function moirephorePoint(index, time, settings, _layers, target) {
+  const pointCount = Math.max(5000, Math.round(settings.pointCount / 5000) * 5000);
+  const u = index / (pointCount / 5);
+  const v = index % 80 / 13;
+  const phaseTime = time * settings.genomeSpeed;
+  const phaseA = settings.waveA * u - phaseTime;
+  const phaseB = settings.waveB * u + phaseTime;
+  const profile = Math.sin(u / 1.6);
+  const interference = Math.sin(phaseA) * Math.cos(phaseB);
+  const radius = profile * (settings.radius + settings.interference * interference);
+  const angle = v + Math.sin(phaseA - phaseB) / settings.twist;
+  const colorSignal = settings.colorLaw === "sum"
+    ? Math.sin(phaseA + phaseB)
+    : settings.colorLaw === "depth"
+      ? Math.sin(angle)
+      : settings.colorLaw === "rim" ? Math.cos(angle) : Math.sin(phaseA - phaseB);
+
+  target.x = settings.length * u - settings.length * 2.5 + 200;
+  target.y = radius * Math.cos(angle) + 200;
+  target.z = settings.depth * radius * Math.sin(angle);
+  target.parameter = u;
+  target.k = colorSignal;
+  target.e = interference;
+  target.d = profile;
+  target.c = angle;
+  target.branch = index % 80;
+  target.forms = 80;
+  target.mix = (colorSignal + 1) / 2;
   return target;
 }
 
@@ -1203,6 +1241,50 @@ export const spatialForms = Object.freeze([
     layers: [],
     randomRanges: {},
     evaluate: tesselophorePoint
+  },
+  {
+    id: "moirephore",
+    displayNumber: "P8",
+    sketchNumber: null,
+    shortLabel: "Муарофор",
+    title: "Муарофор",
+    association: "две волны · муаровая оболочка · скрытая глубина",
+    description: "Две фазовые волны с взаимно простыми пространственными частотами проходят через одну замкнутую оболочку. Их произведение меняет радиус, разность закручивает скрытую глубину, а сумма или разность непосредственно окрашивает ткань.",
+    origin: "interference-synthesis",
+    autoOrbit: true,
+    genomeSketch: MOIREPHORE_GENOME_SKETCH,
+    compileGenome: compileMoirephoreGenome,
+    rawColorPalettes: MOIREPHORE_COLOR_PALETTES,
+    rawColorLaws: MOIREPHORE_COLOR_LAWS,
+    savedColor: Object.freeze({
+      mode: "formula",
+      preset: "custom",
+      expression: "clamp((1 + k) / 2, 0, 1)",
+      colorA: "#00ffff",
+      colorB: "#ff00ff"
+    }),
+    timeStep: 0.01,
+    defaults: MOIREPHORE_DEFAULTS,
+    primaryControls: [
+      control("genomeSpeed", "Темп сущности", 1, 5, 1, { format: "integerSpeed" }),
+      control("length", "Длина оболочки", 40, 70, 2),
+      control("radius", "Радиус оболочки", 50, 80, 1),
+      control("depth", "Скрытая глубина", 1, 3, 1),
+      control("interference", "Сила интерференции", 8, 18, 1),
+      control("pointCount", "Точки", 5000, 20000, 5000, { format: "count" })
+    ],
+    advancedControls: [
+      control("waveA", "Частота волны a", 2, 6, 1),
+      control("waveB", "Частота волны b", 3, 9, 1),
+      control("twist", "Делитель фазового сдвига", 2, 6, 1)
+    ],
+    layers: [],
+    randomRanges: {
+      genomeSpeed: [1, 5, 1], length: [40, 70, 2], radius: [50, 80, 1],
+      depth: [1, 3, 1], interference: [8, 18, 1], pointCount: [5000, 20000, 5000],
+      waveA: [2, 6, 1], waveB: [3, 9, 1], twist: [2, 6, 1]
+    },
+    evaluate: moirephorePoint
   }
 ]);
 
