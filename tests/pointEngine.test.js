@@ -100,6 +100,8 @@ test("the WEBGL runner rotates real primitives with the same external saved came
   assert.match(html, /sourceDraw/);
   assert.match(html, /globalThis\.rotate\(angle/);
   assert.match(html, /sourceDraw\.apply\(this, args\)/);
+  assert.match(html, /globalThis\.C/);
+  assert.match(html, /setAnimationTime/);
   assert.match(html, /"time":8/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
 });

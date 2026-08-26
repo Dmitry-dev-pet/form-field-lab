@@ -86,8 +86,23 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   function snapshot() {
     return {
       orientation: { ...state.orientation },
-      time: Math.max(0, Number(globalThis.t) || 0)
+      time: animationTime()
     };
+  }
+
+  function animationTime() {
+    const value = viewModel === "webgl-orbit" && Number.isFinite(Number(globalThis.C))
+      ? globalThis.C
+      : globalThis.t;
+    return Math.max(0, Number(value) || 0);
+  }
+
+  function setAnimationTime(value) {
+    if (viewModel === "webgl-orbit" && Number.isFinite(Number(globalThis.C))) {
+      globalThis.C = value;
+    } else {
+      globalThis.t = value;
+    }
   }
 
   function publish(requestId) {
@@ -107,7 +122,7 @@ function installSpatialViewBridge(viewModel, initialViewState) {
     state.invertY = next.invertY !== false;
     if (Number.isFinite(Number(next.time))) {
       pendingTime = Math.max(0, Number(next.time));
-      if (hasDrawn) globalThis.t = pendingTime;
+      if (hasDrawn) setAnimationTime(pendingTime);
     }
   }
 
@@ -216,12 +231,12 @@ function installSpatialViewBridge(viewModel, initialViewState) {
     if (canvas?.width > 0 && (!orbitEnabled || viewReady)) {
       if (canvas.tabIndex < 0) canvas.tabIndex = 0;
       hasDrawn = true;
-      const firstStep = Math.max(0, Number(globalThis.t) || 0);
+      const firstStep = animationTime();
       if (pendingTime > firstStep && typeof globalThis.redraw === "function") {
-        globalThis.t = pendingTime - firstStep;
+        setAnimationTime(pendingTime - firstStep);
         globalThis.redraw();
       } else if (pendingTime !== null) {
-        globalThis.t = pendingTime;
+        setAnimationTime(pendingTime);
       }
       return;
     }

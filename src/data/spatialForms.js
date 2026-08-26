@@ -38,8 +38,6 @@ import {
 } from "./moirephoreGenome.js";
 import {
   compileTorophoreGenome,
-  TOROPHORE_COLOR_LAWS,
-  TOROPHORE_COLOR_PALETTES,
   TOROPHORE_DEFAULTS,
   TOROPHORE_GENOME_SKETCH
 } from "./torophoreGenome.js";
@@ -621,25 +619,23 @@ function coherentNoise(value) {
 }
 
 function torophorePoint(index, time, settings, _layers, target) {
-  const phase = coherentNoise(index - time) * Math.PI * 2 * settings.turns;
-  const depthPhase = index / settings.depthWave - time / settings.depthSpeed;
-  const colorSignal = settings.colorLaw === "heading-rim"
-    ? Math.cos(phase)
-    : settings.colorLaw === "depth"
-      ? Math.sin(depthPhase)
-      : settings.colorLaw === "depth-rim" ? Math.cos(depthPhase) : Math.sin(phase);
+  const phase = coherentNoise((index - time) / settings.noiseScale)
+    * Math.PI * 2 * settings.turns;
+  const surface = index * 2.399963;
+  const tube = index * 1.618034;
+  const ring = settings.organRadius + 10 * Math.cos(tube);
 
-  target.x = index * Math.cos(phase) + 200;
-  target.y = index * Math.sin(phase) + 200;
-  target.z = settings.depth * Math.sin(depthPhase);
+  target.x = index * Math.cos(phase) + ring * Math.cos(surface) + 200;
+  target.y = index * Math.sin(phase) + ring * Math.sin(surface) + 200;
+  target.z = 10 * Math.sin(tube);
   target.parameter = index / settings.organCount;
-  target.k = colorSignal;
-  target.e = depthPhase;
+  target.k = Math.sin(phase);
+  target.e = settings.noiseScale;
   target.d = phase;
   target.c = phase;
   target.branch = index;
   target.forms = settings.organCount;
-  target.mix = (colorSignal + 1) / 2;
+  target.mix = (1 - Math.sin(phase)) / 2;
   return target;
 }
 
@@ -1330,45 +1326,31 @@ export const spatialForms = Object.freeze([
   },
   {
     id: "torophore",
-    displayNumber: "P9",
+    displayNumber: "X1",
     sketchNumber: null,
-    shortLabel: "Торофор",
-    title: "Торофор",
-    association: "колония торов · перенос без памяти · объёмный поток",
-    description: "Сотни одинаковых тороидальных органов получают положение, глубину, ориентацию и цвет из двух бегущих фаз. Ни траектории, ни координаты прошлых кадров не хранятся: форма каждый раз возникает заново из индекса и времени.",
-    origin: "toroidal-advection-synthesis",
+    shortLabel: "Тор-поток",
+    title: "Исходный тороидальный поток",
+    association: "точный источник · 480 торов · перенос фазы · WEBGL",
+    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок по индексам, центры остаются в плоскости z = 0, а объём дают сами торы.",
+    origin: "provided-source-study",
     autoOrbit: false,
     genomeSketch: TOROPHORE_GENOME_SKETCH,
     compileGenome: compileTorophoreGenome,
-    rawColorPalettes: TOROPHORE_COLOR_PALETTES,
-    rawColorLaws: TOROPHORE_COLOR_LAWS,
-    savedColor: Object.freeze({
-      mode: "formula",
-      preset: "custom",
-      expression: "clamp((1 + k) / 2, 0, 1)",
-      colorA: "#00ffff",
-      colorB: "#ff00ff"
-    }),
     timeStep: 2,
     defaults: TOROPHORE_DEFAULTS,
     primaryControls: [
       control("genomeSpeed", "Скорость переноса", 1, 5, 1, { format: "integerSpeed" }),
-      control("organCount", "Тороидальные органы", 120, 480, 60, { format: "count" }),
-      control("turns", "Обороты фазы", 1, 4, 1),
-      control("depth", "Глубина центров", 40, 99, 1),
-      control("organRadius", "Радиус органа", 30, 90, 10)
+      control("organCount", "Количество торов", 120, 720, 60, { format: "count" }),
+      control("turns", "Обороты фазы", 1, 5, 1),
+      control("organRadius", "Радиус тора", 60, 180, 10)
     ],
     advancedControls: [
-      control("depthWave", "Длина глубинной волны", 10, 40, 5),
-      control("depthSpeed", "Делитель скорости z", 1, 9, 1),
-      control("detailX", "Сегменты кольца", 4, 9, 1),
-      control("detailY", "Сегменты трубки", 3, 8, 1)
+      control("noiseScale", "Сглаживание шума", 1, 9, 1)
     ],
     layers: [],
     randomRanges: {
-      genomeSpeed: [1, 5, 1], organCount: [120, 480, 60], turns: [1, 4, 1],
-      depth: [40, 99, 1], organRadius: [30, 90, 10], depthWave: [10, 40, 5],
-      depthSpeed: [1, 9, 1], detailX: [4, 9, 1], detailY: [3, 8, 1]
+      genomeSpeed: [1, 5, 1], organCount: [120, 720, 60], turns: [1, 5, 1],
+      organRadius: [60, 180, 10], noiseScale: [1, 9, 1]
     },
     evaluate: torophorePoint
   }

@@ -10,7 +10,9 @@ import { createPointEngine } from "../src/lib/pointEngine.js";
 
 test("the spatial lab separates attributed lifts from synthetic entities", () => {
   const attributed = spatialForms.filter(form => form.sketch);
-  const synthetic = spatialForms.filter(form => !form.sketch);
+  const sourceStudies = spatialForms.filter(form => form.origin === "provided-source-study");
+  const synthetic = spatialForms.filter(form => !form.sketch
+    && form.origin !== "provided-source-study");
 
   assert.deepEqual(attributed.map(form => form.sketchNumber), [5, 1, 6]);
   assert.deepEqual(synthetic.map(form => form.id), [
@@ -22,9 +24,9 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     "krylofor",
     "chiralophore",
     "tesselophore",
-    "moirephore",
-    "torophore"
+    "moirephore"
   ]);
+  assert.deepEqual(sourceStudies.map(form => form.id), ["torophore"]);
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
 
@@ -32,7 +34,9 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     assert.match(form.sketch.source, /^https:\/\/x\.com\/yuruyurau\/status\//);
   }
   for (const form of spatialForms) {
-    assert.ok(form.meshGenome || form.primaryControls.some(control => control.key === "depth"));
+    assert.ok(form.meshGenome
+      || form.genomeSketch?.viewModel === "webgl-orbit"
+      || form.primaryControls.some(control => control.key === "depth"));
     assert.ok(form.layers.every(layer => Object.hasOwn(spatialLayerDefaults(form), layer.key)));
     assert.ok(form.sketch || form.genomeSketch, `${form.id}: RAW source is missing`);
   }

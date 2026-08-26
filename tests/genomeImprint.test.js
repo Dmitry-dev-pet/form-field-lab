@@ -117,10 +117,10 @@ test("a fixed imprint becomes a numbered, reloadable local entity", () => {
     }
   });
 
-  assert.equal(record.displayNumber, "P10");
+  assert.equal(record.displayNumber, "P9");
   assert.equal(record.parentId, "chronophore");
   assert.equal(writeSavedEntities([record], storage), true);
   assert.ok(values.has(GENOME_ENTITY_STORAGE_KEY));
   assert.deepEqual(readSavedEntities(storage), [JSON.parse(JSON.stringify(record))]);
-  assert.equal(nextMutationNumber(readSavedEntities(storage)), 11);
+  assert.equal(nextMutationNumber(readSavedEntities(storage)), 10);
 });

@@ -43,7 +43,7 @@ const savedEntityRecords = ref(readSavedEntities());
 const chronophoreForm = spatialFormById("chronophore");
 
 function hydrateSavedForm(record) {
-  const legacyNumbers = ["P3", "P4", "P5", "P6", "P7", "P8", "P9"];
+  const legacyNumbers = ["P3", "P4", "P5", "P6", "P7", "P8"];
   const legacyNumber = legacyNumbers.includes(record.displayNumber) ? `${record.displayNumber}′` : record.displayNumber;
   const legacyTitle = legacyNumbers.includes(record.displayNumber)
     ? record.title.replace(new RegExp(`${record.displayNumber}\\b`), `${record.displayNumber}′`)
@@ -92,7 +92,13 @@ const formGroups = computed(() => {
     {
       id: "synthetic",
       label: "Синтетические сущности",
-      forms: spatialForms.filter(form => !form.sketch && form.origin !== "mesh-study")
+      forms: spatialForms.filter(form => !form.sketch
+        && !["mesh-study", "provided-source-study"].includes(form.origin))
+    },
+    {
+      id: "source-studies",
+      label: "Исходные эксперименты",
+      forms: spatialForms.filter(form => form.origin === "provided-source-study")
     },
     {
       id: "mesh-studies",
@@ -218,7 +224,9 @@ const bareRunnerLabel = computed(() => isCompiledGenome.value
     ? `${selectedForm.value.title}: ${selectedRawVariant.value.title}, ${bareCodeLength.value} символов`
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isCompiledGenome.value
-  ? selectedForm.value.autoOrbit
+  ? selectedForm.value.origin === "provided-source-study"
+    ? `На холсте исполняется буквальный исходный код: ${bareCodeLength.value} из 280 символов. Ползунки меняют только его исходные константы; «Сбросить» возвращает точную строку.`
+    : selectedForm.value.autoOrbit
     ? `На холсте исполняется итоговый ${bareCodeLength.value}-символьный RAW: форма, волна, цвет и автоматический пространственный оборот находятся в самой строке.`
     : `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
   : hasBudgetVariants.value
@@ -330,6 +338,7 @@ async function captureActiveView() {
 function basePresetLabel(form) {
   if (form.savedRecord) return "Мутация";
   if (form.meshGenome) return "RAW ≤ 280";
+  if (form.origin === "provided-source-study") return "Исходник";
   if (form.motionModes) {
     return form.motionModes.find(mode => mode.id === form.defaults.motionMode)?.label
       || "Хореография";
@@ -635,7 +644,7 @@ onBeforeUnmount(() => {
 
       <aside :key="`${selectedForm.id}-raw`" class="control-panel" aria-label="RAW-геном и его параметры">
         <div class="form-picker">
-          <p class="panel-kicker">Форма / синтез</p>
+          <p class="panel-kicker">Форма / источник / синтез</p>
           <div class="form-choice-groups">
             <div v-for="group in formGroups" :key="group.id" class="form-choice-group">
               <p>{{ group.label }}</p>
@@ -985,7 +994,7 @@ onBeforeUnmount(() => {
           </details>
 
           <details v-if="rawAdvancedControls.length || rawLayers.length" class="control-details">
-            <summary>Точная настройка и анатомия</summary>
+            <summary>{{ rawLayers.length ? "Точная настройка и анатомия" : "Точная настройка" }}</summary>
             <div class="advanced-controls">
               <label v-for="control in rawAdvancedControls" :key="control.key" class="range-field">
                 <span>{{ control.label }} <output>{{ formatValue(control, settings[control.key]) }}</output></span>
@@ -1001,7 +1010,7 @@ onBeforeUnmount(() => {
                 >
               </label>
 
-              <div class="anatomy-box">
+              <div v-if="rawLayers.length" class="anatomy-box">
                 <div class="anatomy-title"><strong>Анатомия</strong><small>нажмите, чтобы убрать</small></div>
                 <div class="layer-grid">
                   <button
