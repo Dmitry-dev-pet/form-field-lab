@@ -6,6 +6,8 @@
 
 `blastophore-original-001.html` — первый выпуск серии Form / Field Originals. Собственный 279-символьный Бластофор проходит полный цикл почкования в вертикальном кадре; критичная типографика помещена в официальный безопасный прямоугольник TikTok In-Feed Standard LTR.
 
+`krylofor-original-002.html` — второй выпуск серии Form / Field Originals. Точный 280-символьный Крылофор выполняет четыре полных взмаха и собственный пространственный полуоборот; фиксированный портретный поворот и вся типографика остаются внешней видеопостановкой.
+
 Параметры камеры, титров и перехода не входят в RAW-геном.
 
 Для локального рендера нужны Python Playwright, Chrome и FFmpeg:
@@ -14,6 +16,7 @@
 python3 scripts/video/render_entity_001.py
 python3 scripts/video/render_sketch_36_small_code.py
 python3 scripts/video/render_blastophore_original_001.py
+python3 scripts/video/render_krylofor_original_002.py
 ```
 
 Команды используют общий `render_video.py` и создают MP4 и `cover.png` в соответствующих каталогах `public/videos/`. Исходный WebM временный; флаг `--keep-webm` сохраняет его рядом с MP4.

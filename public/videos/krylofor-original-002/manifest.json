@@ -1,0 +1,42 @@
+{
+  "id": "krylofor-original-002",
+  "series": "Form / Field Originals",
+  "number": 2,
+  "title": "Krylofor — 280 Characters Learn to Fly",
+  "status": "exported",
+  "created": "2026-08-26",
+  "video": {
+    "file": "krylofor-original-002.mp4",
+    "cover": "cover.png",
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "durationSeconds": 15,
+    "codec": "h264",
+    "pixelFormat": "yuv420p",
+    "audio": false
+  },
+  "genome": {
+    "entity": "krylofor",
+    "origin": "form-field-synthesis",
+    "characters": 280,
+    "limit": 280,
+    "timeStep": 0.01,
+    "completeWingbeats": 4,
+    "internalOrbit": true,
+    "sourceMechanicsChanged": false
+  },
+  "presentation": {
+    "externalToGenome": true,
+    "camera": "fixed 90-degree portrait roll; animated orbit remains in RAW",
+    "safeZone": {
+      "source": "TikTok In-Feed Standard LTR",
+      "sourceCanvas": [720, 1280],
+      "sourceRect": [80, 160, 440, 680],
+      "renderRect": [120, 240, 660, 1020]
+    },
+    "essentialTextMinimumPixels": 46,
+    "codeTextPixels": 38,
+    "displayTextMaximumPixels": 260
+  }
+}
