@@ -21,6 +21,12 @@ const routes = [
     meta: { title: "Эволюция" }
   },
   {
+    path: "/video/:id?",
+    name: "video",
+    component: () => import("./views/VideoView.vue"),
+    meta: { title: "Видео" }
+  },
+  {
     path: "/archive",
     name: "archive",
     component: () => import("./views/ArchiveView.vue"),
