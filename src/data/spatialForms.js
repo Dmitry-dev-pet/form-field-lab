@@ -1331,8 +1331,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Тор-поток",
     title: "Исходный тороидальный поток",
-    association: "точный источник · 480 торов · перенос фазы · дыхание толщины",
-    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок по индексам, а опциональное дыхание проводит ту же фазу через толщину торов.",
+    association: "точный источник · 480 торов · дыхание · RAW-вращение XYZ",
+    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок, дыхание меняет толщину, а три компактных rotate-вызова вращают сцену внутри самого RAW.",
     origin: "provided-source-study",
     autoOrbit: false,
     genomeSketch: TOROPHORE_GENOME_SKETCH,
@@ -1344,7 +1344,10 @@ export const spatialForms = Object.freeze([
       control("organCount", "Количество торов", 120, 720, 60, { format: "count" }),
       control("turns", "Обороты фазы", 1, 5, 1),
       control("organRadius", "Радиус тора", 60, 180, 10),
-      control("breath", "Дыхание", 0, 0.9, 0.1, { format: "percent" })
+      control("breath", "Дыхание", 0, 0.9, 0.1, { format: "percent" }),
+      control("spinX", "RAW-вращение X", 0, 5, 1, { format: "rawSpin" }),
+      control("spinY", "RAW-вращение Y", 0, 5, 1, { format: "rawSpin" }),
+      control("spinZ", "RAW-вращение Z", 0, 5, 1, { format: "rawSpin" })
     ],
     advancedControls: [
       control("noiseScale", "Сглаживание шума", 1, 9, 1)
@@ -1352,7 +1355,8 @@ export const spatialForms = Object.freeze([
     layers: [],
     randomRanges: {
       genomeSpeed: [1, 5, 1], organCount: [120, 720, 60], turns: [1, 5, 1],
-      organRadius: [60, 180, 10], breath: [0, 0.9, 0.1], noiseScale: [1, 9, 1]
+      organRadius: [60, 180, 10], breath: [0, 0.9, 0.1],
+      spinX: [0, 5, 1], spinY: [0, 5, 1], spinZ: [0, 5, 1], noiseScale: [1, 9, 1]
     },
     evaluate: torophorePoint
   }

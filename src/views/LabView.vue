@@ -248,6 +248,8 @@ const rawBudgetContract = computed(() => selectedForm.value.id === "pelagion"
   ? "микроэволюция выбирает корневую формулу не длиннее 280; уровни 512/768/900 не заменяют её, а добавляют орган, двухнаправленную сетку и автономный импульс. Камера и фаза переходят без перезапуска; касание остаётся только камерой."
   : selectedForm.value.id === "blastophore"
     ? "279 символов уже содержат полный цикл почкования и точную перетяжку до нулевого радиуса. 512 добавляет два ядра, 768 — тканевую сетку, 900 — бегущий морфогенетический фронт. Камера и фаза переходят между стадиями вне генома."
+    : selectedForm.value.id === "torophore"
+      ? "вращения X, Y и Z компилируются в RAW и расходуют его символы; ручной трекбол накладывается поверх результата, сохраняется отдельно и геном не меняет."
     : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.");
 const rawColorPalettes = computed(() => selectedForm.value.rawColorPalettes || []);
 const rawColorLaws = computed(() => selectedForm.value.rawColorLaws || []);
@@ -358,6 +360,7 @@ function theoryTarget(form) {
 function formatValue(control, value) {
   if (control.format === "speed") return `${Number(value).toFixed(2)}×`;
   if (control.format === "integerSpeed") return `${Math.round(Number(value))}×`;
+  if (control.format === "rawSpin") return Number(value) === 0 ? "выкл." : `${Math.round(Number(value))}×`;
   if (control.format === "codeFraction") {
     const digits = String(Math.round(Number(value))).padStart(2, "0");
     return digits.endsWith("0") ? `.${digits[0]}` : `.${digits}`;

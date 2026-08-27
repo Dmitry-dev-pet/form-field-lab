@@ -12,6 +12,7 @@ import {
 
 function executeFrames(code) {
   let organs = [];
+  let rotations = [];
   let current = {};
   const sandbox = {
     TAU: Math.PI * 2,
@@ -34,7 +35,11 @@ function executeFrames(code) {
     },
     createCanvas() {},
     noStroke() {},
-    clear() { organs = []; },
+    clear() { organs = []; rotations = []; },
+    scale() {},
+    rotateX(value) { rotations.push(["X", value]); },
+    rotateY(value) { rotations.push(["Y", value]); },
+    rotateZ(value) { rotations.push(["Z", value]); },
     fill(value) { current.color = value; },
     push() { current = { color: current.color }; },
     translate(x, y, z) { current.position = [x, y, z]; },
@@ -54,8 +59,14 @@ function executeFrames(code) {
   sandbox.setup();
   sandbox.draw();
   const first = organs.map(organ => structuredClone(organ));
+  const firstRotations = rotations.map(rotation => [...rotation]);
   sandbox.draw();
-  return { first, second: organs.map(organ => structuredClone(organ)) };
+  return {
+    first,
+    firstRotations,
+    second: organs.map(organ => structuredClone(organ)),
+    secondRotations: rotations.map(rotation => [...rotation])
+  };
 }
 
 test("the torus-flow canon is the exact provided 200-character source", () => {
@@ -76,6 +87,7 @@ test("the torus-flow canon is the exact provided 200-character source", () => {
   assert.ok(frames.first.every(organ => organ.position[2] === 0));
   assert.ok(frames.first.every(organ => organ.radius === 120));
   assert.ok(frames.first.every(organ => organ.tubeRadius === 50));
+  assert.deepEqual(frames.firstRotations, []);
   assert.ok(new Set(frames.first.map(organ => organ.color)).size > 100);
 
   const firstPhase = frames.first.find(organ => organ.index === 100).phase;
@@ -92,7 +104,10 @@ test("each source control changes only a compact constant and stays below 280", 
       turns: 1,
       noiseScale: 1,
       organRadius: 60,
-      breath: 0
+      breath: 0,
+      spinX: 0,
+      spinY: 0,
+      spinZ: 0
     }),
     compileTorophoreGenome({
       ...TOROPHORE_DEFAULTS,
@@ -101,7 +116,10 @@ test("each source control changes only a compact constant and stays below 280", 
       turns: 5,
       noiseScale: 9,
       organRadius: 180,
-      breath: 0.9
+      breath: 0.9,
+      spinX: 5,
+      spinY: 5,
+      spinZ: 5
     })
   ];
 
@@ -117,7 +135,41 @@ test("each source control changes only a compact constant and stays below 280", 
   assert.match(endpoints[0].code, /C\+=1/);
   assert.match(endpoints[0].code, /for\(i=120/);
   assert.match(endpoints[1].code, /noise\(\(i-C\)\/9\)/);
+  assert.match(endpoints[1].code, /scale\(\.6\),rotateX\(C\/240\),rotateY\(C\/240\),rotateZ\(C\/240\)/);
   assert.match(endpoints[1].code, /torus\(180,50\*\(1\+\.9\*sin\(d\+C\/30\)\)\)/);
+});
+
+test("RAW rotations compile per axis and advance with C inside the sketch", () => {
+  const compiled = compileTorophoreGenome({
+    ...TOROPHORE_DEFAULTS,
+    spinX: 2,
+    spinY: 3,
+    spinZ: 1
+  });
+  const frames = executeFrames(compiled.code);
+
+  assert.equal(compiled.characters, 253);
+  assert.match(compiled.code, /scale\(\.6\),rotateX\(C\/600\),rotateY\(C\/400\),rotateZ\(C\/900\)/);
+  assert.deepEqual(frames.firstRotations, [["X", 2 / 600], ["Y", 2 / 400], ["Z", 2 / 900]]);
+  assert.deepEqual(frames.secondRotations, [["X", 4 / 600], ["Y", 4 / 400], ["Z", 4 / 900]]);
+  assert.ok(compiled.withinLimit, `${compiled.characters} characters`);
+});
+
+test("breathing, smoothing and all RAW rotations fit together below 280", () => {
+  const compiled = compileTorophoreGenome({
+    ...TOROPHORE_DEFAULTS,
+    noiseScale: 9,
+    breath: 0.9,
+    spinX: 5,
+    spinY: 5,
+    spinZ: 5
+  });
+
+  assert.ok(compiled.withinLimit, `${compiled.characters} characters`);
+  assert.ok(compiled.characters <= TOROPHORE_GENOME_LIMIT);
+  assert.equal(compiled.characters, 279);
+  assert.doesNotThrow(() => new Function(compiled.code));
+  assert.equal(executeFrames(compiled.code).first.length, 480);
 });
 
 test("breathing modulates only the torus tube radius through the source phase", () => {
