@@ -253,7 +253,7 @@ const rawBudgetContract = computed(() => selectedForm.value.id === "pelagion"
   : selectedForm.value.id === "blastophore"
     ? "279 символов уже содержат полный цикл почкования и точную перетяжку до нулевого радиуса. 512 добавляет два ядра, 768 — тканевую сетку, 900 — бегущий морфогенетический фронт. Камера и фаза переходят между стадиями вне генома."
     : selectedForm.value.id === "torophore"
-      ? "вращения X, Y и Z компилируются в RAW и расходуют его символы; ручной трекбол накладывается поверх результата, сохраняется отдельно и геном не меняет."
+      ? "цвет от фазы d и вращения X/Y/Z компилируются в RAW и расходуют его символы; ручной трекбол накладывается поверх результата, сохраняется отдельно и геном не меняет."
     : "признаки снимаются только в указанном списке и только до запуска. Базовая морфология, анимация и сохранённая камера входят даже в 280; вращение не изменяет сущность и не расходует символы.");
 const rawColorPalettes = computed(() => selectedForm.value.rawColorPalettes || []);
 const rawColorLaws = computed(() => selectedForm.value.rawColorLaws || []);
@@ -375,6 +375,7 @@ function formatValue(control, value) {
   if (control.format === "speed") return `${Number(value).toFixed(2)}×`;
   if (control.format === "integerSpeed") return `${Math.round(Number(value))}×`;
   if (control.format === "rawSpin") return Number(value) === 0 ? "выкл." : `${Math.round(Number(value))}×`;
+  if (control.format === "intensity") return `${Math.round(Number(value) / 9 * 100)}%`;
   if (control.format === "codeFraction") {
     const digits = String(Math.round(Number(value))).padStart(2, "0");
     return digits.endsWith("0") ? `.${digits[0]}` : `.${digits}`;
@@ -950,7 +951,7 @@ onBeforeUnmount(() => {
             <div class="raw-color-preview" :style="rawColorPreviewStyle" aria-hidden="true"></div>
 
             <div class="raw-color-group">
-              <div class="raw-color-label"><strong>Палитра</strong><small>перестановка каналов · 0 дополнительных символов</small></div>
+              <div class="raw-color-label"><strong>Палитра</strong><small>{{ selectedForm.rawColorPaletteCaption || "перестановка каналов · 0 дополнительных символов" }}</small></div>
               <div class="raw-palette-grid" role="group" aria-label="Палитра формульного цвета">
                 <button
                   v-for="option in rawColorPalettes"
@@ -966,7 +967,7 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="raw-color-group">
+            <div v-if="rawColorLaws.length > 1" class="raw-color-group">
               <div class="raw-color-label"><strong>Математический закон</strong><small>каждый вариант сохраняет RAW ≤ 280</small></div>
               <div class="raw-law-grid" role="group" aria-label="Математический закон цвета">
                 <button
@@ -983,6 +984,7 @@ onBeforeUnmount(() => {
               </div>
               <p>{{ selectedRawColorLaw.description }}</p>
             </div>
+            <p v-else>{{ selectedRawColorLaw.description }}</p>
           </section>
 
           <div class="control-list">

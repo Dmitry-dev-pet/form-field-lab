@@ -39,6 +39,8 @@ import {
 import {
   compileTorophoreGenome,
   TOROPHORE_AUTOROTATE_DEFAULTS,
+  TOROPHORE_COLOR_LAWS,
+  TOROPHORE_COLOR_PALETTES,
   TOROPHORE_DEFAULTS,
   TOROPHORE_GENOME_SKETCH
 } from "./torophoreGenome.js";
@@ -1332,8 +1334,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Тор-поток",
     title: "Исходный тороидальный поток",
-    association: "точный источник · 480 торов · дыхание · RAW-вращение XYZ",
-    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок, дыхание меняет толщину, а три компактных rotate-вызова вращают сцену внутри самого RAW.",
+    association: "точный источник · 480 торов · фазовый цвет · RAW-вращение XYZ",
+    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок, цвет и дыхание, а три компактных rotate-вызова вращают сцену внутри самого RAW.",
     origin: "provided-source-study",
     autoOrbit: false,
     genomeSketch: TOROPHORE_GENOME_SKETCH,
@@ -1342,6 +1344,9 @@ export const spatialForms = Object.freeze([
     defaults: TOROPHORE_DEFAULTS,
     startupDefaults: TOROPHORE_AUTOROTATE_DEFAULTS,
     startupPresetLabel: "RAW-автовращение",
+    rawColorPalettes: TOROPHORE_COLOR_PALETTES,
+    rawColorLaws: TOROPHORE_COLOR_LAWS,
+    rawColorPaletteCaption: "формула фазы · каждый вариант сохраняет RAW ≤ 280",
     primaryControls: [
       control("genomeSpeed", "Скорость переноса", 1, 5, 1, { format: "integerSpeed" }),
       control("organCount", "Количество торов", 120, 720, 60, { format: "count" }),
@@ -1350,7 +1355,8 @@ export const spatialForms = Object.freeze([
       control("breath", "Дыхание", 0, 0.9, 0.1, { format: "percent" }),
       control("spinX", "RAW-вращение X", 0, 5, 1, { format: "rawSpin" }),
       control("spinY", "RAW-вращение Y", 0, 5, 1, { format: "rawSpin" }),
-      control("spinZ", "RAW-вращение Z", 0, 5, 1, { format: "rawSpin" })
+      control("spinZ", "RAW-вращение Z", 0, 5, 1, { format: "rawSpin" }),
+      control("colorIntensity", "Интенсивность цвета", 1, 9, 1, { format: "intensity" })
     ],
     advancedControls: [
       control("noiseScale", "Сглаживание шума", 1, 9, 1)
@@ -1359,7 +1365,8 @@ export const spatialForms = Object.freeze([
     randomRanges: {
       genomeSpeed: [1, 5, 1], organCount: [120, 720, 60], turns: [1, 5, 1],
       organRadius: [60, 180, 10], breath: [0, 0.9, 0.1],
-      spinX: [0, 5, 1], spinY: [0, 5, 1], spinZ: [0, 5, 1], noiseScale: [1, 9, 1]
+      spinX: [0, 5, 1], spinY: [0, 5, 1], spinZ: [0, 5, 1],
+      colorIntensity: [1, 9, 1], noiseScale: [1, 9, 1]
     },
     evaluate: torophorePoint
   }

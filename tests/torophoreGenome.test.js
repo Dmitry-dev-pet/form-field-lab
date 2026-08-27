@@ -4,6 +4,7 @@ import vm from "node:vm";
 import {
   compileTorophoreGenome,
   TOROPHORE_AUTOROTATE_DEFAULTS,
+  TOROPHORE_COLOR_PALETTES,
   TOROPHORE_DEFAULTS,
   TOROPHORE_GENOME,
   TOROPHORE_GENOME_CHARACTERS,
@@ -41,7 +42,7 @@ function executeFrames(code) {
     rotateX(value) { rotations.push(["X", value]); },
     rotateY(value) { rotations.push(["Y", value]); },
     rotateZ(value) { rotations.push(["Z", value]); },
-    fill(value) { current.color = value; },
+    fill(...values) { current.color = values.length === 1 ? values[0] : values; },
     push() { current = { color: current.color }; },
     translate(x, y, z) { current.position = [x, y, z]; },
     torus(radius, tubeRadius = 50) {
@@ -144,13 +145,39 @@ test("RAW rotations compile per axis and advance with C inside the sketch", () =
   const compiled = compileTorophoreGenome(TOROPHORE_AUTOROTATE_DEFAULTS);
   const frames = executeFrames(compiled.code);
 
-  assert.equal(compiled.characters, 253);
+  assert.equal(compiled.characters, 246);
   assert.match(compiled.code, /scale\(\.6\),rotateX\(C\/600\),rotateY\(C\/400\),rotateZ\(C\/900\)/);
+  assert.match(compiled.code, /fill\(d\*20,99,255-d\*9\)/);
   assert.deepEqual(frames.firstRotations, [["X", 2 / 600], ["Y", 2 / 400], ["Z", 2 / 900]]);
   assert.deepEqual(frames.secondRotations, [["X", 4 / 600], ["Y", 4 / 400], ["Z", 4 / 900]]);
   assert.ok(compiled.withinLimit, `${compiled.characters} characters`);
   assert.notEqual(compiled.code, TOROPHORE_SOURCE);
   assert.equal(compileTorophoreGenome(TOROPHORE_DEFAULTS).code, TOROPHORE_SOURCE);
+});
+
+test("phase palettes and every intensity stay finite inside the 280-character genome", () => {
+  for (const palette of TOROPHORE_COLOR_PALETTES) {
+    for (const colorIntensity of [1, 9]) {
+      const compiled = compileTorophoreGenome({
+        ...TOROPHORE_DEFAULTS,
+        colorPalette: palette.id,
+        colorIntensity,
+        noiseScale: 9,
+        breath: 0.9,
+        spinX: 5,
+        spinY: 5,
+        spinZ: 5
+      });
+      const colors = executeFrames(compiled.code).first.map(organ => organ.color);
+
+      assert.ok(compiled.withinLimit, `${palette.id}/${colorIntensity}: ${compiled.characters}`);
+      assert.ok(compiled.characters <= TOROPHORE_GENOME_LIMIT);
+      assert.ok(colors.flatMap(color => Array.isArray(color) ? color : [color]).every(Number.isFinite));
+      assert.ok(new Set(colors.map(color => JSON.stringify(color))).size > 100);
+      if (palette.id === "original") assert.ok(colors.every(color => !Array.isArray(color)));
+      else assert.ok(colors.every(color => Array.isArray(color) && color.length === 3));
+    }
+  }
 });
 
 test("breathing, smoothing and all RAW rotations fit together below 280", () => {

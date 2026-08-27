@@ -36,6 +36,11 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     [torophore.startupDefaults.spinX, torophore.startupDefaults.spinY, torophore.startupDefaults.spinZ],
     [2, 3, 1]
   );
+  assert.equal(torophore.defaults.colorPalette, "original");
+  assert.equal(torophore.startupDefaults.colorPalette, "lagoon");
+  assert.deepEqual(torophore.rawColorPalettes.map(option => option.id), [
+    "original", "lagoon", "fire", "plasma"
+  ]);
   assert.equal(torophore.startupPresetLabel, "RAW-автовращение");
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
