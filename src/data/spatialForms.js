@@ -623,11 +623,12 @@ function torophorePoint(index, time, settings, _layers, target) {
     * Math.PI * 2 * settings.turns;
   const surface = index * 2.399963;
   const tube = index * 1.618034;
-  const ring = settings.organRadius + 10 * Math.cos(tube);
+  const tubeRadius = 50 * (1 + settings.breath * Math.sin(phase + time / 30));
+  const ring = settings.organRadius + tubeRadius * Math.cos(tube);
 
   target.x = index * Math.cos(phase) + ring * Math.cos(surface) + 200;
   target.y = index * Math.sin(phase) + ring * Math.sin(surface) + 200;
-  target.z = 10 * Math.sin(tube);
+  target.z = tubeRadius * Math.sin(tube);
   target.parameter = index / settings.organCount;
   target.k = Math.sin(phase);
   target.e = settings.noiseScale;
@@ -1330,8 +1331,8 @@ export const spatialForms = Object.freeze([
     sketchNumber: null,
     shortLabel: "Тор-поток",
     title: "Исходный тороидальный поток",
-    association: "точный источник · 480 торов · перенос фазы · WEBGL",
-    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок по индексам, центры остаются в плоскости z = 0, а объём дают сами торы.",
+    association: "точный источник · 480 торов · перенос фазы · дыхание толщины",
+    description: "Буквальный 200-символьный WEBGL-фрагмент без нашей новой геометрии. Шум переносит фазовый рисунок по индексам, а опциональное дыхание проводит ту же фазу через толщину торов.",
     origin: "provided-source-study",
     autoOrbit: false,
     genomeSketch: TOROPHORE_GENOME_SKETCH,
@@ -1342,7 +1343,8 @@ export const spatialForms = Object.freeze([
       control("genomeSpeed", "Скорость переноса", 1, 5, 1, { format: "integerSpeed" }),
       control("organCount", "Количество торов", 120, 720, 60, { format: "count" }),
       control("turns", "Обороты фазы", 1, 5, 1),
-      control("organRadius", "Радиус тора", 60, 180, 10)
+      control("organRadius", "Радиус тора", 60, 180, 10),
+      control("breath", "Дыхание", 0, 0.9, 0.1, { format: "percent" })
     ],
     advancedControls: [
       control("noiseScale", "Сглаживание шума", 1, 9, 1)
@@ -1350,7 +1352,7 @@ export const spatialForms = Object.freeze([
     layers: [],
     randomRanges: {
       genomeSpeed: [1, 5, 1], organCount: [120, 720, 60], turns: [1, 5, 1],
-      organRadius: [60, 180, 10], noiseScale: [1, 9, 1]
+      organRadius: [60, 180, 10], breath: [0, 0.9, 0.1], noiseScale: [1, 9, 1]
     },
     evaluate: torophorePoint
   }

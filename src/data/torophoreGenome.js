@@ -18,6 +18,7 @@ export const TOROPHORE_DEFAULTS = Object.freeze({
   turns: 2,
   noiseScale: 1,
   organRadius: 120,
+  breath: 0,
   pointCount: 480,
   alpha: 255,
   backgroundColor: "#090909"
@@ -29,19 +30,33 @@ function integer(value, fallback, minimum, maximum, step = 1) {
   return Math.min(maximum, Math.max(minimum, stepped));
 }
 
+function decimal(value, fallback, minimum, maximum, step) {
+  const number = Number.isFinite(Number(value)) ? Number(value) : fallback;
+  const stepped = Math.round(number / step) * step;
+  return Math.min(maximum, Math.max(minimum, Number(stepped.toFixed(1))));
+}
+
+function compactDecimal(value) {
+  return String(value).replace(/^0\./, ".");
+}
+
 export function compileTorophoreGenome(settings = {}) {
   const parameters = Object.freeze({
     genomeSpeed: integer(settings.genomeSpeed, TOROPHORE_DEFAULTS.genomeSpeed, 1, 5),
     organCount: integer(settings.organCount, TOROPHORE_DEFAULTS.organCount, 120, 720, 60),
     turns: integer(settings.turns, TOROPHORE_DEFAULTS.turns, 1, 5),
     noiseScale: integer(settings.noiseScale, TOROPHORE_DEFAULTS.noiseScale, 1, 9),
-    organRadius: integer(settings.organRadius, TOROPHORE_DEFAULTS.organRadius, 60, 180, 10)
+    organRadius: integer(settings.organRadius, TOROPHORE_DEFAULTS.organRadius, 60, 180, 10),
+    breath: decimal(settings.breath, TOROPHORE_DEFAULTS.breath, 0, 0.9, 0.1)
   });
   const count = parameters.organCount === 480 ? "W*2/3" : parameters.organCount;
   const radius = parameters.organRadius === 120 ? "W/6" : parameters.organRadius;
   const noise = parameters.noiseScale === 1
     ? "noise(i-C)"
     : `noise((i-C)/${parameters.noiseScale})`;
+  const torus = parameters.breath === 0
+    ? `torus(${radius})`
+    : `torus(${radius},50*(1+${compactDecimal(parameters.breath)}*sin(d+C/30)))`;
   const code = `C=0
 setup=_=>createCanvas(W=720,W,WEBGL)&noStroke()
 draw=_=>{clear();C+=${parameters.genomeSpeed}
@@ -50,14 +65,15 @@ d=${noise}*TAU*${parameters.turns}
 fill(map(sin(d),-1,1,255,0))
 push()
 translate(cos(d)*i,sin(d)*i,0)
-torus(${radius})
+${torus}
 pop()}}`;
   const identity = [
     parameters.genomeSpeed,
     parameters.organCount,
     parameters.turns,
     parameters.noiseScale,
-    parameters.organRadius
+    parameters.organRadius,
+    parameters.breath
   ].join("-");
   const id = `torus-source-${identity}`;
   const sketch = Object.freeze({ id, code, viewModel: "webgl-orbit" });
