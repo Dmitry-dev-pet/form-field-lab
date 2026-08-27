@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import {
   compileTorophoreGenome,
+  TOROPHORE_AUTOROTATE_DEFAULTS,
   TOROPHORE_DEFAULTS,
   TOROPHORE_GENOME,
   TOROPHORE_GENOME_CHARACTERS,
@@ -140,12 +141,7 @@ test("each source control changes only a compact constant and stays below 280", 
 });
 
 test("RAW rotations compile per axis and advance with C inside the sketch", () => {
-  const compiled = compileTorophoreGenome({
-    ...TOROPHORE_DEFAULTS,
-    spinX: 2,
-    spinY: 3,
-    spinZ: 1
-  });
+  const compiled = compileTorophoreGenome(TOROPHORE_AUTOROTATE_DEFAULTS);
   const frames = executeFrames(compiled.code);
 
   assert.equal(compiled.characters, 253);
@@ -153,6 +149,8 @@ test("RAW rotations compile per axis and advance with C inside the sketch", () =
   assert.deepEqual(frames.firstRotations, [["X", 2 / 600], ["Y", 2 / 400], ["Z", 2 / 900]]);
   assert.deepEqual(frames.secondRotations, [["X", 4 / 600], ["Y", 4 / 400], ["Z", 4 / 900]]);
   assert.ok(compiled.withinLimit, `${compiled.characters} characters`);
+  assert.notEqual(compiled.code, TOROPHORE_SOURCE);
+  assert.equal(compileTorophoreGenome(TOROPHORE_DEFAULTS).code, TOROPHORE_SOURCE);
 });
 
 test("breathing, smoothing and all RAW rotations fit together below 280", () => {

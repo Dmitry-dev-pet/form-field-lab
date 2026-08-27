@@ -27,6 +27,16 @@ test("the spatial lab separates attributed lifts from synthetic entities", () =>
     "moirephore"
   ]);
   assert.deepEqual(sourceStudies.map(form => form.id), ["torophore"]);
+  const torophore = sourceStudies[0];
+  assert.deepEqual(
+    [torophore.defaults.spinX, torophore.defaults.spinY, torophore.defaults.spinZ],
+    [0, 0, 0]
+  );
+  assert.deepEqual(
+    [torophore.startupDefaults.spinX, torophore.startupDefaults.spinY, torophore.startupDefaults.spinZ],
+    [2, 3, 1]
+  );
+  assert.equal(torophore.startupPresetLabel, "RAW-автовращение");
   assert.equal(new Set(spatialForms.map(form => form.id)).size, spatialForms.length);
   assert.equal(new Set(attributed.map(form => form.sketch.id)).size, attributed.length);
 

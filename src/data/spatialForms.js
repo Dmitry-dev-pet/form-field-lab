@@ -38,6 +38,7 @@ import {
 } from "./moirephoreGenome.js";
 import {
   compileTorophoreGenome,
+  TOROPHORE_AUTOROTATE_DEFAULTS,
   TOROPHORE_DEFAULTS,
   TOROPHORE_GENOME_SKETCH
 } from "./torophoreGenome.js";
@@ -1339,6 +1340,8 @@ export const spatialForms = Object.freeze([
     compileGenome: compileTorophoreGenome,
     timeStep: 2,
     defaults: TOROPHORE_DEFAULTS,
+    startupDefaults: TOROPHORE_AUTOROTATE_DEFAULTS,
+    startupPresetLabel: "RAW-автовращение",
     primaryControls: [
       control("genomeSpeed", "Скорость переноса", 1, 5, 1, { format: "integerSpeed" }),
       control("organCount", "Количество торов", 120, 720, 60, { format: "count" }),

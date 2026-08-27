@@ -115,12 +115,12 @@ const formGroups = computed(() => {
   }
   return groups;
 });
-const settings = reactive({ ...initialForm.defaults });
+const settings = reactive({ ...startupSettings(initialForm) });
 const layers = reactive(initialForm.savedLayers || spatialLayerDefaults(initialForm));
 const bareRunner = ref(null);
 const barePaused = ref(false);
 const invertOrbitY = ref(true);
-const preset = ref(basePresetLabel(initialForm));
+const preset = ref(startupPresetLabel(initialForm));
 const mutationMessage = ref("");
 const genomeCopyLabel = ref("Копировать RAW");
 const bareVariant = ref(defaultBareVariant(initialForm));
@@ -198,6 +198,8 @@ const bareSketch = computed(() => isImprintBare.value
   ? Object.freeze({ id: imprintResult.value.id, code: imprintResult.value.code })
   : selectedRawVariant.value?.sketch || canonicalSketch.value);
 const bareCodeLength = computed(() => bareSketch.value.code.length);
+const hasRawAutorotation = computed(() => Boolean(selectedForm.value.startupDefaults)
+  && ["spinX", "spinY", "spinZ"].some(key => Number(settings[key]) > 0));
 const rawBudgetStatus = computed(() => budgetSelection.value || Object.freeze({
   budget: rawBudget.value,
   characters: bareCodeLength.value,
@@ -225,7 +227,9 @@ const bareRunnerLabel = computed(() => isCompiledGenome.value
     : `${selectedForm.value.title}: автономный канонический p5.js-геном`);
 const bareLead = computed(() => isCompiledGenome.value
   ? selectedForm.value.origin === "provided-source-study"
-    ? `На холсте исполняется буквальный исходный код: ${bareCodeLength.value} из 280 символов. Ползунки меняют только его исходные константы; «Сбросить» возвращает точную строку.`
+    ? hasRawAutorotation.value
+      ? `На холсте исполняется ${bareCodeLength.value}-символьный RAW с автоматическим вращением внутри строки. «Исходник 200» возвращает буквальный код автора.`
+      : `На холсте исполняется ${bareCodeLength.value}-символьный RAW без автоматического вращения. «Исходник 200» возвращает точную строку автора.`
     : selectedForm.value.autoOrbit
     ? `На холсте исполняется итоговый ${bareCodeLength.value}-символьный RAW: форма, волна, цвет и автоматический пространственный оборот находятся в самой строке.`
     : `На холсте исполняется итоговый код выбранной формы: ${bareCodeLength.value} из 280 символов. Лаборатория меняет только его короткие константы.`
@@ -352,6 +356,16 @@ function basePresetLabel(form) {
   return form.sketch ? "Original" : "Синтез";
 }
 
+function startupSettings(form) {
+  return form.startupDefaults || form.defaults;
+}
+
+function startupPresetLabel(form) {
+  return form.startupDefaults
+    ? form.startupPresetLabel || "Стартовый RAW"
+    : basePresetLabel(form);
+}
+
 function theoryTarget(form) {
   if (form.savedRecord) return "/theory#chronophore";
   return form.sketch ? "/theory" : `/theory#${form.id}`;
@@ -452,6 +466,16 @@ function reset() {
   spaSnapshot.value = form.savedPose || null;
   rawViewState.value = spaSnapshot.value;
   bareVariant.value = defaultBareVariant(form);
+}
+
+function applyStartupPreset() {
+  const form = selectedForm.value;
+  if (!form.startupDefaults) return;
+  for (const key of ["spinX", "spinY", "spinZ"]) {
+    settings[key] = form.startupDefaults[key];
+  }
+  barePaused.value = false;
+  preset.value = form.startupPresetLabel || "RAW-автовращение";
 }
 
 function frontView() {
@@ -562,14 +586,14 @@ async function selectForm(formId, updateRoute = true) {
   await captureActiveView();
 
   selectedFormId.value = form.id;
-  replaceReactive(settings, form.defaults);
+  replaceReactive(settings, startupSettings(form));
   replaceReactive(layers, form.savedLayers || spatialLayerDefaults(form));
   if (form.savedColor) Object.assign(color, form.savedColor);
   spaSnapshot.value = restoredViewFor(form);
   rawViewState.value = spaSnapshot.value;
   bareVariant.value = defaultBareVariant(form);
   barePaused.value = false;
-  preset.value = basePresetLabel(form);
+  preset.value = startupPresetLabel(form);
 
   if (updateRoute) {
     const query = { ...route.query };
@@ -978,8 +1002,9 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="button-grid raw-genetic-actions">
-            <button class="button" type="button" @click="reset">Сбросить</button>
-            <button class="button" type="button" @click="randomize">Случайный</button>
+            <button class="button" type="button" @click="reset">{{ selectedForm.startupDefaults ? "Исходник 200" : "Сбросить" }}</button>
+            <button v-if="selectedForm.startupDefaults" class="button" type="button" @click="applyStartupPreset">Автовращение</button>
+            <button v-else class="button" type="button" @click="randomize">Случайный</button>
           </div>
 
           <details v-if="isImprintRequested" class="control-details color-details" open>

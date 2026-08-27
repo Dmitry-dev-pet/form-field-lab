@@ -29,6 +29,13 @@ export const TOROPHORE_DEFAULTS = Object.freeze({
   backgroundColor: "#090909"
 });
 
+export const TOROPHORE_AUTOROTATE_DEFAULTS = Object.freeze({
+  ...TOROPHORE_DEFAULTS,
+  spinX: 2,
+  spinY: 3,
+  spinZ: 1
+});
+
 function integer(value, fallback, minimum, maximum, step = 1) {
   const number = Number.isFinite(Number(value)) ? Number(value) : fallback;
   const stepped = Math.round(number / step) * step;
