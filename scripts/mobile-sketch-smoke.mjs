@@ -65,6 +65,55 @@ try {
     if (bright<12) throw new Error(id+": blank canvas ("+bright+" bright pixels)");
     console.log("PASS "+id+" "+bright+" visible pixels @ "+png.width+"x"+png.height);
   }
+
+  // The earlier smoke test scrolled the canvas into view during screenshot(),
+  // hiding the offscreen p5 start/auto-pause race.
+  const hidden = await browser.newPage({
+    viewport:{width:390,height:844},deviceScaleFactor:3,hasTouch:true,isMobile:true
+  });
+  await hidden.addInitScript(() => {
+    window.IntersectionObserver = class SimulatedOffscreenCanvas {
+      constructor(cb) { this.callback=cb; }
+      observe(element) {
+        setTimeout(() => this.callback([{target:element,isIntersecting:false}]), 0);
+      }
+      disconnect() {}
+      unobserve() {}
+    };
+  });
+  try {
+    await hidden.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+    // No canvas screenshot, no Restart, no scroll.
+    await hidden.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:20000});
+    console.log("PASS first-load-while-offscreen: first frame started without Restart");
+  } finally { await hidden.close(); }
+
+  // Simulate first CDN request failing; automatic retry must recover.
+  const recovering = await browser.newPage({viewport:{width:1280,height:800}});
+  let aborted = 0;
+  await recovering.route("**/p5.min.js", async route => {
+    if (aborted === 0) { aborted++; await route.abort("failed"); }
+    else await route.continue();
+  });
+  try {
+    await recovering.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+    await recovering.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:25000});
+    if (aborted !== 1) throw new Error("Expected the initial p5.js fetch to be deliberately blocked");
+    if (await recovering.locator(".raw-runtime-failure").count()) throw new Error("Unexpected unrecovered error");
+    console.log("PASS automatic-boot-retry: p5 CDN failed, recovered without button click");
+  } finally { await recovering.close(); }
+
+  // Desktop navigation starts immediately, without pressing Restart.
+  const desktop = await browser.newPage({viewport:{width:1280,height:800}});
+  try {
+    await desktop.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+    for (const id of ["swimmer","chronophore","torophore"]) {
+      await desktop.locator('[data-form-id="'+id+'"]').click();
+      await desktop.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:20000});
+      console.log("PASS desktop-auto-start "+id);
+    }
+  } finally { await desktop.close(); }
+
   if(errors.length) console.log("Console diagnostics:",errors.slice(0,8));
   console.log("PASS: "+ids.length+" mobile-viewport forms drew nonblank canvases");
 } finally { await browser?.close(); preview.kill(); }

@@ -319,10 +319,11 @@ function installSpatialViewBridge(viewModel, initialViewState) {
 }
 
 
-function installRunnerErrorChannel() {
+function installRunnerErrorChannel(frameToken = "") {
   const send = (state, message = "") => {
     parent.postMessage({
       type: "sketch-runtime-status",
+      frameToken,
       state,
       message: String(message).slice(0, 350)
     }, "*");
@@ -404,7 +405,7 @@ export function runnerDocument(code, options = {}) {
     : "";
   // Separate scripts are essential: syntax errors in the author's unmodified
   // RAW code cannot disable the independently installed diagnostics bridge.
-  const diagnostics = `(${installRunnerErrorChannel.toString()})();`;
+  const diagnostics = `(${installRunnerErrorChannel.toString()})(${JSON.stringify(options.frameToken || "")});`;
   const frameMonitor = `(${installRunnerFrameMonitor.toString()})();`;
   return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#090909}body{display:grid;place-items:center}canvas{display:block!important;width:min(100vw,100vh)!important;height:min(100vw,100vh)!important;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style><script>${diagnostics}${closeScript}<script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js" onerror="window.__sketchStatus?.('error','Не удалось загрузить p5.js')">${closeScript}<script>${safeCode}${closeScript}<script>${frameMonitor}\n${motionBridge}\n${spatialBridge}${closeScript}</head><body></body></html>`;
 }

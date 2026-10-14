@@ -122,3 +122,13 @@ test("runner diagnostics remain available even when the unmodified RAW has a syn
   assert.match(html, /sketch-motion/);
   assert.match(runnerDocument("draw=_=>{}", {viewModel: "webgl-orbit"}), /installSpatialViewBridge/);
 });
+
+test("each p5 iframe boot emits a versioned status so a prior iframe cannot overwrite it", () => {
+  const first = runnerDocument("t=0,draw=_=>{}", { frameToken: "first-load" });
+  const second = runnerDocument("t=0,draw=_=>{}", { frameToken: "second-load" });
+  assert.match(first, /frameToken/);
+  assert.match(first, /"first-load"/);
+  assert.match(second, /"second-load"/);
+  assert.doesNotMatch(second, /"first-load"/);
+  assert.match(second, /sketch-runtime-status/);
+});
