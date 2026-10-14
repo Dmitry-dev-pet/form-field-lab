@@ -1,6 +1,7 @@
 <script setup>
 const navigation = [
   { to: "/lab", label: "Лаборатория", short: "Лаб" },
+  { to: "/glsl", label: "GLSL", short: "GLSL" },
   { to: "/video", label: "Видео", short: "Видео" },
   { to: "/evolution", label: "Эволюция", short: "Эвол." },
   { to: "/archive", label: "Архив", short: "Архив" },
