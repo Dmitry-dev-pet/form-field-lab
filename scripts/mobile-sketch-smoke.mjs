@@ -46,26 +46,6 @@ try {
   });
   const errors=[];
   page.on("pageerror",e=>errors.push(e.message));
-  await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
-  for (const id of ids) {
-    await page.locator('[data-form-id="'+id+'"]').click({timeout:10000});
-    await page.locator('[data-form-id="'+id+'"][aria-pressed="true"]').waitFor({timeout:15000});
-    try {
-      await page.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:id==="torophore"?30000:17000});
-    } catch {
-      const status=await page.locator(".lab-raw-runner").getAttribute("data-runtime-state");
-      const detail=await page.locator(".raw-runtime-failure").allTextContents();
-      throw new Error(id+": no first frame. Status="+status+"; "+detail.join(" "));
-    }
-    const canvas=page.frameLocator(".lab-raw-runner iframe").locator("canvas");
-    await canvas.waitFor({state:"visible",timeout:10000});
-    await sleep(300); // IntersectionObserver resumes canvases scrolled into view.
-    const png=PNG.sync.read(await canvas.screenshot({timeout:15000}));
-    const bright=nonDarkPixels(png);
-    if (bright<12) throw new Error(id+": blank canvas ("+bright+" bright pixels)");
-    console.log("PASS "+id+" "+bright+" visible pixels @ "+png.width+"x"+png.height);
-  }
-
   // The earlier smoke test scrolled the canvas into view during screenshot(),
   // hiding the offscreen p5 start/auto-pause race.
   const hidden = await browser.newPage({
@@ -85,23 +65,42 @@ try {
     await hidden.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
     // No canvas screenshot, no Restart, no scroll.
     await hidden.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:20000});
-    console.log("PASS first-load-while-offscreen: first frame started without Restart");
+    // Read pixels directly; canvas.screenshot() scrolls it and masks noLoop bugs.
+    const visible = await hidden.frameLocator(".lab-raw-runner iframe").locator("canvas").evaluate(canvas => {
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return -1;
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let total = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 100 && Math.max(data[i], data[i + 1], data[i + 2]) > 35) total++;
+      }
+      return total;
+    });
+    if (visible < 12) throw new Error("Offscreen first frame was blank (" + visible + " bright pixels)");
+    console.log("PASS first-load-while-offscreen: " + visible + " pixels, without Restart or scrolling");
   } finally { await hidden.close(); }
 
   // Simulate first CDN request failing; automatic retry must recover.
-  const recovering = await browser.newPage({viewport:{width:1280,height:800}});
+  const retryContext = await browser.newContext({viewport:{width:1280,height:800}});
   let aborted = 0;
-  await recovering.route("**/p5.min.js", async route => {
-    if (aborted === 0) { aborted++; await route.abort("failed"); }
-    else await route.continue();
+  const p5Requests = [];
+  // Intercept all subframe requests, including sandboxed about:srcdoc
+  // children whose opaque origin can behave differently from the parent.
+  await retryContext.route("**/*", async route => {
+    if (route.request().url().includes("p5.min.js")) {
+      p5Requests.push(route.request().url());
+      if (aborted === 0) { aborted++; await route.abort("failed"); return; }
+    }
+    await route.continue();
   });
+  const recovering = await retryContext.newPage();
   try {
     await recovering.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
     await recovering.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:25000});
-    if (aborted !== 1) throw new Error("Expected the initial p5.js fetch to be deliberately blocked");
+    if (aborted !== 1) throw new Error("Could not intercept the initial p5.js request; matched: " + p5Requests.join(", "));
     if (await recovering.locator(".raw-runtime-failure").count()) throw new Error("Unexpected unrecovered error");
     console.log("PASS automatic-boot-retry: p5 CDN failed, recovered without button click");
-  } finally { await recovering.close(); }
+  } finally { await retryContext.close(); }
 
   // Desktop navigation starts immediately, without pressing Restart.
   const desktop = await browser.newPage({viewport:{width:1280,height:800}});
@@ -113,6 +112,26 @@ try {
       console.log("PASS desktop-auto-start "+id);
     }
   } finally { await desktop.close(); }
+
+  await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
+  for (const id of ids) {
+    await page.locator('[data-form-id="'+id+'"]').click({timeout:10000});
+    await page.locator('[data-form-id="'+id+'"][aria-pressed="true"]').waitFor({timeout:15000});
+    try {
+      await page.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:id==="torophore"?30000:17000});
+    } catch {
+      const status=await page.locator(".lab-raw-runner").getAttribute("data-runtime-state");
+      const detail=await page.locator(".raw-runtime-failure").allTextContents();
+      throw new Error(id+": no first frame. Status="+status+"; "+detail.join(" "));
+    }
+    const canvas=page.frameLocator(".lab-raw-runner iframe").locator("canvas");
+    await canvas.waitFor({state:"visible",timeout:10000});
+    await sleep(300); // IntersectionObserver resumes canvases scrolled into view.
+    const png=PNG.sync.read(await canvas.screenshot({timeout:15000}));
+    const bright=nonDarkPixels(png);
+    if (bright<12) throw new Error(id+": blank canvas ("+bright+" bright pixels)");
+    console.log("PASS "+id+" "+bright+" visible pixels @ "+png.width+"x"+png.height);
+  }
 
   if(errors.length) console.log("Console diagnostics:",errors.slice(0,8));
   console.log("PASS: "+ids.length+" mobile-viewport forms drew nonblank canvases");
