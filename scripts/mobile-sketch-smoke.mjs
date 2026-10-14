@@ -96,6 +96,49 @@ try {
     }
   } finally { await desktop.close(); }
 
+  // Regression for the specific reported "w is not defined" failure:
+  // keep a prior nonzero animation phase in localStorage, reload the page,
+  // and verify the very first RAW draw initializes w before phase restoration.
+  const restored = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3, hasTouch: true, isMobile: true
+  });
+  try {
+    await restored.goto(url, {waitUntil:"domcontentloaded",timeout:30000});
+    const initialValues = {
+      pelagion: { time: 12.75, orientation: { x: 0, y: 0, z: 0, w: 1 } },
+      krylofor: { time: 9.25, orientation: { x: 0, y: 0, z: 0, w: 1 } },
+      moirephore: { time: 18.3, orientation: { x: 0, y: 0, z: 0, w: 1 } }
+    };
+    await restored.evaluate(state => {
+      localStorage.setItem("form-field-lab:view-states:v1",JSON.stringify(state));
+    }, initialValues);
+    for (const id of ["pelagion","krylofor","moirephore"]) {
+      // Reload SPA for an independently restored view; no "Restart" clicked.
+      await restored.goto(url + "?form=" + id, { waitUntil: "domcontentloaded", timeout:30000 });
+      await restored.reload({ waitUntil: "domcontentloaded", timeout:30000 });
+      await restored.locator('[data-form-id="' + id + '"][aria-pressed="true"]').waitFor({timeout:15000});
+      try {
+        await restored.locator('.lab-raw-runner[data-runtime-state="running"]').waitFor({timeout:18000});
+      } catch {
+        const error = await restored.locator(".raw-runtime-failure").allTextContents();
+        throw new Error("Saved-phase restore failed for " + id + ": " + error.join(" "));
+      }
+      const state = await restored.frameLocator(".lab-raw-runner iframe").locator("canvas").evaluate(canvas => {
+        const ctx=canvas.getContext("2d",{willReadFrequently:true});
+        if (!ctx) return -1;
+        const d=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+        let count=0;
+        for(let i=0;i<d.length;i+=4) {
+          if(d[i+3]>100 && Math.max(d[i],d[i+1],d[i+2])>35)count++;
+        }
+        return count;
+      });
+      if(state<12)throw new Error("Saved phase produced blank canvas: " + id);
+      console.log("PASS saved-phase " + id + ": rendered " + state + " pixels without Restart");
+    }
+  } finally { await restored.close(); }
+
   await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
   for (const id of ids) {
     await page.locator('[data-form-id="'+id+'"]').click({timeout:10000});

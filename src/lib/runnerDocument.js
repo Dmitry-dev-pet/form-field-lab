@@ -1,4 +1,4 @@
-function installSpatialViewBridge(viewModel, initialViewState) {
+export function installSpatialViewBridge(viewModel, initialViewState) {
   document.documentElement.dataset.viewModel = viewModel;
   const orbitEnabled = viewModel === "pelagion-orbit"
     || viewModel === "point-cloud-orbit"
@@ -223,6 +223,16 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   applyState(initialViewState);
   installWebglProjector();
 
+  // The p5 default canvas can exist BEFORE the first RAW draw. In particular,
+  // t||createCanvas(w=400,w) has not initialized w at that point. Restoring a
+  // saved nonzero t here would skip createCanvas and throw ReferenceError: w.
+  // Wait for the runtime's first completed RAW draw, not canvas existence.
+  addEventListener("sketch-first-frame", () => {
+    if (hasDrawn) return;
+    hasDrawn = true;
+    if (pendingTime !== null) setAnimationTime(pendingTime);
+  });
+
   function activate() {
     installSpatialProjectors();
     installWebglProjector();
@@ -230,14 +240,7 @@ function installSpatialViewBridge(viewModel, initialViewState) {
     const viewReady = viewModel === "webgl-orbit" ? sourceDraw : sourcePoint;
     if (canvas?.width > 0 && (!orbitEnabled || viewReady)) {
       if (canvas.tabIndex < 0) canvas.tabIndex = 0;
-      hasDrawn = true;
-      const firstStep = animationTime();
-      if (pendingTime > firstStep && typeof globalThis.redraw === "function") {
-        setAnimationTime(pendingTime - firstStep);
-        globalThis.redraw();
-      } else if (pendingTime !== null) {
-        setAnimationTime(pendingTime);
-      }
+      // Startup is handled by the first-frame event; no phase mutation here.
       return;
     }
     requestAnimationFrame(activate);
@@ -388,6 +391,8 @@ function installRunnerFrameMonitor() {
     }
     if (!ready && document.querySelector("canvas")) {
       ready = true;
+      // Always after sourceDraw.apply() completed, never during setup.
+      dispatchEvent(new Event("sketch-first-frame"));
       requestAnimationFrame(() => {
         globalThis.__sketchStatus?.("running", "Первый кадр выполнен.");
       });
