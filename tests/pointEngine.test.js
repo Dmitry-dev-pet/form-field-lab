@@ -105,3 +105,30 @@ test("the WEBGL runner rotates real primitives with the same external saved came
   assert.match(html, /"time":8/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
 });
+
+test("runner diagnostics remain available even when the unmodified RAW has a syntax error", () => {
+  const invalid = "t=0,draw=_=>{this is deliberately invalid";
+  const html = runnerDocument(invalid);
+  assert.match(html, /installRunnerErrorChannel/);
+  assert.match(html, /installRunnerFrameMonitor/);
+  assert.match(html, /sketch-runtime-status/);
+  assert.match(html, /Не удалось загрузить p5\.js/);
+  assert.match(html, /pixelDensity\(1\)/);
+  assert.ok(html.indexOf("installRunnerErrorChannel") < html.indexOf(invalid));
+  assert.equal(html.split(invalid).length, 2, "RAW must appear byte-for-byte once");
+  assert.ok(html.indexOf(invalid) < html.indexOf("installRunnerFrameMonitor"));
+  assert.equal(html.match(/p5@1\.11\.3/g)?.length, 1);
+  // The existing bridge and spatial camera must remain outside the RAW source.
+  assert.match(html, /sketch-motion/);
+  assert.match(runnerDocument("draw=_=>{}", {viewModel: "webgl-orbit"}), /installSpatialViewBridge/);
+});
+
+test("each p5 iframe boot emits a versioned status so a prior iframe cannot overwrite it", () => {
+  const first = runnerDocument("t=0,draw=_=>{}", { frameToken: "first-load" });
+  const second = runnerDocument("t=0,draw=_=>{}", { frameToken: "second-load" });
+  assert.match(first, /frameToken/);
+  assert.match(first, /"first-load"/);
+  assert.match(second, /"second-load"/);
+  assert.doesNotMatch(second, /"first-load"/);
+  assert.match(second, /sketch-runtime-status/);
+});

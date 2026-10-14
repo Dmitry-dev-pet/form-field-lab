@@ -5,6 +5,7 @@ on:
     paths:
       - "src/**"
       - "tests/**"
+      - "scripts/mobile-sketch-smoke.mjs"
       - "package.json"
       - "package-lock.json"
       - "vite.config.js"
@@ -24,3 +25,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+
+  mobile-browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install ephemeral smoke dependencies
+        run: npm install --no-save --package-lock=false --ignore-scripts playwright-core@1.57.0 pngjs@7.0.0
+      - run: npm run build
+      - name: Test 13 forms in Android-sized Chrome
+        run: node scripts/mobile-sketch-smoke.mjs
