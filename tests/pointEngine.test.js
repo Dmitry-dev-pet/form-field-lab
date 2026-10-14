@@ -60,7 +60,7 @@ test("the Pelagion runner adds a spatial camera bridge outside the RAW code", ()
   assert.match(html, /next \|\|= \{\}/);
   assert.match(html, /"time":7/);
   assert.match(html, /sketch-first-frame/);
-  assert.match(html, /globalThis\.redraw\(\)/);
+  assert.doesNotMatch(html, /globalThis\.redraw\(\)/);
   assert.match(html, /canvas\?\.width > 0/);
   assert.match(html, /touch-action:none/);
   assert.equal((html.match(new RegExp(code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length, 1);
