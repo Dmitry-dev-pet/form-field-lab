@@ -65,6 +65,7 @@ function scheduleRetry(reason) {
   window.clearTimeout(launchTimer);
   publishStatus("loading", reason + " Пробую автоматически ещё раз…");
   retryTimer = window.setTimeout(() => {
+    retryTimer = null;
     if (frameGeneration === expectedGeneration) reload(false);
   }, 250);
   return true;
@@ -74,6 +75,7 @@ function reload(resetRetry = true) {
   if (!frame.value) return;
   window.clearTimeout(launchTimer);
   window.clearTimeout(retryTimer);
+  retryTimer = null;
   if (resetRetry) retryCount = 0;
   firstFrameSeen = false;
   const frameToken = String(++frameGeneration);
@@ -132,6 +134,9 @@ function receiveMessage(event) {
       publishStatus("running", String(event.data.message || "").slice(0, 350));
       syncMotion(); // Now offscreen auto-pause is safe.
     } else if (state === "error") {
+      // One failed <script> may emit both resource-error and inline onerror.
+      // Do not let the second report cancel an already scheduled retry.
+      if (retryTimer !== null) return;
       if (!firstFrameSeen
         && /Не удалось загрузить p5\.js|Не загрузилась внешняя библиотека/.test(String(event.data.message))
         && scheduleRetry("Не загрузилась библиотека p5.js.")) return;
