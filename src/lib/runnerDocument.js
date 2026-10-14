@@ -318,6 +318,82 @@ function installSpatialViewBridge(viewModel, initialViewState) {
   });
 }
 
+
+function installRunnerErrorChannel() {
+  const send = (state, message = "") => {
+    parent.postMessage({
+      type: "sketch-runtime-status",
+      state,
+      message: String(message).slice(0, 350)
+    }, "*");
+  };
+  globalThis.__sketchStatus = send;
+
+  addEventListener("error", event => {
+    const failure = event.message || (event.target?.src
+      ? "Не загрузилась внешняя библиотека: " + event.target.src
+      : "Ошибка запуска RAW-скетча.");
+    send("error", failure);
+  }, true);
+  addEventListener("unhandledrejection", event => {
+    send("error", event.reason?.message || event.reason || "Ошибка выполнения.");
+  });
+}
+
+function installRunnerFrameMonitor() {
+  const sourceDraw = globalThis.draw;
+  const sourceSetup = globalThis.setup;
+  const isMobileDisplay = typeof matchMedia === "function"
+    && matchMedia("(max-width: 880px)").matches
+    && Number(globalThis.devicePixelRatio) > 1;
+  let densityCapped = false;
+  let ready = false;
+
+  // Render resolution is viewer state, not a mutation of the visible RAW.
+  // A 400x400 canvas on a 3x DPR phone otherwise renders 1.44M pixels/frame.
+  function capMobileDensity() {
+    if (densityCapped || !isMobileDisplay || !document.querySelector("canvas")
+      || typeof globalThis.pixelDensity !== "function") return;
+    try {
+      globalThis.pixelDensity(1);
+      densityCapped = true;
+    } catch {
+      // The p5 renderer can be absent before its first createCanvas call.
+    }
+  }
+
+  if (typeof sourceSetup === "function") {
+    globalThis.setup = function(...args) {
+      const result = sourceSetup.apply(this, args);
+      capMobileDensity();
+      return result;
+    };
+  }
+
+  if (typeof sourceDraw !== "function") {
+    globalThis.__sketchStatus?.("error", "В RAW-коде нет функции draw().");
+    return;
+  }
+
+  globalThis.draw = function(...args) {
+    let result;
+    try {
+      result = sourceDraw.apply(this, args);
+      capMobileDensity();
+    } catch (error) {
+      globalThis.__sketchStatus?.("error", error?.message || error);
+      throw error;
+    }
+    if (!ready && document.querySelector("canvas")) {
+      ready = true;
+      requestAnimationFrame(() => {
+        globalThis.__sketchStatus?.("running", "Первый кадр выполнен.");
+      });
+    }
+    return result;
+  };
+}
+
 export function runnerDocument(code, options = {}) {
   const safeCode = code.replace(/<\/script/gi, "<\\/script");
   const closeScript = "<" + "/script>";
@@ -325,5 +401,9 @@ export function runnerDocument(code, options = {}) {
   const spatialBridge = options.viewModel
     ? `;(${installSpatialViewBridge.toString()})(${JSON.stringify(options.viewModel)},${JSON.stringify(options.initialViewState || null)});`
     : "";
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#090909}body{display:grid;place-items:center}canvas{display:block!important;width:min(100vw,100vh)!important;height:min(100vw,100vh)!important;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style><script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js">${closeScript}<script>${safeCode}\n${motionBridge}\n${spatialBridge}\n${closeScript}</head><body></body></html>`;
+  // Separate scripts are essential: syntax errors in the author's unmodified
+  // RAW code cannot disable the independently installed diagnostics bridge.
+  const diagnostics = `(${installRunnerErrorChannel.toString()})();`;
+  const frameMonitor = `(${installRunnerFrameMonitor.toString()})();`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#090909}body{display:grid;place-items:center}canvas{display:block!important;width:min(100vw,100vh)!important;height:min(100vw,100vh)!important;touch-action:none;cursor:grab}canvas:active{cursor:grabbing}</style><script>${diagnostics}${closeScript}<script src="https://cdn.jsdelivr.net/npm/p5@1.11.3/lib/p5.min.js" onerror="window.__sketchStatus?.('error','Не удалось загрузить p5.js')">${closeScript}<script>${safeCode}${closeScript}<script>${frameMonitor}\n${motionBridge}\n${spatialBridge}${closeScript}</head><body></body></html>`;
 }

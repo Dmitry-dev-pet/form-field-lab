@@ -119,6 +119,7 @@ const settings = reactive({ ...startupSettings(initialForm) });
 const layers = reactive(initialForm.savedLayers || spatialLayerDefaults(initialForm));
 const bareRunner = ref(null);
 const barePaused = ref(false);
+const rawRuntimeStatus = ref({ state: "loading", message: "" });
 const invertOrbitY = ref(true);
 const preset = ref(startupPresetLabel(initialForm));
 const mutationMessage = ref("");
@@ -580,12 +581,18 @@ function saveImprint() {
   announceMutation(`${record.title} закреплён и добавлен в список мутаций.`);
 }
 
+let switchRequest = 0;
 async function selectForm(formId, updateRoute = true) {
   const form = formById(formId);
+  const request = ++switchRequest;
   if (form.id === selectedFormId.value) return;
 
   await captureActiveView();
+  // Snapshotting a busy canvas may resolve after another selection was made.
+  // Last tap wins; stale async completions must never select an older form.
+  if (request !== switchRequest) return;
 
+  rawRuntimeStatus.value = { state: "loading", message: "" };
   selectedFormId.value = form.id;
   replaceReactive(settings, startupSettings(form));
   replaceReactive(layers, form.savedLayers || spatialLayerDefaults(form));
@@ -650,7 +657,17 @@ onBeforeUnmount(() => {
           :view-state="rawViewState"
           :invert-y="invertOrbitY"
           @update:view-state="rememberViewState"
+          @runtime-status="status => rawRuntimeStatus = status"
         />
+        <div
+          v-if="rawRuntimeStatus.state === 'error' || rawRuntimeStatus.state === 'timeout'"
+          class="raw-runtime-failure"
+          role="alert"
+        >
+          <strong>Скетч не удалось запустить</strong>
+          <p>{{ rawRuntimeStatus.message }}</p>
+          <button class="button primary" type="button" @click="restartBareSketch">Повторить запуск</button>
+        </div>
         <div
           v-if="barePaused"
           class="raw-paused-overlay"
@@ -665,7 +682,7 @@ onBeforeUnmount(() => {
           <button class="button primary" type="button" @click="startBareMotion">Запустить анимацию</button>
         </div>
         <div class="canvas-meta" aria-hidden="true">
-          <span><span class="live-dot raw"></span>{{ barePaused ? "pause / raw" : "raw / p5.js" }}</span>
+          <span><span class="live-dot raw"></span>{{ rawRuntimeStatus.state === "loading" ? "loading / p5.js" : barePaused ? "pause / raw" : "raw / p5.js" }}</span>
           <span>{{ bareCodeLength }} chars · {{ isCompiledGenome ? "compiled" : isImprintBare ? "raw mutation" : selectedRawVariant?.id || "canonical" }} · {{ bareSketch.viewModel ? "drag / saved view" : "isolated" }}</span>
         </div>
       </div>

@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { runnerDocument } from "../lib/runnerDocument.js";
 
-const emit = defineEmits(["update:view-state"]);
+const emit = defineEmits(["update:view-state", "runtime-status"]);
 
 const props = defineProps({
   sketch: { type: Object, required: true },
@@ -17,6 +17,8 @@ const frame = ref(null);
 let observer;
 let visible = true;
 let snapshotRequest = 0;
+let launchTimer = null;
+let runtimeState = "loading";
 const pendingSnapshots = new Map();
 
 function syncMotion() {
@@ -46,12 +48,24 @@ function syncViewControls() {
 }
 
 function reload() {
-  if (frame.value) {
-    frame.value.srcdoc = runnerDocument(props.sketch.code, {
-      viewModel: props.sketch.viewModel,
-      initialViewState: props.viewState
-    });
-  }
+  if (!frame.value) return;
+  window.clearTimeout(launchTimer);
+  runtimeState = "loading";
+  emit("runtime-status", { state: "loading", message: "" });
+  frame.value.srcdoc = runnerDocument(props.sketch.code, {
+    viewModel: props.sketch.viewModel,
+    initialViewState: props.viewState
+  });
+  // Parent-side watchdog still fires if a p5 sketch blocks its own event loop.
+  launchTimer = window.setTimeout(() => {
+    if (runtimeState === "loading") {
+      runtimeState = "timeout";
+      emit("runtime-status", {
+        state: "timeout",
+        message: "Нет подтверждения первого кадра. Возможно, устройство перегружено или заблокирована загрузка p5.js."
+      });
+    }
+  }, 12000);
 }
 
 function resetView() {
@@ -80,7 +94,19 @@ function snapshot() {
 }
 
 function receiveMessage(event) {
-  if (event.source !== frame.value?.contentWindow || event.data?.type !== "sketch-view-state") return;
+  if (event.source !== frame.value?.contentWindow) return;
+  if (event.data?.type === "sketch-runtime-status") {
+    if (runtimeState !== "error" || event.data.state === "running") {
+      runtimeState = event.data.state;
+      window.clearTimeout(launchTimer);
+      emit("runtime-status", {
+        state: runtimeState,
+        message: String(event.data.message || "").slice(0, 350)
+      });
+    }
+    return;
+  }
+  if (event.data?.type !== "sketch-view-state") return;
   const resolve = pendingSnapshots.get(event.data.requestId);
   if (resolve) {
     pendingSnapshots.delete(event.data.requestId);
@@ -89,7 +115,7 @@ function receiveMessage(event) {
   emit("update:view-state", event.data.state);
 }
 
-watch(() => props.sketch.id, reload);
+watch(() => [props.sketch.id, props.sketch.code, props.sketch.viewModel], reload);
 watch(() => props.paused, syncMotion);
 watch(() => props.viewState, syncView, { deep: true });
 watch(() => props.invertY, syncViewControls);
@@ -107,6 +133,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  window.clearTimeout(launchTimer);
   observer?.disconnect();
   window.removeEventListener("message", receiveMessage);
   for (const resolve of pendingSnapshots.values()) resolve(props.viewState || null);
