@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { sketches } from "../src/data/sketches.js";
 import { createPointEngine, interpolatePointClouds } from "../src/lib/pointEngine.js";
-import { runnerDocument } from "../src/lib/runnerDocument.js";
+import { runnerDocument, installSpatialViewBridge } from "../src/lib/runnerDocument.js";
+import { runInNewContext } from "node:vm";
 
 test("catalog contains 36 unique attributed sketches", () => {
   assert.equal(sketches.length, 36);
@@ -58,7 +59,7 @@ test("the Pelagion runner adds a spatial camera bridge outside the RAW code", ()
   assert.match(html, /applyState\(initialViewState\)/);
   assert.match(html, /next \|\|= \{\}/);
   assert.match(html, /"time":7/);
-  assert.match(html, /pendingTime - firstStep/);
+  assert.match(html, /sketch-first-frame/);
   assert.match(html, /globalThis\.redraw\(\)/);
   assert.match(html, /canvas\?\.width > 0/);
   assert.match(html, /touch-action:none/);
@@ -131,4 +132,62 @@ test("each p5 iframe boot emits a versioned status so a prior iframe cannot over
   assert.match(second, /"second-load"/);
   assert.doesNotMatch(second, /"first-load"/);
   assert.match(second, /sketch-runtime-status/);
+});
+
+
+test("saved nonzero phase never bypasses RAW first-draw canvas initialization", () => {
+  const handlers = new Map();
+  const frames = [];
+  const document = {
+    documentElement: { dataset: {} },
+    // p5 can create a default canvas before calling the user's draw().
+    // This is the exact condition that previously caused w not defined.
+    querySelector: selector => selector === "canvas"
+      ? { width: 100, height: 100, tabIndex: -1 }
+      : null
+  };
+  const scope = {
+    t: 0, point: () => {}, line: () => {},
+    redraw: () => { throw Error("Never redraw before RAW initialized"); },
+    parent: { postMessage: () => {} },
+    document,
+    addEventListener: (type, callback) => handlers.set(type, callback),
+    requestAnimationFrame: callback => frames.push(callback),
+    setInterval: () => 1
+  };
+  scope.globalThis = scope;
+  const saved = { time: 7.8, orientation: { x: 0, y: 0, z: 0, w: 1 } };
+  runInNewContext(
+    "(" + installSpatialViewBridge.toString() + ")('point-cloud-orbit',"
+      + JSON.stringify(saved) + ")",
+    scope
+  );
+
+  handlers.get("load")();
+  frames.shift()(); // view setup observes the pre-existing default canvas.
+  assert.equal(scope.t, 0, "saved time must not suppress t||createCanvas(w=400,w)");
+
+  // Native RAW first draw has now assigned w and incremented t.
+  scope.w = 400;
+  scope.t = 0.02;
+  handlers.get("sketch-first-frame")();
+  assert.equal(scope.t, 7.8, "restore phase only after the RAW created its canvas");
+  handlers.get("sketch-first-frame")();
+  assert.equal(scope.t, 7.8, "duplicate first-frame events are harmless");
+
+  handlers.get("message")({ data: {
+    type: "sketch-view", state: { time: 9.4 }
+  } });
+  assert.equal(scope.t, 9.4, "subsequent view updates remain live");
+});
+
+test("runner first frame signals phase restoration only after RAW draw returned", () => {
+  const html = runnerDocument("t=0,draw=_=>{t||createCanvas(w=400,w);point(200,200)}", {
+    viewModel: "pelagion-orbit",
+    initialViewState: { orientation: { x: 0, y: 0, z: 0, w: 1 }, time: 9 }
+  });
+  assert.match(html, /sourceDraw.apply\(this, args\)/);
+  assert.match(html, /dispatchEvent\(new Event\("sketch-first-frame"\)\)/);
+  assert.match(html, /addEventListener\("sketch-first-frame"/);
+  assert.match(html, /time":9/);
 });
