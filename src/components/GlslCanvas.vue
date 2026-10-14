@@ -1,11 +1,13 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { buildFragmentShader, VERTEX_SHADER } from "../lib/glslRuntime.js";
+import { advanceGlslClock, GLSL_SPEED_DEFAULT } from "../lib/glslPlayback.js";
 
 const props = defineProps({
   source: { type: String, required: true },
   revision: { type: Number, required: true },
   resolution: { type: Number, default: 320 },
+  speed: { type: Number, default: GLSL_SPEED_DEFAULT },
   paused: { type: Boolean, default: false }
 });
 const emit = defineEmits(["diagnostic"]);
@@ -103,7 +105,6 @@ function draw() {
   if (uniform.t !== null) gl.uniform1f(uniform.t, elapsed);
   if (uniform.f !== null) gl.uniform1f(uniform.f, frameNumber);
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-  frameNumber += 1;
 }
 
 function tick(now) {
@@ -111,7 +112,12 @@ function tick(now) {
   if (props.paused || !program || !gl || gl.isContextLost()) return;
   // Bound update rate and framebuffer size; 100-step raymarchers are expensive on phones.
   if (!lastTick || now - lastTick >= 1000 / 24) {
-    if (lastTick) elapsed += Math.min((now - lastTick) / 1000, 0.25);
+    // Only the virtual shader clock changes: WebGL FPS stays capped at 24.
+    const next = advanceGlslClock(
+      { elapsed, frameNumber }, lastTick ? now - lastTick : 0, props.speed
+    );
+    elapsed = next.elapsed;
+    frameNumber = next.frameNumber;
     lastTick = now;
     draw();
   }

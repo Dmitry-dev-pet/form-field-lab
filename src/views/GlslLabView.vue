@@ -3,12 +3,17 @@ import { computed, ref } from "vue";
 import GlslCanvas from "../components/GlslCanvas.vue";
 import { GLSL_PRESETS } from "../data/glslPresets.js";
 import { MAX_GLSL_CHARACTERS } from "../lib/glslRuntime.js";
+import {
+  GLSL_SPEED_DEFAULT, GLSL_SPEED_MIN, GLSL_SPEED_MAX,
+  GLSL_SPEED_STEP, GLSL_SPEED_PRESETS
+} from "../lib/glslPlayback.js";
 
 const selectedPreset = ref(GLSL_PRESETS[0].id);
 const editor = ref(GLSL_PRESETS[0].code);
 const activeSource = ref(editor.value);
 const revision = ref(0);
 const resolution = ref(320);
+const speed = ref(GLSL_SPEED_DEFAULT);
 const paused = ref(false);
 const diagnostic = ref({ ok: null, message: "Инициализация WebGL2…" });
 const copyMessage = ref("");
@@ -67,7 +72,7 @@ async function copySource() {
         Фрагментный WebGL2-шейдер из видимого RAW-кода. Синтаксис twigl
         <strong>geekest (300 es)</strong>: <code>FC</code> — координата пикселя,
         <code>r</code> — размер, <code>t</code> — время, <code>m</code> — мышь,
-        <code>f</code> — номер кадра, <code>o</code> — цвет.
+        <code>f</code> — виртуальный номер кадра, <code>o</code> — цвет.
         <RouterLink to="/lab">Вернуться к p5.js →</RouterLink>
       </p>
     </header>
@@ -79,6 +84,7 @@ async function copySource() {
           :source="activeSource"
           :revision="revision"
           :resolution="resolution"
+          :speed="speed"
           :paused="paused"
           @diagnostic="onDiagnostic"
         />
@@ -129,6 +135,37 @@ async function copySource() {
             {{ paused ? "Продолжить" : "Пауза" }}
           </button>
           <button class="button" type="button" @click="copySource">Копировать RAW</button>
+        </div>
+
+        <div class="glsl-speed-control">
+          <label class="glsl-speed-label" for="glsl-speed">
+            <span>Скорость анимации</span>
+            <output for="glsl-speed">{{ speed.toFixed(2) }}×</output>
+          </label>
+          <input
+            id="glsl-speed"
+            v-model.number="speed"
+            type="range"
+            :min="GLSL_SPEED_MIN"
+            :max="GLSL_SPEED_MAX"
+            :step="GLSL_SPEED_STEP"
+            aria-label="Скорость анимации"
+          />
+          <div class="glsl-speed-endpoints" aria-hidden="true">
+            <span>Медленно · 0.05×</span>
+            <span>Быстро · 4×</span>
+          </div>
+          <div class="glsl-speed-presets" role="group" aria-label="Быстрый выбор скорости">
+            <button
+              v-for="presetSpeed in GLSL_SPEED_PRESETS"
+              :key="presetSpeed"
+              type="button"
+              :aria-pressed="speed === presetSpeed"
+              @click="speed = presetSpeed"
+            >{{ presetSpeed }}×</button>
+          </div>
+          <p class="glsl-description">Меняет ход времени <code>t</code> и виртуального кадра <code>f</code>,
+            не FPS и не исходный RAW. Скорость сохраняется при смене шейдера.</p>
         </div>
 
         <label class="glsl-quality" for="glsl-resolution">
@@ -244,6 +281,63 @@ textarea {
 textarea:focus-visible { outline: 2px solid var(--focus); }
 .glsl-controls { display: flex; flex-wrap: wrap; gap: 8px; }
 .glsl-controls .button { min-height: 44px; padding-inline: 12px; }
+.glsl-speed-control {
+  display: grid;
+  gap: 11px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 11, 9, 0.45);
+}
+.glsl-speed-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+.glsl-speed-label output {
+  color: var(--cyan);
+  font: 650 0.9rem "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.glsl-speed-control input[type="range"] {
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  accent-color: var(--acid);
+  cursor: pointer;
+}
+.glsl-speed-endpoints {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--quiet);
+  font-size: 0.66rem;
+}
+.glsl-speed-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.glsl-speed-presets button {
+  flex: 1 0 55px;
+  min-height: 39px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(255,255,255,0.035);
+  font: 650 0.72rem "SFMono-Regular", Consolas, monospace;
+}
+.glsl-speed-presets button[aria-pressed="true"] {
+  border-color: var(--acid);
+  color: var(--acid-ink);
+  background: var(--acid);
+}
+.glsl-speed-control .glsl-description code { color: var(--cyan); }
 .glsl-quality {
   display: flex;
   align-items: center;
