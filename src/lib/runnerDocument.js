@@ -378,8 +378,9 @@ function installRunnerFrameMonitor() {
   globalThis.draw = function(...args) {
     let result;
     try {
+      capMobileDensity(); // Set DPR before drawing when p5 already has a canvas.
       result = sourceDraw.apply(this, args);
-      capMobileDensity();
+      capMobileDensity(); // Draw-only RAW may have created its canvas just now.
     } catch (error) {
       globalThis.__sketchStatus?.("error", error?.message || error);
       throw error;

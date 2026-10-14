@@ -8,7 +8,7 @@ import { PNG } from "pngjs";
 
 const ids = ["brancher","swimmer","pulsator","sphere-grid","pelagion","chronophore","mnemophore","blastophore","krylofor","chiralophore","tesselophore","moirephore","torophore"];
 const url = "http://127.0.0.1:4173/form-field-lab/#/lab";
-const preview = spawn("npm",["run","preview","--","--host","127.0.0.1","--port","4173","--strictPort"],{stdio:["ignore","pipe","pipe"]});
+const preview = spawn(process.execPath,["node_modules/vite/bin/vite.js","preview","--host","127.0.0.1","--port","4173","--strictPort"],{stdio:["ignore","pipe","pipe"]});
 let logs = "";
 preview.stdout.on("data",chunk=>logs+=String(chunk));
 preview.stderr.on("data",chunk=>logs+=String(chunk));
