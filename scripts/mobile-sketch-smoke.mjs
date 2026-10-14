@@ -159,6 +159,82 @@ try {
     console.log("PASS "+id+" "+bright+" visible pixels @ "+png.width+"x"+png.height);
   }
 
+
+  // Shader speed test: WebGL program stays identical while t/f virtual clocks
+  // accelerate, pause, resume, and preserve the chosen rate across presets.
+  const glsl = await browser.newPage({viewport:{width:1280,height:800}});
+  try {
+    await glsl.goto(url.replace("#/lab", "#/glsl"), {
+      waitUntil:"domcontentloaded", timeout:30000
+    });
+    await glsl.locator("#glsl-code").fill(
+      "o=vec4(fract(t/100.),fract(f/1000.),0.,1.);"
+    );
+    await glsl.getByRole("button",{name:/Запустить изменения|Запустить код/}).click();
+    await glsl.getByText("Компиляция успешна").waitFor({timeout:20000});
+    const slider=glsl.locator("#glsl-speed");
+    if(await slider.inputValue()!=="1")throw new Error("GLSL initial speed must be 1×");
+
+    async function clock() {
+      return glsl.evaluate(() => {
+        const canvas=document.querySelector(".glsl-surface");
+        const context=canvas?.getContext("webgl2");
+        const program=context?.getParameter(context.CURRENT_PROGRAM);
+        if(!program)return null;
+        if(!window.__glslSmokeProgram)window.__glslSmokeProgram=program;
+        return {
+          time:context.getUniform(program,context.getUniformLocation(program,"t")),
+          frame:context.getUniform(program,context.getUniformLocation(program,"f")),
+          sameProgram:window.__glslSmokeProgram===program
+        };
+      });
+    }
+    const baseline=await clock();
+    if(!baseline || !Number.isFinite(baseline.time) || !Number.isFinite(baseline.frame))
+      throw new Error("GLSL t/f uniforms were not active");
+
+    await glsl.getByRole("button",{name:"0.25×",exact:true}).click();
+    const slowStart=await clock();
+    await glsl.waitForTimeout(750);
+    const slowEnd=await clock();
+    const slowT=slowEnd.time-slowStart.time;
+    const slowF=slowEnd.frame-slowStart.frame;
+    if(slowT < 0.025 || slowF < 0.25)
+      throw new Error("GLSL 0.25× did not advance t/f: " + JSON.stringify({slowT,slowF}));
+
+    await glsl.getByRole("button",{name:"4×",exact:true}).click();
+    const fastStart=await clock();
+    await glsl.waitForTimeout(750);
+    const fastEnd=await clock();
+    const fastT=fastEnd.time-fastStart.time;
+    const fastF=fastEnd.frame-fastStart.frame;
+    if(fastT < slowT*5 || fastF < slowF*5 || !fastEnd.sameProgram)
+      throw new Error("GLSL speed change recompiled or failed to accelerate t/f: "
+        + JSON.stringify({slowT,fastT,slowF,fastF,same:fastEnd.sameProgram}));
+
+    await glsl.getByRole("button",{name:"Пауза",exact:true}).click();
+    await glsl.waitForTimeout(150);
+    const frozenStart=await clock();
+    await glsl.waitForTimeout(450);
+    const frozenEnd=await clock();
+    if(Math.abs(frozenEnd.time-frozenStart.time)>0.00001
+      || Math.abs(frozenEnd.frame-frozenStart.frame)>0.00001)
+      throw new Error("GLSL pause advanced virtual timeline");
+    await glsl.getByRole("button",{name:"0.5×",exact:true}).click();
+    await glsl.getByRole("button",{name:"Продолжить",exact:true}).click();
+    await glsl.waitForTimeout(500);
+    const resumed=await clock();
+    if(resumed.time<=frozenEnd.time || resumed.frame<=frozenEnd.frame)
+      throw new Error("GLSL did not resume with preserved timeline");
+
+    await glsl.getByRole("button",{name:"Тест · палитра"}).click();
+    if(await slider.inputValue()!=="0.5")throw new Error("Speed reset on shader switch");
+    await glsl.reload({waitUntil:"domcontentloaded"});
+    if(await glsl.locator("#glsl-speed").inputValue()!=="1")
+      throw new Error("GLSL speed should reset to 1× after a page refresh");
+    console.log("PASS GLSL speed: t/f scaled live, same program, pause/resume, preset and refresh");
+  } finally { await glsl.close(); }
+
   if(errors.length) console.log("Console diagnostics:",errors.slice(0,8));
   console.log("PASS: "+ids.length+" mobile-viewport forms drew nonblank canvases");
 } finally { await browser?.close(); preview.kill(); }
