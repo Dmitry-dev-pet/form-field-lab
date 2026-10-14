@@ -222,10 +222,18 @@ try {
       throw new Error("GLSL pause advanced virtual timeline");
     await glsl.getByRole("button",{name:"0.5×",exact:true}).click();
     await glsl.getByRole("button",{name:"Продолжить",exact:true}).click();
-    await glsl.waitForTimeout(500);
-    const resumed=await clock();
+    await glsl.bringToFront();
+    await glsl.waitForTimeout(800);
+    let resumed=await clock();
+    if(resumed.time<=frozenEnd.time || resumed.frame<=frozenEnd.frame) {
+      await glsl.waitForTimeout(1200); // Distinguish throttled WebGL from a broken resume.
+      resumed=await clock();
+    }
     if(resumed.time<=frozenEnd.time || resumed.frame<=frozenEnd.frame)
-      throw new Error("GLSL did not resume with preserved timeline");
+      throw new Error("GLSL did not resume with preserved timeline: "
+        + JSON.stringify({frozenEnd,resumed,slider:await slider.inputValue(),
+          continueLabel:await glsl.locator(".glsl-controls").innerText()}));
+    console.log("PASS GLSL pause/resume: "+JSON.stringify({before:frozenEnd,after:resumed}));
 
     await glsl.getByRole("button",{name:"Тест · палитра"}).click();
     if(await slider.inputValue()!=="0.5")throw new Error("Speed reset on shader switch");
