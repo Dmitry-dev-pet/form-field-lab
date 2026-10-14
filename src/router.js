@@ -9,6 +9,12 @@ const routes = [
     meta: { title: "Лаборатория" }
   },
   {
+    path: "/glsl",
+    name: "glsl",
+    component: () => import("./views/GlslLabView.vue"),
+    meta: { title: "GLSL Shader Lab" }
+  },
+  {
     path: "/lab/36",
     name: "sketch-36-lab",
     component: () => import("./views/Sketch36LabView.vue"),
