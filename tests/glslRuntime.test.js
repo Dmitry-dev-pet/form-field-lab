@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildFragmentShader, MAX_GLSL_CHARACTERS, VERTEX_SHADER } from "../src/lib/glslRuntime.js";
-import { ORIGINAL_GLSL, STABLE_GLSL, DIAGNOSTIC_GLSL, GLSL_PRESETS } from "../src/data/glslPresets.js";
+import { ORIGINAL_GLSL, STABLE_GLSL, SPHERICAL_FIELD_RAW_GLSL, SPHERICAL_FIELD_STABLE_GLSL, DIAGNOSTIC_GLSL, GLSL_PRESETS } from "../src/data/glslPresets.js";
 
 test("GLSL ES 300 supports Twigl's geekest aliases without rewriting user code", () => {
   const source = "o+=vec4(FC.xy/r, sin(t), 1.);";
@@ -25,7 +25,24 @@ test("original supplied raymarcher is preserved exactly as raw input", () => {
   assert.ok(!ORIGINAL_GLSL.includes("#つぶやきGLSL"));
   assert.ok(!STABLE_GLSL.includes("p/p"));
   assert.notEqual(ORIGINAL_GLSL, STABLE_GLSL);
-  assert.equal(GLSL_PRESETS.length, 3);
+  assert.equal(GLSL_PRESETS.length, 5);
+});
+
+test("second spherical GLSL shader keeps user RAW intact and a separate safe adaptation", () => {
+  assert.equal(SPHERICAL_FIELD_RAW_GLSL, "float i,e,R,s,k,z;vec3 q,p,d=.5-FC.rgb/r.y;for(q.z++;s=5.,q+=d*e*R/6.+1e-5,p=vec3(log(R=length(q))-t/s,acos(q.z/R)-2.,atan(q.x,q.y)-t/s),i++<1e2;z=i>70.?d/=-d,-e:exp(e)*.2,o+=(cos(vec4(1,2,3,0)-R)+k+1.)*z/1e2)for(e=p.y;s<4e2;s+=s)e+=(z=sin(dot(p/p,exp(cos(p*s)+.7))))/s,k+=z/1e2;");
+  assert.ok(buildFragmentShader(SPHERICAL_FIELD_RAW_GLSL).includes("\n#line 1\n" + SPHERICAL_FIELD_RAW_GLSL + "\n}"));
+  assert.notEqual(SPHERICAL_FIELD_RAW_GLSL, SPHERICAL_FIELD_STABLE_GLSL);
+  assert.match(SPHERICAL_FIELD_STABLE_GLSL, /float i=0\\.,e=\\.02,R=1\\./);
+  assert.match(SPHERICAL_FIELD_STABLE_GLSL, /acos\\(clamp\\(q\\.z\\/R,-1\\.,1\\.\\)\\)/);
+  assert.match(SPHERICAL_FIELD_STABLE_GLSL, /R=max\\(length\\(q\\),1e-5\\)/);
+  assert.ok(!SPHERICAL_FIELD_STABLE_GLSL.includes("p/p"));
+  assert.ok(!SPHERICAL_FIELD_STABLE_GLSL.includes("d/=-d"));
+  assert.deepEqual(GLSL_PRESETS.map(preset => preset.id), [
+    "stable", "original", "spherical-stable", "spherical-raw", "diagnostic"
+  ]);
+  assert.ok(GLSL_PRESETS.every(preset =>
+    buildFragmentShader(preset.code).includes("\n#line 1\n" + preset.code + "\n}")
+  ));
 });
 
 test("the diagnostic code uses only supported short forms", () => {
