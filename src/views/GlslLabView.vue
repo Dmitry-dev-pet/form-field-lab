@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import GlslCanvas from "../components/GlslCanvas.vue";
 import { GLSL_PRESETS } from "../data/glslPresets.js";
 import { MAX_GLSL_CHARACTERS } from "../lib/glslRuntime.js";
+import { SPHERICAL_FIELD_CONTROLS, SPHERICAL_FIELD_DEFAULT_PARAMETERS } from "../lib/glslParameters.js";
 import {
   GLSL_SPEED_DEFAULT, GLSL_SPEED_MIN, GLSL_SPEED_MAX,
   GLSL_SPEED_STEP, GLSL_SPEED_PRESETS
@@ -11,6 +12,11 @@ import {
 const selectedPreset = ref(GLSL_PRESETS[0].id);
 const editor = ref(GLSL_PRESETS[0].code);
 const activeSource = ref(editor.value);
+const renderedPresetId = ref(selectedPreset.value);
+// Keep parameter values for each parameterized preset when switching away and back.
+const parametersByPreset = ref({
+  "spherical-stable": { ...SPHERICAL_FIELD_DEFAULT_PARAMETERS }
+});
 const revision = ref(0);
 const resolution = ref(320);
 const speed = ref(GLSL_SPEED_DEFAULT);
@@ -21,6 +27,31 @@ const copyMessage = ref("");
 const activePreset = computed(() => GLSL_PRESETS.find(item => item.id === selectedPreset.value));
 const length = computed(() => editor.value.length);
 const isDirty = computed(() => editor.value !== activeSource.value);
+const activeParameterSpecs = computed(() =>
+  renderedPresetId.value === "spherical-stable" ? SPHERICAL_FIELD_CONTROLS : []
+);
+const activeParameters = computed(() =>
+  parametersByPreset.value[renderedPresetId.value] || SPHERICAL_FIELD_DEFAULT_PARAMETERS
+);
+
+function setParameter(key, rawValue) {
+  const id = renderedPresetId.value;
+  const spec = activeParameterSpecs.value.find(control => control.key === key);
+  if (!spec || !parametersByPreset.value[id]) return;
+  const numeric = Number(rawValue);
+  if (!Number.isFinite(numeric)) return;
+  parametersByPreset.value[id] = {
+    ...parametersByPreset.value[id],
+    [key]: Math.min(spec.max, Math.max(spec.min, numeric))
+  };
+}
+
+function resetParameters() {
+  const id = renderedPresetId.value;
+  if (id === "spherical-stable") {
+    parametersByPreset.value[id] = { ...SPHERICAL_FIELD_DEFAULT_PARAMETERS };
+  }
+}
 
 function selectPreset(preset) {
   selectedPreset.value = preset.id;
@@ -43,6 +74,7 @@ function run() {
   }
   diagnostic.value = { ok: null, message: "Компиляция…" };
   activeSource.value = editor.value;
+  renderedPresetId.value = selectedPreset.value;
   revision.value += 1;
   paused.value = false;
 }
@@ -85,6 +117,7 @@ async function copySource() {
           :revision="revision"
           :resolution="resolution"
           :speed="speed"
+          :parameters="activeParameters"
           :paused="paused"
           @diagnostic="onDiagnostic"
         />
@@ -166,6 +199,38 @@ async function copySource() {
           </div>
           <p class="glsl-description">Меняет ход времени <code>t</code> и виртуального кадра <code>f</code>,
             не FPS и не исходный RAW. Скорость сохраняется при смене шейдера.</p>
+        </div>
+
+        <div v-if="activeParameterSpecs.length" class="glsl-param-section" aria-label="Параметры сферического поля">
+          <div class="glsl-param-head">
+            <strong>Форма / цвет</strong>
+            <button class="button" type="button" @click="resetParameters">Сбросить параметры</button>
+          </div>
+          <div class="glsl-param-grid">
+            <div v-for="control in activeParameterSpecs" :key="control.key" class="glsl-param-row">
+              <label class="glsl-param-label" :for="'glsl-param-' + control.key">
+                <span>{{ control.label }}</span>
+                <output :for="'glsl-param-' + control.key">
+                  {{ activeParameters[control.key].toFixed(control.digits) }}{{ control.suffix }}
+                </output>
+              </label>
+              <input
+                :id="'glsl-param-' + control.key"
+                type="range"
+                :min="control.min"
+                :max="control.max"
+                :step="control.step"
+                :value="activeParameters[control.key]"
+                :aria-label="control.label"
+                @input="setParameter(control.key, $event.target.value)"
+              />
+            </div>
+          </div>
+          <p class="glsl-description">
+            Изменения видны сразу, без перекомпиляции и без изменения RAW.
+            На паузе можно исследовать ту же фазу. Значения сохраняются при смене примера,
+            сбрасываются кнопкой или обновлением страницы.
+          </p>
         </div>
 
         <label class="glsl-quality" for="glsl-resolution">
@@ -338,6 +403,37 @@ textarea:focus-visible { outline: 2px solid var(--focus); }
   background: var(--acid);
 }
 .glsl-speed-control .glsl-description code { color: var(--cyan); }
+.glsl-param-section {
+  display: grid;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(8, 11, 9, 0.45);
+}
+.glsl-param-head, .glsl-param-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.glsl-param-head strong { color: var(--ink); font-size: 0.82rem; }
+.glsl-param-head .button { min-height: 39px; padding: 7px 10px; font-size: 0.72rem; }
+.glsl-param-grid { display: grid; gap: 15px; }
+.glsl-param-row { display: grid; gap: 7px; }
+.glsl-param-label { color: var(--ink); font-size: 0.78rem; }
+.glsl-param-label output {
+  color: var(--cyan);
+  font: 650 0.8rem "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.glsl-param-row input[type="range"] {
+  width: 100%;
+  min-height: 32px;
+  margin: 0;
+  accent-color: var(--acid);
+  cursor: pointer;
+}
 .glsl-quality {
   display: flex;
   align-items: center;

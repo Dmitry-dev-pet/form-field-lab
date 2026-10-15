@@ -2,12 +2,14 @@
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { buildFragmentShader, VERTEX_SHADER } from "../lib/glslRuntime.js";
 import { advanceGlslClock, GLSL_SPEED_DEFAULT } from "../lib/glslPlayback.js";
+import { SPHERICAL_FIELD_CONTROLS, normalizeSphericalFieldParameters } from "../lib/glslParameters.js";
 
 const props = defineProps({
   source: { type: String, required: true },
   revision: { type: Number, required: true },
   resolution: { type: Number, default: 320 },
   speed: { type: Number, default: GLSL_SPEED_DEFAULT },
+  parameters: { type: Object, default: () => ({}) },
   paused: { type: Boolean, default: false }
 });
 const emit = defineEmits(["diagnostic"]);
@@ -104,6 +106,12 @@ function draw() {
   if (uniform.m !== null) gl.uniform2f(uniform.m, pointer.x, pointer.y);
   if (uniform.t !== null) gl.uniform1f(uniform.t, elapsed);
   if (uniform.f !== null) gl.uniform1f(uniform.f, frameNumber);
+  const parameters = normalizeSphericalFieldParameters(props.parameters);
+  for (const control of SPHERICAL_FIELD_CONTROLS) {
+    if (uniform[control.uniform] !== null) {
+      gl.uniform1f(uniform[control.uniform], parameters[control.key]);
+    }
+  }
   gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 }
 
@@ -134,7 +142,7 @@ function recompile() {
   releaseProgram();
   try {
     program = buildProgram();
-    uniform = Object.fromEntries(["r", "m", "t", "f"].map(
+    uniform = Object.fromEntries(["r", "m", "t", "f", ...SPHERICAL_FIELD_CONTROLS.map(control => control.uniform)].map(
       name => [name, gl.getUniformLocation(program, name)]
     ));
     elapsed = 0;
@@ -178,6 +186,11 @@ function contextRestored() {
 }
 
 watch(() => props.revision, recompile);
+// Slider changes never replace the program or reset the shader clock.
+// On pause a slider still redraws the same frozen time instant.
+watch(() => props.parameters, () => {
+  if (props.paused) draw();
+}, { deep: true });
 watch(() => props.resolution, () => {
   if (gl && program) draw();
 });

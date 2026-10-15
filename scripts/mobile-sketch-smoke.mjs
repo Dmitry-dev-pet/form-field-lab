@@ -241,6 +241,73 @@ try {
     if(await glsl.locator("#glsl-speed").inputValue()!=="1")
       throw new Error("GLSL speed should reset to 1× after a page refresh");
     console.log("PASS GLSL speed: t/f scaled live, same program, pause/resume, preset and refresh");
+
+    // Five independent live parameters: the paused scene receives new
+    // uniforms without a new program or clock reset. Returning to this
+    // preset keeps values until the explicit Reset button is clicked.
+    await glsl.getByRole("button", {name:"Сферическое поле · адаптация",exact:true}).click();
+    await glsl.getByText("Компиляция успешна").waitFor({timeout:20000});
+    await glsl.getByRole("button",{name:"Пауза",exact:true}).click();
+    const controlValues={scale:1.8,detail:3,warp:1.25,turn:55,hue:2.5};
+    const defaults={scale:1,detail:7,warp:0.7,turn:70,hue:0};
+    const uniforms={scale:"u_fieldScale",detail:"u_fieldDetail",warp:"u_fieldWarp",turn:"u_fieldTurn",hue:"u_fieldHue"};
+    async function fieldState() {
+      return glsl.evaluate(names => {
+        const canvas=document.querySelector(".glsl-surface");
+        const ctx=canvas?.getContext("webgl2");
+        const program=ctx?.getParameter(ctx.CURRENT_PROGRAM);
+        if(!program)return null;
+        if(!window.__fieldSmokeProgram)window.__fieldSmokeProgram=program;
+        return {
+          sameProgram:window.__fieldSmokeProgram===program,
+          values:Object.fromEntries(Object.entries(names).map(([key,name])=>{
+            const location=ctx.getUniformLocation(program,name);
+            return [key,location?ctx.getUniform(program,location):null];
+          }))
+        };
+      }, uniforms);
+    }
+    function expectParameters(snapshot, expected, label) {
+      if(!snapshot || !snapshot.sameProgram)
+        throw new Error("Spherical field unexpectedly recompiled: "+label);
+      for(const [key,value] of Object.entries(expected)) {
+        if(snapshot.values[key]===null || Math.abs(snapshot.values[key]-value)>0.001)
+          throw new Error("GLSL live uniform "+label+" "+key+": "+JSON.stringify(snapshot));
+      }
+    }
+    expectParameters(await fieldState(),defaults,"defaults");
+    for(const [key,value] of Object.entries(controlValues)) {
+      await glsl.locator("#glsl-param-"+key).evaluate((el,v)=>{
+        el.value=String(v);
+        el.dispatchEvent(new Event("input",{bubbles:true}));
+      },value);
+    }
+    await glsl.waitForTimeout(400);
+    expectParameters(await fieldState(),controlValues,"slider");
+    for(const [key,value] of Object.entries(controlValues)) {
+      const got=Number(await glsl.locator("#glsl-param-"+key).inputValue());
+      if(Math.abs(got-value)>0.001)
+        throw new Error("Live slider "+key+" wasn't updated");
+    }
+    await glsl.getByRole("button",{name:"Тест · палитра",exact:true}).click();
+    if(await glsl.locator("#glsl-param-scale").count()!==0)
+      throw new Error("Spherical controls shown for a different shader");
+    await glsl.getByRole("button",{name:"Сферическое поле · адаптация",exact:true}).click();
+    await glsl.getByText("Компиляция успешна").waitFor({timeout:20000});
+    for(const [key,value] of Object.entries(controlValues)) {
+      const got=Number(await glsl.locator("#glsl-param-"+key).inputValue());
+      if(Math.abs(got-value)>0.001)
+        throw new Error("Spherical parameter "+key+" was lost across presets");
+    }
+    await glsl.getByRole("button",{name:"Пауза",exact:true}).click();
+    // Switching presets recreates a program; Reset must NOT.
+    await glsl.evaluate(()=>{delete window.__fieldSmokeProgram});
+    expectParameters(await fieldState(),controlValues,"restored");
+    await glsl.getByRole("button",{name:"Сбросить параметры",exact:true}).click();
+    await glsl.waitForTimeout(150);
+    expectParameters(await fieldState(),defaults,"reset");
+    console.log("PASS GLSL live field parameters: uniform updates, pause, preset persistence and reset");
+
   } finally { await glsl.close(); }
 
   if(errors.length) console.log("Console diagnostics:",errors.slice(0,8));
