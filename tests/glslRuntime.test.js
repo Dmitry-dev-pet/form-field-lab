@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { buildFragmentShader, MAX_GLSL_CHARACTERS, VERTEX_SHADER } from "../src/lib/glslRuntime.js";
 import { ORIGINAL_GLSL, STABLE_GLSL, SPHERICAL_FIELD_RAW_GLSL, SPHERICAL_FIELD_STABLE_GLSL, DIAGNOSTIC_GLSL, GLSL_PRESETS } from "../src/data/glslPresets.js";
+import { SPHERICAL_FIELD_CONTROLS } from "../src/lib/glslParameters.js";
 
 test("GLSL ES 300 supports Twigl's geekest aliases without rewriting user code", () => {
   const source = "o+=vec4(FC.xy/r, sin(t), 1.);";
@@ -11,6 +12,9 @@ test("GLSL ES 300 supports Twigl's geekest aliases without rewriting user code",
   assert.match(generated, /uniform vec2 m;/);
   assert.match(generated, /uniform float t;/);
   assert.match(generated, /uniform float f;/);
+  for (const control of SPHERICAL_FIELD_CONTROLS) {
+    assert.ok(generated.includes("uniform float " + control.uniform + ";"));
+  }
   assert.match(generated, /out vec4 o;/);
   assert.match(generated, /#define FC gl_FragCoord/);
   assert.match(generated, /o = vec4\(0\.0\);\n#line 1\n/);
@@ -37,6 +41,14 @@ test("second spherical GLSL shader keeps user RAW intact and a separate safe ada
   assert.ok(SPHERICAL_FIELD_STABLE_GLSL.includes("R=max(length(q),1e-5)"));
   assert.ok(!SPHERICAL_FIELD_STABLE_GLSL.includes("p/p"));
   assert.ok(!SPHERICAL_FIELD_STABLE_GLSL.includes("d/=-d"));
+  for (const control of SPHERICAL_FIELD_CONTROLS) {
+    assert.ok(SPHERICAL_FIELD_STABLE_GLSL.includes(control.uniform),
+      "Adapter should read " + control.uniform);
+    assert.ok(!SPHERICAL_FIELD_RAW_GLSL.includes(control.uniform),
+      "RAW should never contain injected parameter names");
+  }
+  assert.ok(SPHERICAL_FIELD_STABLE_GLSL.includes("for(int level=0;level<7;level++)"));
+  assert.ok(SPHERICAL_FIELD_STABLE_GLSL.includes("if(float(level)>=u_fieldDetail)break;"));
   assert.deepEqual(GLSL_PRESETS.map(preset => preset.id), [
     "stable", "original", "spherical-stable", "spherical-raw", "diagnostic"
   ]);

@@ -1,5 +1,7 @@
 // The user's visible GLSL body is appended verbatim after #line 1.
 // This is a small Twigl geekest (GLSL ES 3.00) compatibility wrapper, not p5.js.
+import { SPHERICAL_FIELD_CONTROLS } from "./glslParameters.js";
+
 export const MAX_GLSL_CHARACTERS = 12000;
 
 export const VERTEX_SHADER = [
@@ -25,6 +27,7 @@ export function buildFragmentShader(code) {
     "uniform vec2 m;",
     "uniform float t;",
     "uniform float f;",
+    ...SPHERICAL_FIELD_CONTROLS.map(control => `uniform float ${control.uniform};`),
     "out vec4 o;",
     "#define FC gl_FragCoord",
     "void main() {",

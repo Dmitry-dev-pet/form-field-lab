@@ -25,12 +25,17 @@ export const SPHERICAL_FIELD_STABLE_GLSL = [
   "for(;i++<1e2;){",
   " s=5.;q+=d*e*R/6.+1e-5;",
   " R=max(length(q),1e-5);",
-  " p=vec3(log(R)-t/s,acos(clamp(q.z/R,-1.,1.))-2.,atan(q.x,q.y)-t/s);",
-  " for(e=p.y;s<4e2;s+=s)",
-  "  e+=(z=sin(dot(vec3(1.),exp(cos(p*s)+.7))))/s,k+=z/1e2;",
-  " z=i>70.?-e:exp(e)*.2;",
-  " if(i>70.) d=vec3(-1.);",
-  " o+=(cos(vec4(1.,2.,3.,0.)-R)+k+1.)*z/1e2;",
+  " p=vec3(log(R)-t/s,acos(clamp(q.z/R,-1.,1.))-2.,atan(q.x,q.y)-t/s)*u_fieldScale;",
+  " e=p.y;",
+  " for(int level=0;level<7;level++){",
+  "  if(float(level)>=u_fieldDetail)break;",
+  "  e+=(z=sin(dot(vec3(1.),exp(cos(p*s)+u_fieldWarp))))/s;",
+  "  k+=z/1e2;",
+  "  s+=s;",
+  " }",
+  " z=i>u_fieldTurn?-e:exp(e)*.2;",
+  " if(i>u_fieldTurn)d=vec3(-1.);",
+  " o+=(cos(vec4(1.,2.,3.,0.)-R+u_fieldHue)+k+1.)*z/1e2;",
   "}"
 ].join("\n");
 
