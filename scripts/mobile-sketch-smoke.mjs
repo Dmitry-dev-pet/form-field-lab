@@ -167,6 +167,14 @@ try {
     await glsl.goto(url.replace("#/lab", "#/glsl"), {
       waitUntil:"domcontentloaded", timeout:30000
     });
+    const codeToggle=glsl.locator(".glsl-editor-details > summary");
+    if(await glsl.locator(".glsl-editor-details").evaluate(el=>el.open))
+      throw new Error("GLSL source editor should start collapsed");
+    if(await glsl.locator("#glsl-code").isVisible())
+      throw new Error("GLSL source textarea should not be visible by default");
+    await codeToggle.click();
+    if(!await glsl.locator("#glsl-code").isVisible())
+      throw new Error("GLSL source editor failed to expand");
     await glsl.locator("#glsl-code").fill(
       "o=vec4(fract(t/100.),fract(f/1000.),0.,1.);"
     );
@@ -307,6 +315,53 @@ try {
     await glsl.waitForTimeout(150);
     expectParameters(await fieldState(),defaults,"reset");
     console.log("PASS GLSL live field parameters: uniform updates, pause, preset persistence and reset");
+
+    // Layout regression: controls must sit next to the image on desktop/tablet
+    // and immediately below it on a narrow phone, while RAW stays after them.
+    async function checkLayout(width, height, beside) {
+      await glsl.setViewportSize({width,height});
+      await glsl.evaluate(() => window.scrollTo(0,0));
+      await glsl.waitForTimeout(120);
+      const layout=await glsl.evaluate(() => {
+        const rect=selector => {
+          const el=document.querySelector(selector);
+          if(!el)return null;
+          const box=el.getBoundingClientRect();
+          return {x:box.x,y:box.y,right:box.right,bottom:box.bottom,width:box.width};
+        };
+        return {
+          stage:rect(".glsl-stage"), panel:rect(".glsl-panel"),
+          slider:rect("#glsl-param-scale"), speed:rect("#glsl-speed"),
+          source:rect(".glsl-editor-details"),
+          pageWidth:document.documentElement.scrollWidth,
+          viewportWidth:window.innerWidth
+        };
+      });
+      if(!layout.stage || !layout.panel || !layout.slider || !layout.speed || !layout.source)
+        throw new Error("Missing shader layout elements: "+JSON.stringify(layout));
+      if(layout.pageWidth>layout.viewportWidth+2)
+        throw new Error("GLSL horizontal overflow at "+width+": "+JSON.stringify(layout));
+      if(beside) {
+        if(layout.panel.x < layout.stage.right-3)
+          throw new Error("Controls not next to canvas at "+width+": "+JSON.stringify(layout));
+        if(layout.stage.width < 320 || layout.slider.width < 180)
+          throw new Error("Canvas or controls too narrow at "+width+": "+JSON.stringify(layout));
+      } else {
+        if(layout.panel.y < layout.stage.bottom-3)
+          throw new Error("Mobile controls not below canvas: "+JSON.stringify(layout));
+      }
+      if(layout.source.y < layout.panel.bottom-3)
+        throw new Error("RAW editor is not below the experiment: "+JSON.stringify(layout));
+    }
+    await checkLayout(1280,800,true);
+    await checkLayout(1024,768,true);
+    await checkLayout(390,844,false);
+    await checkLayout(360,740,false);
+    await glsl.locator(".glsl-editor-details > summary").click();
+    if(await glsl.locator("#glsl-code").isVisible())
+      throw new Error("GLSL source editor did not collapse");
+    console.log("PASS GLSL layout: image beside sliders, mobile stack, collapsible RAW");
+
 
   } finally { await glsl.close(); }
 
