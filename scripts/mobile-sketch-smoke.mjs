@@ -357,6 +357,13 @@ try {
     await checkLayout(1024,768,true);
     await checkLayout(390,844,false);
     await checkLayout(360,740,false);
+    // The page was reloaded during the speed test: native details starts
+    // closed again, so explicitly verify both transitions from that state.
+    if(await glsl.locator(".glsl-editor-details").evaluate(el=>el.open))
+      throw new Error("GLSL source editor should reset to collapsed after reload");
+    await glsl.locator(".glsl-editor-details > summary").click();
+    if(!await glsl.locator("#glsl-code").isVisible())
+      throw new Error("GLSL source editor did not expand");
     await glsl.locator(".glsl-editor-details > summary").click();
     if(await glsl.locator("#glsl-code").isVisible())
       throw new Error("GLSL source editor did not collapse");
